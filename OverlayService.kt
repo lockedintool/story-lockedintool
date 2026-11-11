@@ -1537,7 +1537,10 @@ class OverlayService : Service(), StoryBridge.Host {
         // The Dashboard's Station 3 band shows only while the Dashboard itself is up and the phone is unlocked - never on
         // the lock screen / AOD / under the phone's own panel (owner, 28 Oct 2026: 'the dashboard station 3 pops up
         // everywhere ... is not fixed'). The lock screen has its own Station 3 rules.
-        val dash = (pagesUp || (s3Held && pagesAside())) && dashUp && QuickAccess.s3Dash(this) && !sysQuiet() && !aodShowing() && !panelOver && !keyguardLocked()
+        // #248 (owner, 11 Nov 2026, as an app: 'The dashboard station 3 doesn't work. When I tap anything doesn't work'): the
+        // Dashboard's bar is part of the Dashboard INSIDE the app, so app mode doesn't turn it off - only Only use widgets
+        // does (sysQuiet() also meant app mode, so every tap on the bar was refused). Leaving the app closes what it opened (appStopped).
+        val dash = (pagesUp || (s3Held && pagesAside())) && dashUp && QuickAccess.s3Dash(this) && !WidgetMode.on(this) && !aodShowing() && !panelOver && !keyguardLocked()
         if (dash) {
             s3Held = true
             val p = s3Pane

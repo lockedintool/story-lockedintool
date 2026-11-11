@@ -4086,7 +4086,9 @@
      wallpaper or background colors or text colors. Nothing affects visibility'): every word on a picture gets a soft
      halo in the colour opposite to the words, and the grey section titles / sub-lines lying straight on the picture are
      as bright as the page's own text. */
-  .lit-has-bg, .lit-has-bg *{ text-shadow:0 0 1px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 2px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 4px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 8px rgba(var(--lit-halo, 0, 0, 0), 0.9); }
+  /* #243: !important + the extra class beat the app look's 'html.focus .phone-screen * { text-shadow:none !important }',
+     which silently took the halo away on phones. Stacked thin layers = a solid edge round every letter, even tiny ones. */
+  .lit-has-bg, .lit-has-bg *, html.focus .phone-screen .lit-has-bg.lit-has-bg, html.focus .phone-screen .lit-has-bg.lit-has-bg *{ text-shadow:1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 3px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 6px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 12px rgba(var(--lit-halo, 0, 0, 0), 0.85) !important; }
   .lit-has-bg .section-title, .lit-has-bg .page-shell > .row-sub, .lit-has-bg .story-screen > .row-sub{ color:rgba(var(--litc-text-rgb, 255, 255, 255), 1) !important; }   /* #238: the System switch is Second system's (customers) */
   /* Apps search + letter bar (#236 - owner). The two wiggles are the owner's own exception to the rule above. */
   .apps-shell{ padding-right:24px; }

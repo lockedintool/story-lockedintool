@@ -169,6 +169,19 @@ for (const [w, h] of SIZES) {
     });
     if (low.length) fail('every word stays readable', s + ' with your colours', low.slice(0, 4).join(', '));
   }
+  // On a background picture every word carries a halo (#243 - the owner's Trading screenshot: 'Search broker' unreadable on
+  // the picture, because the app look's 'text-shadow:none !important' had silently removed the halo on phones).
+  const tiny = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+  for (const s of ['dashboard', 'money', 'wallet', 'trading', 'settings']) {
+    const bare = await pg.evaluate(([s, img]) => { LIT_BG.all = img; LIT_BG.dashboard = img; state.current = s; renderDevice();
+      const a = document.querySelector('#device-wrap #content-area'); if (!a || !a.classList.contains('lit-has-bg')) return ['no picture shown'];
+      const out = []; a.querySelectorAll('*').forEach(el => { if (out.length > 3) return;
+        if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+        const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
+        if (getComputedStyle(el).textShadow === 'none') out.push(el.textContent.trim().slice(0, 30)); });
+      return out; }, [s, tiny]);
+    if (bare.length) fail('every word stays readable', s + ' on a background picture (no halo)', bare.join(', '));
+  }
   await ctx.close();
 }
 await within(b.close(), 15000);

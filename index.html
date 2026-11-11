@@ -4081,6 +4081,7 @@
     animation-iteration-count:1 !important;
     scroll-behavior:auto !important;
   }
+  .toggle-switch.sys-locked{ opacity:.4; }   /* #238: the System switch is Second system's (customers) */
   /* Apps search + letter bar (#236 - owner). The two wiggles are the owner's own exception to the rule above. */
   .apps-shell{ padding-right:24px; }
   .apps-search{ display:flex; align-items:center; gap:8px; margin:4px 0 10px; padding:0 12px; height:40px; border-radius:12px; background:#141414; border:1px solid #262626; color:#8e8e93; }
@@ -10556,9 +10557,13 @@ function systemCardsHTML(){
   const boxes = st.owner ? ['second', 'only'] : (bought ? [bought] : []);
   const NAMES = { second:'Second system', only:'Only system' };
   const SUBS = { second:'Lockedintool works alongside your phone', only:'Lockedintool is your whole phone' };
+  const can = systemSwitchAllowed(st, bought);
+  const sub2 = can ? (st.on ? 'Lockedintool is working as a system' : 'Lockedintool is an app - turn on to use it as a system')
+    : bought === 'only' ? 'Only system is always a system - switching to the app comes with Second system'
+    : 'Switching between the app and a system comes with Second system';
   return `<div class="set2-card sys-card">
-      <div class="set2-row"><div class="set2-text"><div class="set2-name">System</div><div class="set2-sub">${st.on ? 'Lockedintool is working as a system' : 'Lockedintool is an app - turn on to use it as a system'}</div></div>
-      <button class="toggle-switch${st.on ? ' on' : ''}" data-action="sys-switch"><span class="toggle-knob"></span></button></div>
+      <div class="set2-row"><div class="set2-text"><div class="set2-name">System</div><div class="set2-sub">${sub2}</div></div>
+      <button class="toggle-switch${st.on ? ' on' : ''}${can ? '' : ' sys-locked'}" data-action="sys-switch"><span class="toggle-knob"></span></button></div>
     </div>
     <div class="sys-box${st.on ? '' : ' off'}">${boxes.length ? boxes.map(m=>{ const cur = st.on && st.mode === m; return `
       <div class="sys-opt${cur ? ' on' : ''}" data-action="sys-pick" data-v="${m}">
@@ -10567,8 +10572,17 @@ function systemCardsHTML(){
       </div>`; }).join('') : `<div class="sys-opt none"><div class="sys-opt-sub">Your system comes with your plan - see Subscriptions.</div></div>`}
     </div>`;
 }
+// Switching between the app and a system is only on SECOND SYSTEM for customers (#238 - owner, 11 Nov 2026: 'This is for
+// users not me. Me I have the whole entire access of lockedintool. Switch from system to app or app to system is only on
+// second system'). The owner's phone switches freely.
+function systemSwitchAllowed(st, bought){
+  if(st.owner) return true;
+  if(bought === undefined){ const sub = (typeof subState === 'function' && subState()) || {}; bought = sub.active && (sub.mode === 'only' || sub.mode === 'second') ? sub.mode : ''; }
+  return bought === 'second';
+}
 function systemSwitchTap(){
   const st = systemStateGet();
+  if(!systemSwitchAllowed(st)){ showToast('Switching between the app and a system comes with Second system'); return; }
   if(!st.app){ showToast('The System switch works in the Lockedintool app'); return; }
   try{ window.StoryNative.systemSwitch(!st.on); }catch(e){}
 }

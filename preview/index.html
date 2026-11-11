@@ -2568,6 +2568,15 @@
     font-size:22px; line-height:1; display:flex; align-items:center; justify-content:center; align-self:flex-start; }
   #story-profile .pf-head-btns{ display:flex; flex-direction:column; align-items:center; align-self:flex-start; gap:2px; position:relative; }
   /* Profile's ⋮ menu: pops out right beside the ⋮ (a pop-up goes with where it comes from - owner). */
+  #story-profile .pf-frq{ display:flex; align-items:center; gap:10px; padding:12px 2px; border-top:1px solid var(--pf-hair); }
+  #story-profile .pf-frq-pic{ width:40px; height:40px; border-radius:50%; background:#1c1c1c; overflow:hidden; flex:none; }
+  #story-profile .pf-frq-pic img{ width:100%; height:100%; object-fit:cover; }
+  #story-profile .pf-frq-who{ flex:1; min-width:0; display:flex; flex-direction:column; font-size:14px; overflow:hidden; }
+  #story-profile .pf-frq-who b, #story-profile .pf-frq-who i{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #story-profile .pf-frq-who i{ font-style:normal; font-size:12px; opacity:.7; }
+  #story-profile .pf-frq button{ font:inherit; font-size:13px; font-weight:600; border-radius:999px; padding:7px 12px; cursor:pointer; flex:none; }
+  #story-profile .pf-frq-no{ background:transparent; border:1px solid #4a4a4a; color:#ffffff; }
+  #story-profile .pf-frq-yes{ background:#ffffff; border:1px solid #ffffff; color:#000000; }
   #story-profile .pf-pv-opt{ display:flex; align-items:flex-start; gap:12px; width:100%; text-align:left; padding:14px 2px; border:none; border-top:1px solid var(--pf-hair);
     background:transparent; color:var(--pf-fg); font:inherit; }
   #story-profile .pf-pv-opt:last-of-type{ border-bottom:1px solid var(--pf-hair); }
@@ -9156,7 +9165,7 @@ function payFind(q){
   const t = q.trim();
   if(t.replace(/^@/, '').length < 2 || !msgAccount()){ state.pay.found = []; payFoundDraw(); return; }
   payFindT = setTimeout(async ()=>{
-    try{ const r = await msgApi('/v1/find?q=' + encodeURIComponent(t)); if(state.pay.q.trim() === t){ state.pay.found = (r.people || []).filter(u=>u.id !== (msgAccount() || {}).id); payFoundDraw(); } }
+    try{ const r = await msgApi('/v1/find?q=' + encodeURIComponent(t)); if(state.pay.q.trim() === t){ state.pay.found = (r.people || []).filter(u=>u.id !== (msgAccount() || {}).id && !u.locked); payFoundDraw(); } }
     catch(e){ state.pay.found = []; payFoundDraw(); }
   }, 300);
 }
@@ -10290,6 +10299,23 @@ function saveQuickAccess(patch){
 function storyPrivacy(){ try{ return JSON.parse(localStorage.getItem('story-privacy') || '{}') || {}; }catch(e){ return {}; } }
 // Profile privacy (owner; Profile's ⋮ menu): 'public' (default) or 'private' - enforced by the message server.
 function profilePrivacy(){ return storyPrivacy().profile === 'private' ? 'private' : 'public'; }
+// Follow requests to a private account (#246): Accept / Decline.
+async function frqLoad(){
+  const box = document.querySelector('#story-profile .pf-frq-list'); if(!box) return;
+  box.innerHTML = '<div class="pf-ed-note">Loading…</div>';
+  try{ frqRender((await msgApi('/v1/follow/requests')).requests || []); }catch(e){ box.innerHTML = '<div class="pf-ed-note">No connection right now.</div>'; }
+}
+function frqRender(list){
+  const box = document.querySelector('#story-profile .pf-frq-list'); if(!box) return;
+  const n = document.querySelector('#story-profile .pf-mp-req'); if(n) n.textContent = list.length ? String(list.length) : '';
+  if(!list.length){ box.innerHTML = '<div class="pf-ed-note">No follow requests.</div>'; return; }
+  box.innerHTML = list.map(u=>'<div class="pf-frq"><span class="pf-frq-pic">' + (u.photo ? '<img alt="" src="' + escText(u.photo) + '">' : '') + '</span><span class="pf-frq-who"><b>' + escText(u.name || ('@' + u.username)) + '</b>' + (u.name && u.username ? '<i>@' + escText(u.username) + '</i>' : '') + '</span>' +
+    '<button class="pf-frq-no" data-pf="frq-act" data-a="decline" data-id="' + escText(u.id) + '">Decline</button><button class="pf-frq-yes" data-pf="frq-act" data-a="accept" data-id="' + escText(u.id) + '">Accept</button></div>').join('');
+}
+async function frqAct(id, accept){
+  try{ frqRender((await msgApi('/v1/follow/respond', { id, accept })).requests || []); showToast(accept ? 'Request accepted' : 'Request declined'); if(typeof upLoad === 'function') upLoad(); }
+  catch(e){ showToast('No connection right now'); }
+}
 function pvRender(){
   const el = document.getElementById('story-profile'); if(!el) return;
   const v = profilePrivacy();
@@ -10449,7 +10475,7 @@ window.addEventListener('storage', e=>{
 });
 function setStoryPrivacy(p){ try{ localStorage.setItem('story-privacy', JSON.stringify(p)); }catch(e){} try{ const q = JSON.parse(localStorage.getItem('story-msg-outbox') || '[]') || []; q.push({ at: Date.now(), type:'privacy', privacy: p }); localStorage.setItem('story-msg-outbox', JSON.stringify(q.slice(-500))); }catch(e){} }
 function privacySettingsHTML(){
-  const p = storyPrivacy(), calls = p.calls || 'everyone', picked = p.callPeople || [], status = p.status || 'followers';
+  const p = storyPrivacy(), calls = p.calls || 'everyone', picked = p.callPeople || [], status = ['following', 'followers', 'nobody'].includes(p.status) ? p.status : 'public';
   let people = []; try{ people = (JSON.parse(localStorage.getItem('story-messages') || '[]') || []).filter(c=>c && c.kind !== 'group'); }catch(e){}
   return `
     <div class="section-title">PRIVACY</div>
@@ -10468,9 +10494,10 @@ function privacySettingsHTML(){
           <span class="privacy-check${picked.includes(c.id) ? ' on' : ''}">${picked.includes(c.id) ? '✓' : ''}</span>
         </div>`).join('') : `<div class="set2-row set2-nested"><div class="set2-text"><div class="set2-sub">People you chat with show here to pick from.</div></div></div>`) : ''}
       <div class="set2-row set2-stack">
-        <div class="set2-text"><div class="set2-name">Who can see your status</div><div class="set2-sub">${status === 'everyone' ? 'Anyone on Lockedintool' : status === 'nobody' ? 'Only you' : 'Only people who follow you'}</div></div>
+        <div class="set2-text"><div class="set2-name">Who can see your status</div><div class="set2-sub">${status === 'following' ? 'Only people you follow' : status === 'followers' ? 'Only your followers' : status === 'nobody' ? 'Only you' : 'People you follow and your followers'}${profilePrivacy() === 'private' && status !== 'nobody' ? ' - and only followers you accepted, as your account is private' : ''}</div></div>
         <div class="set2-seg">
-          <button class="theme-opt${status === 'everyone' ? ' on' : ''}" data-action="privacy-status" data-value="everyone">Everyone</button>
+          <button class="theme-opt${status === 'public' ? ' on' : ''}" data-action="privacy-status" data-value="public">Public</button>
+          <button class="theme-opt${status === 'following' ? ' on' : ''}" data-action="privacy-status" data-value="following">Following</button>
           <button class="theme-opt${status === 'followers' ? ' on' : ''}" data-action="privacy-status" data-value="followers">Followers</button>
           <button class="theme-opt${status === 'nobody' ? ' on' : ''}" data-action="privacy-status" data-value="nobody">No one</button>
         </div>
@@ -11281,6 +11308,7 @@ window.storyProfileOnly = function(){
     <div class="pf-scroll pf-menupage" hidden>
       <div class="pf-ed-head"><button class="pf-ed-back" data-pf="menu-back" aria-label="Back">‹</button><div class="pf-ed-title">Menu</div></div>
       <div class="pf-ed-row" data-pf="menu-privacy"><span>Profile privacy</span><span class="pf-ed-val pf-mp-privacy"></span></div>
+      <div class="pf-ed-row" data-pf="menu-requests"><span>Follow requests</span><span class="pf-ed-val pf-mp-req"></span></div>
       <div class="pf-ed-row" data-pf="ed-currency"><span>Account currency</span><span class="pf-ed-val pf-mp-cur"></span></div>
       <div class="pf-ed-row" data-pf="menu-important"><span>Important data</span><span class="pf-ed-val pf-mp-imp"></span></div>
       <div class="pf-ed-row" data-pf="menu-reports" hidden><span>Reports</span><span class="pf-ed-val">Review what people reported</span></div>
@@ -11292,8 +11320,13 @@ window.storyProfileOnly = function(){
     <div class="pf-scroll pf-privacy" hidden>
       <div class="pf-ed-head"><button class="pf-ed-back" data-pf="pv-back" aria-label="Back">‹</button><div class="pf-ed-title">Profile privacy</div></div>
       <div class="pf-ed-note">Choose who can see your profile.</div>
-      <button class="pf-pv-opt" data-pf="pv-set" data-v="public"><span class="pf-pv-txt"><div class="pf-pv-t">Public</div><div class="pf-pv-d">Everyone can see your profile, and anyone can find it in search.</div></span><span class="pf-pv-dot"></span></button>
-      <button class="pf-pv-opt" data-pf="pv-set" data-v="private"><span class="pf-pv-txt"><div class="pf-pv-t">Private</div><div class="pf-pv-d">Only people you follow, people you’ve messaged and people in your groups and communities can see your profile. No one can find it in search.</div></span><span class="pf-pv-dot"></span></button>
+      <button class="pf-pv-opt" data-pf="pv-set" data-v="public"><span class="pf-pv-txt"><div class="pf-pv-t">Public</div><div class="pf-pv-d">Everyone can see your profile, posts and highlights, and anyone can follow you.</div></span><span class="pf-pv-dot"></span></button>
+      <button class="pf-pv-opt" data-pf="pv-set" data-v="private"><span class="pf-pv-txt"><div class="pf-pv-t">Private</div><div class="pf-pv-d">Following you needs a request. Only followers you accept can see your profile, posts, highlights and statuses.</div></span><span class="pf-pv-dot"></span></button>
+    </div>
+    <div class="pf-scroll pf-requests" hidden>
+      <div class="pf-ed-head"><button class="pf-ed-back" data-pf="frq-back" aria-label="Back">‹</button><div class="pf-ed-title">Follow requests</div></div>
+      <div class="pf-ed-note">People who asked to follow your private account. Accept lets them see your profile, posts, highlights and statuses.</div>
+      <div class="pf-frq-list"></div>
     </div>
     <div class="pf-scroll pf-reports" hidden>
       <div class="pf-ed-head"><button class="pf-ed-back" data-pf="rep-back" aria-label="Back">‹</button><div class="pf-ed-title">Reports</div></div>
@@ -11498,6 +11531,9 @@ window.storyProfileOnly = function(){
       showToast(ok ? (f === 'pan' ? 'Card number copied' : f === 'exp' ? 'Expiry copied' : 'CVV copied') : 'Couldn’t copy');
     }
     else if(k === 'imp-keep'){ impKeep(); }
+    else if(k === 'menu-requests'){ el.querySelector('.pf-menupage').hidden = true; main.hidden = true; const pg = el.querySelector('.pf-requests'); pg.hidden = false; pg.scrollTop = 0; frqLoad(); }
+    else if(k === 'frq-back'){ el.querySelector('.pf-requests').hidden = true; el.querySelector('.pf-menupage').hidden = false; }
+    else if(k === 'frq-act'){ frqAct(t.getAttribute('data-id'), t.getAttribute('data-a') === 'accept'); }
     else if(k === 'menu-privacy'){ el.querySelector('.pf-menupage').hidden = true; main.hidden = true; const pv = el.querySelector('.pf-privacy'); pv.hidden = false; pv.scrollTop = 0; pvRender(); }
     else if(k === 'pv-back'){ el.querySelector('.pf-privacy').hidden = true; pfMenuOpen(); }
     else if(k === 'pv-set'){ const p = storyPrivacy(); p.profile = b.getAttribute('data-v') === 'private' ? 'private' : 'public'; setStoryPrivacy(p); pvRender(); msgFlush(); }
@@ -11837,6 +11873,7 @@ function pfMenuOpen(){
   el.querySelector('.pf-home').hidden = true;
   const m = el.querySelector('.pf-menupage'); m.hidden = false; m.scrollTop = 0;
   m.querySelector('.pf-mp-privacy').textContent = profilePrivacy() === 'private' ? 'Private' : 'Public';
+  { const rq = m.querySelector('.pf-mp-req'), n = (typeof UP !== 'undefined' && UP.data && UP.data.me && UP.data.me.requests) || 0; if(rq) rq.textContent = n ? String(n) : ''; }
   m.querySelector('.pf-mp-cur').textContent = curLabel();
   const nc = walletCards().length, nt = tradeAccounts().length;
   m.querySelector('.pf-mp-imp').textContent = (nc ? nc + (nc === 1 ? ' card' : ' cards') : '') + (nc && nt ? ' · ' : '') + (nt ? nt + (nt === 1 ? ' trading account' : ' trading accounts') : '') || 'Cards, trading accounts';
@@ -12161,7 +12198,7 @@ function upPersonRowHTML(u){
     '<span class="msg-mid"><span class="msg-who">' + escText(upName(u)) + '</span>' +
     (u.name && u.username ? '<span class="msg-last">@' + escText(u.username) + '</span>' : '') +
     (u.about ? '<span class="up-about">' + escText(u.about) + '</span>' : '') + '</span>' +
-    (me ? '' : '<button class="up-follow' + (u.isFollowing ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(u.id) + '">' + (u.isFollowing ? 'Following' : 'Follow') + '</button>') + '</div>';
+    (me ? '' : '<button class="up-follow' + (u.isFollowing || u.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(u.id) + '">' + (u.isFollowing ? 'Following' : u.requested ? 'Requested' : 'Follow') + '</button>') + '</div>';
 }
 function upRender(){
   const el = upEl(); if(!el) return;
@@ -12378,12 +12415,15 @@ function upSearch(q){
 }
 async function upFollow(id, btn){
   const all = [].concat((UP.data && UP.data.profiles) || [], UP.found || [], UP.person ? [UP.person] : []);
-  const u = all.find(x=>x.id === id); const on = !(u && u.isFollowing);
-  for(const x of all) if(x.id === id) x.isFollowing = on;   // instant (owner: follow anyone instantly)
+  const u = all.find(x=>x.id === id); const on = !(u && (u.isFollowing || u.requested));   // tapping Requested takes the request back
+  for(const x of all) if(x.id === id){ x.isFollowing = on; x.requested = false; }   // instant (owner: follow anyone instantly)
   upRender(); if(UP.person && UP.person.id === id) upRenderPerson();
   try{
     const r = await msgApi('/v1/follow', { id, on });
-    if(UP.person && UP.person.id === id){ Object.assign(UP.person, { followers:r.followers, isFollowing:r.isFollowing }); upRenderPerson(); }
+    for(const x of all) if(x.id === id){ x.isFollowing = !!r.isFollowing; x.requested = !!r.requested; }   // a private account: Requested (#246)
+    if(r.requested) showToast('Follow request sent');
+    if(UP.person && UP.person.id === id){ Object.assign(UP.person, { followers:r.followers, isFollowing:r.isFollowing, requested:r.requested }); upRenderPerson(); }
+    upRender();
     upLoad();
   }catch(e){ for(const x of all) if(x.id === id) x.isFollowing = !on; upRender(); if(UP.person) upRenderPerson(); showToast('No connection right now'); }
 }
@@ -12419,7 +12459,7 @@ function upRenderPerson(){
     pv.querySelector('.up-p-body').innerHTML =
       '<div class="up-p-head"><button class="up-p-pic" disabled>' + upPic(p, '') + '</button>' +
       '<div class="pf-names"><div class="pf-name">' + escText(upName(p)) + '</div>' + (p.name && p.username ? '<div class="pf-user">@' + escText(p.username) + '</div>' : '') + '</div></div>' +
-      '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : 'Follow') + '</button>' +
+      '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing || p.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : p.requested ? 'Requested' : 'Follow') + '</button>' +
       (p.canMsg === false ? '' : '<button class="up-follow up-follow-lg" data-pf="up-message">Message</button>') + '</div>' +
       '<div class="up-p-locked"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><b>' + (p.away ? 'This account isn’t available right now' : 'This profile is private') + '</b></div>';
     return;
@@ -12431,7 +12471,7 @@ function upRenderPerson(){
     (p.about && !p.isFollowing && !isMe ? '<div class="up-p-about">' + escText(p.about) + '</div>' : '') +
     (p.bio ? '<div class="up-p-bio">' + escText(p.bio) + '</div>' : '') +
     ((p.highlights || []).length ? '<div class="pf-hls up-p-hls">' + p.highlights.map((h, i)=>'<button class="pf-hl" data-pf="up-hl" data-i="' + i + '"><span class="pf-hl-c"><img alt="" loading="lazy" src="' + escText(h.cover || '') + '"></span><span class="pf-hl-n">' + escText(h.name) + '</span></button>').join('') + '</div>' : '') +
-    (isMe ? '' : '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : 'Follow') + '</button>' +
+    (isMe ? '' : '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing || p.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : p.requested ? 'Requested' : 'Follow') + '</button>' +
       (p.canMsg === false ? '' : '<button class="up-follow up-follow-lg" data-pf="up-message">Message</button>') + '</div>') +
     (p.loading ? '<div class="up-p-note">Loading…</div>' : p.error ? '<div class="up-p-note">No connection right now</div>'
       : posts.length ? '<div class="up-grid">' + posts.map((x, i)=>!(x.items || [{}]).length || x.type === 'text'
@@ -13079,6 +13119,11 @@ async function msgOnServer(m){
     if(m.seq) msgSend({ t:'ack', seq:m.seq });
     if(m.kind === 'live') return;   // owner: Live is removed from Lockedintool
     const who = m.name || (m.username ? '@' + m.username : 'Someone');
+    if(m.kind === 'request' || m.kind === 'accepted'){   // follow requests (#246)
+      if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(who, m.kind === 'request' ? who + ' wants to follow you' : who + ' accepted your follow request'); }catch(e){}
+      if(typeof upLoad === 'function') setTimeout(()=>{ try{ upLoad(); }catch(e){} }, 800);
+      return;
+    }
     const what = m.kind === 'status' ? 'posted a status' : m.kind === 'highlight' ? 'added to a highlight' : m.kind === 'live' ? 'is live now' : 'shared a new post';
     if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(who, who + ' ' + what); }catch(e){}
     if(m.kind === 'live' && typeof liveNote === 'function') liveNote(m);
@@ -13147,7 +13192,7 @@ function renderGroupSheet(){
       grpAddView.q = inp.value; clearTimeout(renderGroupSheet.t);
       const t = inp.value.trim();
       if(t.replace(/^@/, '').length < 2){ grpAddView.found = []; renderGroupSheetList(); return; }
-      renderGroupSheet.t = setTimeout(()=>msgApi('/v1/find?q=' + encodeURIComponent(t)).then(r=>{ if(grpAddView.q.trim() === t){ grpAddView.found = (r.people || []).filter(u=>u.id !== (msgAccount() || {}).id); renderGroupSheetList(); } }).catch(()=>{}), 300);
+      renderGroupSheet.t = setTimeout(()=>msgApi('/v1/find?q=' + encodeURIComponent(t)).then(r=>{ if(grpAddView.q.trim() === t){ grpAddView.found = (r.people || []).filter(u=>!u.locked && u.id !== (msgAccount() || {}).id); renderGroupSheetList(); } }).catch(()=>{}), 300);
     });
   }
 }
@@ -13274,7 +13319,7 @@ function msgFindFor(q){
   msgFindT = setTimeout(async ()=>{
     try{
       const r = await msgApi('/v1/find?q=' + encodeURIComponent(t));
-      msgFound = r.people || []; msgFoundQ = t;
+      msgFound = (r.people || []).filter(u=>!u.locked || u.id === (msgAccount() || {}).id); msgFoundQ = t;   // private accounts are only found in Updates, to send a follow request (#246)
       msgFound.forEach(u=>setMsgPeer(u.id, { pub:u.pub, name:u.name, username:u.username, canCall:u.canCall, canMsg:u.canMsg }));
     }catch(e){ msgFound = []; msgFoundQ = t; }
     if(msgView.q.trim() === t) renderMsgList();
@@ -21358,7 +21403,7 @@ document.addEventListener('input', e=>{
   put(); clearTimeout(teamFindT);
   teamFindT = setTimeout(async ()=>{
     const v = tm.q.trim(); if(v.replace(/^@/, '').length < 2){ tm.searching = false; put(); return; }
-    try{ const r = await msgApi('/v1/find?q=' + encodeURIComponent(v)); if(tm.q.trim() === v){ tm.found = (r.people || []).filter(u=>u.id !== (msgAccount() || {}).id); tm.searching = false; put(); } }
+    try{ const r = await msgApi('/v1/find?q=' + encodeURIComponent(v)); if(tm.q.trim() === v){ tm.found = (r.people || []).filter(u=>u.id !== (msgAccount() || {}).id && !u.locked); tm.searching = false; put(); } }
     catch(err){ tm.searching = false; tm.found = []; put(); }
   }, 300);
 });

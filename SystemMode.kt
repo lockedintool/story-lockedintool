@@ -14,7 +14,18 @@ import android.telecom.TelecomManager
 object SystemMode {
     private const val PREF = "system_mode"
     fun on(c: Context): Boolean = c.getSharedPreferences("story", Context.MODE_PRIVATE).getBoolean(PREF, false)
-    fun set(c: Context, v: Boolean) { c.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putBoolean(PREF, v).apply() }
+    fun set(c: Context, v: Boolean) { c.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putBoolean(PREF, v).commit(); syncHome(c) }
+    /** Lockedintool is the phone's HOME app ONLY in Only system (#237 - owner, 11 Nov 2026: as an app 'I cant close it ...
+     *  I need to log out or deactivate the account or delete the account'; 'lockedintool when its switched into an app it
+     *  does act like a app'). After leaving Only system the phone kept Lockedintool as its Home app, so every Home swipe
+     *  landed back in Lockedintool. Its Home screen now only exists while Only system is on (the switch on): anywhere else
+     *  the phone's own home screen is the Home again, by itself - nothing to pick. */
+    fun syncHome(c: Context) { runCatching {
+        val want = on(c) && AppMode.systemOn(c)
+        val cn = android.content.ComponentName(c, LockedintoolHome::class.java)
+        val st = if (want) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        if (c.packageManager.getComponentEnabledSetting(cn) != st) c.packageManager.setComponentEnabledSetting(cn, st, android.content.pm.PackageManager.DONT_KILL_APP)
+    } }
 
     private val ALWAYS = setOf(
         "android", "com.android.systemui", "com.android.phone", "com.android.server.telecom", "com.android.incallui",

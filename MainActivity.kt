@@ -27,6 +27,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Updater.schedule(this)          // updates keep coming every 15 minutes, even when STORY is off
+        SystemMode.syncHome(this)       // Lockedintool is the phone's Home app only in Only system (#237)
         KeepAlive.ensureRunning(this)   // switched on but not running (killed by the phone)? bring it back
         if (!Release.agreedAuto(this)) UpdateActivity.ask(this, force = true)  // using STORY = agreeing to automatic updates
         val pad = (24 * resources.displayMetrics.density).toInt()
@@ -235,6 +236,14 @@ class MainActivity : Activity() {
     private fun installAsked(): Boolean = intent?.getBooleanExtra(EXTRA_INSTALL, false) == true && run { intent.removeExtra(EXTRA_INSTALL); true }
     companion object { const val EXTRA_INSTALL = "install_update" }
     override fun onPause() { super.onPause(); ui.removeCallbacks(refresh) }
+    /** As an app, this setup screen is only opened on purpose (Lockedintool's own entry in Apps). Leaving it with the
+     *  phone's Home / Recents closes it, so the icon always opens Lockedintool itself next time - never this screen
+     *  stuck on top of it (#237 - owner: 'sometimes it will be the lockedintool app that like only has button and
+     *  owner mode showing'). */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (AppMode.appOnly(this) && getSharedPreferences("story", MODE_PRIVATE).getBoolean("enabled", false)) finish()
+    }
 
     // Lockedintool as your system: the setup screen's switches open the phone's Settings only while system actions are
     // off (to turn them back on) - otherwise Settings stays closed, like every other app.

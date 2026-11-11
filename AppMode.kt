@@ -18,5 +18,5 @@ object AppMode {
         return p.getBoolean(PREF, true)
     }
     fun appOnly(c: Context) = !systemOn(c)
-    fun set(c: Context, on: Boolean) { c.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putBoolean(PREF, on).apply() }
+    fun set(c: Context, on: Boolean) { c.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putBoolean(PREF, on).commit(); SystemMode.syncHome(c) }
 }

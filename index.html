@@ -2314,7 +2314,7 @@
   html.native:not(.s3-early) .phone-frame{ padding-top:0 !important; padding-bottom:0 !important; }
   html.native:not(.s3-early) #content-area{ padding-top:0 !important; padding-bottom:0 !important; }
   html.native:not(.s3-early) .page-top{ margin-top:0 !important; }
-  html.native:not(.s3-early) .phone-float-dock{ padding-bottom:0 !important; }
+  html.native:not(.s3-early) .phone-float-dock{ padding-bottom:0 !important; bottom:var(--lit-bottom, 0px); }   /* clear of the phone's bottom switch (#237) */
   /* ===== FOCUS DESIGN (on for the app's Pages; Station 3 untouched) =====
      A focus & discipline app: calm, nothing competing for attention, one thing that matters per screen.
      Quieter surfaces (hairline borders, no glows, softer shadows), more breathing room between sections,
@@ -2807,10 +2807,10 @@
   body.page-sliding, body.page-sliding *{ -webkit-user-select:none !important; user-select:none !important; }
   html.native:not(.s3-early) .story-screen{ margin-top:0 !important; margin-bottom:0 !important; padding-bottom:0 !important; }
   /* Station 3 on the Dashboard (Settings > QUICK ACCESS): its bar sits at the very bottom, everything else above it. */
-  html.native:not(.s3-early) .story-screen.s3-dash{ padding-bottom:var(--s3-dash-pad, 46px) !important; }
+  html.native:not(.s3-early) .story-screen.s3-dash{ padding-bottom:calc(var(--s3-dash-pad, 46px) + var(--lit-bottom, 0px)) !important; }
   /* ...and Station 3 never covers a pop-up there (owner: 'problems like this no no'): every pop-up / sheet ends on top
      of Station 3's band (its top = the Dashboard's bottom room minus the 6px gap). */
-  html.s3-dash-on .modal-overlay, html.s3-dash-on .notes-popover-overlay, html.s3-dash-on .lit-sheet-bg{ bottom:calc(var(--s3-dash-pad, 46px) - 6px) !important; }
+  html.s3-dash-on .modal-overlay, html.s3-dash-on .notes-popover-overlay, html.s3-dash-on .lit-sheet-bg{ bottom:calc(var(--s3-dash-pad, 46px) - 6px + var(--lit-bottom, 0px)) !important; }
   /* Brightness Control's close X (owner): top right of the pop-up. */
   .confirm-sheet.has-x{ position:relative; }
   /* A payment's / notification's real icon at the top of its details (owner: real icons). */
@@ -4041,7 +4041,7 @@
      then the bottom line's area. ===== */
   /* No background of its own (owner, 29 Oct 2026: 'since its now part of the dashboard, now it won't have its own
      background') - the Dashboard's own background shows straight through; only the buttons are drawn. */
-  #dash-s3{ position:fixed; left:0; right:0; bottom:0; height:var(--s3-dash-pad, 46px); background:transparent; z-index:60; }
+  #dash-s3{ position:fixed; left:0; right:0; bottom:var(--lit-bottom, 0px); height:var(--s3-dash-pad, 46px); background:transparent; z-index:60; }
   #dash-s3[hidden]{ display:none !important; }
   #dash-s3 .station3-bar{ position:absolute; left:0; right:0; top:6px; height:40px; box-sizing:border-box; display:grid; grid-template-columns:repeat(5, 1fr); justify-items:center; align-items:center; padding:4px 0; gap:0; }
   #dash-s3 .station3-bar:has(> :nth-child(6)){ grid-template-columns:1fr 1fr 1fr 44px 1.5fr 1.5fr; }
@@ -15951,6 +15951,19 @@ window.storyDashPad = function(px){
   if(state.current === 'dashboard') renderDevice();
 };
 if(window.__s3DashPad) document.documentElement.style.setProperty('--s3-dash-pad', window.__s3DashPad + 'px');
+// Room kept free at the bottom of the Dashboard and the Pages for the phone's bottom switch (#237 - owner, 11 Nov 2026:
+// 'resize them at the bottom ... create space for it so that using it doesn't have any disturbance ... This will avoid and
+// remove or reduce accidental touches'). The app says how much (the gesture line's area); asked at once as the page loads.
+let LIT_BOTTOM = 0;
+function litBottomPx(){ return LIT_BOTTOM; }
+function litBottomSet(px){
+  px = Math.max(0, Math.min(80, Math.round(+px || 0)));
+  if(px === LIT_BOTTOM) return false;
+  LIT_BOTTOM = px; document.documentElement.style.setProperty('--lit-bottom', px + 'px');
+  return true;
+}
+window.storyBottomRoom = function(px){ if(litBottomSet(px) && typeof renderDevice === 'function' && !IN_STATION3_WINDOW) renderDevice(); };
+try{ if(window.StoryNative && window.StoryNative.bottomRoom) litBottomSet(window.StoryNative.bottomRoom()); }catch(e){}
 // Ask the app for that room right away (owner: the bar showed up at a different time) - before, a freshly loaded page used a
 // default until the app told it a moment later, so the Dashboard's bar could first sit lower and then move into place.
 try{ if(window.StoryNative && window.StoryNative.dashPad){ const v = Math.round(+window.StoryNative.dashPad()); if(v >= 46){ document.documentElement.style.setProperty('--s3-dash-pad', v + 'px'); window.__s3DashPad = v; window.__s3DashPadSet = v; } } }catch(e){}
@@ -21502,7 +21515,9 @@ function fitPageToScreen(area, el, pageKey){
   const topBarEl = el.querySelector(':scope > .page-top');
   const frame = area.closest('.phone-screen, .laptop-screen') || document;
   const dock = frame.querySelector('.wallet-float-dock');
-  const key = page + '|' + area.clientWidth + 'x' + area.clientHeight + '|' + (dock ? 1 : 0) + (page === 'dashboard' && dashS3On() ? '|s3' + (window.__s3DashPad || 46) : '');
+  // Room kept free at the bottom for the phone's bottom switch (#237) - the Dashboard keeps its own (its Station 3 bar sits on it).
+  const room = (NATIVE && !el.classList.contains('s3-dash')) ? litBottomPx() : 0;
+  const key = page + '|' + area.clientWidth + 'x' + area.clientHeight + '|' + (dock ? 1 : 0) + (page === 'dashboard' && dashS3On() ? '|s3' + (window.__s3DashPad || 46) : '') + (room ? '|b' + room : '');
   const applyZoom = z=>{
     el.style.zoom = z === 1 ? '' : z.toFixed(4);
     // Keep the header (back button, title, dots) at its natural size and position so it lines
@@ -21542,7 +21557,7 @@ function fitPageToScreen(area, el, pageKey){
       dock.querySelectorAll('*').forEach(n=>{ const t = n.getBoundingClientRect().top; if(t > 0 && t < dockTop) dockTop = t; });
     }
     // In the app the page runs right down to the screen's edge, like Station 3 (no 6px gap).
-    return (dock ? dockTop : area.getBoundingClientRect().bottom) - (NATIVE ? 0 : 6);
+    return (dock ? dockTop : area.getBoundingClientRect().bottom - room) - (NATIVE ? 0 : 6);
   };
   // A size worked out while the page wasn't really on screen (ahead of time off screen, while the window rested, or
   // under the log-in screen) is only a first guess: the first time the page is really shown it's worked out once more

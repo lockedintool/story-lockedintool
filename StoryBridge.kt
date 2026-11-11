@@ -31,6 +31,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         /** The Pages' background picture: false = still loading (the Pages wait for it before showing), true = ready. */
         fun bgState(ready: Boolean)
         fun dashPadPx(): Int
+        fun bottomRoomCss(): Int
         fun systemSwipe()
         fun systemSwipeKind(kind: String)
         fun setDialSize(w: Int, h: Int)
@@ -774,6 +775,9 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
 
     @JavascriptInterface
     fun dashPad(): Int = if (pagesWin) runCatching { host.dashPadPx() }.getOrDefault(0) else 0
+    /** Room (CSS px) the Pages and the Dashboard keep free at the bottom for the phone's bottom switch (#237). */
+    @JavascriptInterface
+    fun bottomRoom(): Int = if (pagesWin) runCatching { host.bottomRoomCss() }.getOrDefault(0) else 0
 
     /** Station 3's profile button: Profile opens attached to Station 3 (tap again to close it). */
     @JavascriptInterface

@@ -193,6 +193,7 @@ class OverlayService : Service(), StoryBridge.Host {
         if (AppMove.handedOver(this) && getSharedPreferences("story", MODE_PRIVATE).getBoolean("moved_out", false)) { gated = true; running = false; stopSelf(); return }
         if (AppMove.needed(this)) { gated = true; running = false; stopSelf(); return }
         instance = this
+        SystemMode.syncHome(this); homePkgCache = null   // Lockedintool is the phone's Home app only in Only system (#237)
         getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("enabled", true).apply()
         quietApps(false)  // never leave the phone muted (e.g. STORY was restarted while the Pages were open)
         pickLayer()
@@ -1374,8 +1375,17 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun dashBandYPx(): Int {
         val line = if (sysQuiet()) 0
             else (if (phoneHasGestureLine()) 0 else navBarHeightPx() + (6 * dp).toInt()) + (26 * dp).toInt()
-        return maxOf(line, navInsetPx())
+        val pagesBottom = if (phoneHasGestureLine()) 0 else navBarHeightPx()
+        return maxOf(line, navInsetPx(), pagesBottom + bottomRoomPx())
     }
+    /** Room kept free at the bottom of the Dashboard and the Pages for the phone's bottom switch (#237 - owner, 11 Nov
+     *  2026: 'resize them at the bottom ... create space for it so that using it doesn't have any disturbance ... This
+     *  will avoid and remove or reduce accidental touches'). Gesture phones: the gesture line's area (at least the 26dp
+     *  strip Lockedintool's own switch uses), in every mode - the app too. 3-button phones: the Pages already stop above
+     *  the phone's buttons; as a system Lockedintool's own switch strip (26dp + 6dp) sits there. */
+    private fun bottomRoomPx(): Int = if (phoneHasGestureLine()) maxOf(navInsetPx(), (26 * dp).toInt())
+        else if (sysQuiet()) 0 else (32 * dp).toInt()
+    override fun bottomRoomCss(): Int = Math.round(bottomRoomPx() / dp)
     /** Station 3's bottom edge above the screen's bottom: 0 (the corner) everywhere but the Dashboard. */
     fun s3BandYPx(): Int = if (dashGeom) dashBandYPx() else 0
     /** On the Dashboard Station 3's background runs on to the bottom (owner), under the bottom line's place: down to
@@ -1420,14 +1430,15 @@ class OverlayService : Service(), StoryBridge.Host {
     } }
     /** The room (CSS px) the Dashboard keeps at its bottom: the bottom line's area, Station 3's 40dp band and 6dp. */
     private fun dashPadJs(): String {
-        val pad = dashPadPx()
-        return "window.__s3DashPad=$pad;window.storyDashPad&&window.storyDashPad($pad)"
+        val pad = dashPadPx(); val room = bottomRoomCss()
+        return "window.__s3DashPad=$pad;window.storyDashPad&&window.storyDashPad($pad);window.storyBottomRoom&&window.storyBottomRoom($room)"
     }
     /** The room (CSS px) at the Dashboard's bottom for its Station 3 bar. The page also asks for it the moment it loads
      *  (StoryNative.dashPad), so the bar is in its right place from the very first frame - not at a default first. */
     override fun dashPadPx(): Int {
         val pagesBottom = if (phoneHasGestureLine()) 0 else navBarHeightPx()   // the Pages stop above 3-button navigation
-        return Math.round((maxOf(0, dashBandYPx() - pagesBottom) + 46 * dp) / dp)
+        // The page keeps the bottom room itself (--lit-bottom, #237): the bar sits right above it, so it isn't counted twice.
+        return Math.round((maxOf(0, dashBandYPx() - pagesBottom - bottomRoomPx()) + 46 * dp) / dp)
     }
     /** Tells Station 3's page where it is: on the Pages (Rows / Page Styles column) and / or on the Dashboard (full width). */
     private fun tellS3(onPages: Boolean, onDash: Boolean) {
@@ -2078,9 +2089,9 @@ class OverlayService : Service(), StoryBridge.Host {
             closeStation3Now(); hideLiveWidgets()
             pagesPane?.takeIf { it.shown && !pagesInHome() }?.let { hideOne(it) }
             setInLit(false)
+            runCatching { LockDashActivity.instance?.finish() }
+            homePkgCache = null   // the phone's own home screen is the Home again (SystemMode.syncHome) - #237
             LockedintoolApp.open(this, "settings")
-            // Lockedintool was the phone's Home app (Only system): the phone asks you to pick your own home screen again.
-            if (isHomeApp()) runCatching { startActivity(Intent(android.provider.Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         } else {
             LockedintoolApp.current?.let { a -> homeGone(a); a.finish() }
             if (prefs.getString("system_pick", "second") == "only" && StoryAccessibilityService.instance != null) { SystemMode.set(this, true); systemModeChanged(); askHomeRole() }
@@ -2105,8 +2116,7 @@ class OverlayService : Service(), StoryBridge.Host {
             getSharedPreferences("story", MODE_PRIVATE).edit().putString("system_pick", mode).apply()
             if (mode == "only" && !SystemMode.on(this) && StoryAccessibilityService.instance != null) { SystemMode.set(this, true); systemModeChanged(); askHomeRole() }
             if (mode == "second" && SystemMode.on(this)) {
-                SystemMode.set(this, false); systemModeChanged()
-                if (isHomeApp()) runCatching { startActivity(Intent(android.provider.Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                SystemMode.set(this, false); systemModeChanged(); homePkgCache = null   // the phone's own home screen is the Home again (#237)
             }
         }
         systemAnswer("pick", mode, result)
@@ -2598,7 +2608,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  screen, everything; on Second system only when Lockedintool security is your security ('even if you're on second
      *  system ... and you set Lockedintool security, Lockedintool would be now your lock screen'). Phone's security on
      *  Second system = the phone's own lock screen. */
-    fun lockScreenOurs() = SystemMode.on(this) || Security.lit(this)
+    fun lockScreenOurs() = !sysQuiet() && (SystemMode.on(this) || Security.lit(this))   // never as an app (#237)
     /** Unlocked on Lockedintool's lock screen: you land on your Home Screen - Lockedintool's Home on Only system, the
      *  Pages on your Home Screen on Second system (the app you were in stays in Recents). */
     fun lockDashOpenHome(act: android.app.Activity) {

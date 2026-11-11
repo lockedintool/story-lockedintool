@@ -722,14 +722,24 @@ class OverlayService : Service(), StoryBridge.Host {
             override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
                 val u = r.url.toString(); return !(u.startsWith(REMOTE) || u.startsWith(LOCAL))
             }
-            // No signal / site unreachable: fall back to the copy built into the app.
+            // No signal / site unreachable: fall back to the copy built into the app - but only after one more try 1.5 s
+            // later (#251 - owner, 11 Nov 2026: Station 3's Messages / Profile asked to log in while logged in). The built-in
+            // copy runs from another address, where the account isn't stored, so a short error while new screens go out
+            // left that window on 'Welcome'.
+            var retried = false
+            fun fallBack(v: WebView, u: String) {
+                if (!retried) { retried = true; ui.postDelayed({ v.loadUrl(u) }, 1500); return }
+                paneRef?.ver = "local"; v.loadUrl(LOCAL + query)
+            }
             override fun onReceivedError(v: WebView, r: WebResourceRequest, e: android.webkit.WebResourceError) {
-                if (r.isForMainFrame && r.url.toString().startsWith(REMOTE)) { paneRef?.ver = "local"; v.loadUrl(LOCAL + query) }
+                if (r.isForMainFrame && r.url.toString().startsWith(REMOTE)) fallBack(v, r.url.toString())
             }
             override fun onReceivedHttpError(v: WebView, r: WebResourceRequest, e: WebResourceResponse) {
-                if (r.isForMainFrame && r.url.toString().startsWith(REMOTE)) { paneRef?.ver = "local"; v.loadUrl(LOCAL + query) }
+                if (r.isForMainFrame && r.url.toString().startsWith(REMOTE)) fallBack(v, r.url.toString())
             }
             override fun onPageFinished(v: WebView, url: String) {
+                if (url.startsWith(REMOTE)) retried = false
+                if (profile && !gap && url.startsWith(REMOTE)) s3PageWanted?.let { w -> s3PageWanted = null; ui.postDelayed({ secGate(profilePane) { openS3Page(w) } }, 250) }
                 if (profile) {
                     v.evaluateJavascript(profileGeometryJs(), null)
                     v.evaluateJavascript("window.storyProfileOnly&&window.storyProfileOnly()", null)
@@ -2425,11 +2435,14 @@ class OverlayService : Service(), StoryBridge.Host {
             Thread { if (CallHistory.finishFromLog(this@OverlayService)) ui.post { tellCalls() } }.start()
         }
     }
+    private var s3PageWanted: String? = null
     private fun toggleS3Page(which: String) { ui.post {
         val p = profilePane ?: return@post
         if (p.shown && s3Page == which) { hideOne(p); return@post }
         if (p.shown) { s3Page = which; p.web.evaluateJavascript("window.storyS3Page&&window.storyS3Page('$which')", null); syncCreate(); return@post }
         if (s3Pane?.shown != true && !(s3Held && dashGeom)) return@post   // Station 3 open, or the Dashboard's own bar
+        // On the built-in copy (another address - no account there): load the real screens first, then open (#251).
+        if (p.ver == "local") { s3PageWanted = which; reload(p); profileGapPane?.let { reload(it) }; return@post }
         secGate(profilePane) { openS3Page(which) }
     } }
     private fun openS3Page(which: String) {

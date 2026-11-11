@@ -53,7 +53,8 @@ jobs:
         if: github.event_name == 'push'
         run: |
           npm i --no-save --silent playwright@1.48.2
-          npx playwright install --with-deps chromium >/dev/null
+          # Ubuntu's package servers can be unreachable from GitHub (11 Nov 2026 - only fonts failed): then just the browser.
+          timeout 300 npx playwright install --with-deps chromium >/dev/null || npx playwright install chromium >/dev/null
           python3 -m http.server 8800 >/dev/null 2>&1 &
           sleep 2
           node owner-checks.mjs http://localhost:8800/index.html

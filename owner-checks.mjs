@@ -210,6 +210,25 @@ for (const [w, h] of SIZES) {
   }
   await ctx.close();
 }
+// The tour for new users (#245 - owner, 11 Nov 2026: 'new users should get a tour guide around the whole app. Also they can
+// skip the tutorial if they want'): a new account sees it, every step has Skip tour, and once skipped it never comes back.
+{
+  const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' }));
+    if (!sessionStorage.getItem('tour-seeded')) { localStorage.setItem('story-tour', 'start'); sessionStorage.setItem('tour-seeded', '1'); } } catch (e) {} });
+  await ctx.route('**/*', r => r.request().url().startsWith('http://localhost') ? r.continue() : r.abort());
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  const seen = await pg.evaluate(() => { const o = document.getElementById('lit-tour'); return o ? !!o.querySelector('[data-tour="skip"]') : null; });
+  if (seen === null) fail('tour for new users', 'new account', 'the tour did not show');
+  else if (!seen) fail('tour for new users', 'first step', 'no Skip tour button');
+  else {
+    await pg.click('#lit-tour [data-tour="skip"]'); await pg.waitForTimeout(300);
+    await pg.reload(); await pg.waitForTimeout(2500);
+    if (await pg.evaluate(() => !!document.getElementById('lit-tour'))) fail('tour for new users', 'after Skip tour', 'the tour came back');
+  }
+  await ctx.close();
+}
 await within(b.close(), 15000);
 clearTimeout(WATCHDOG);
 if (fails.length) { console.log('OWNER RULES BROKEN (' + fails.length + '):\n' + fails.join('\n')); process.exit(1); }

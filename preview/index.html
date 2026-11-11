@@ -4004,6 +4004,9 @@
   /* Background picture (Layouts): the screen's own black backgrounds turn see-through so the picture shows behind the cards. */
   #content-area.lit-noscroll{ overflow-y:hidden !important; overscroll-behavior:none; }
   #content-area.lit-has-bg > *, .lit-has-bg .page-shell, .lit-has-bg .story-screen, .lit-has-bg .layouts-shell{ background-color:transparent !important; background-image:none !important; }
+  /* #250 (owner, 11 Nov 2026, the Apps letter bubble circled: 'The indicator there its not visible'): the rule above made the
+     bubble see-through on a picture - it stays solid: your text colour with the letter in your background colour. */
+  #content-area.lit-has-bg > .az-bubble{ background-color:rgb(var(--litc-text-rgb, 255, 255, 255)) !important; color:rgb(var(--litc-bg-rgb, 0, 0, 0)) !important; }
   .litbg-preview{ height:190px; border-radius:16px; border:1px solid var(--line); background:#000 center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; margin:10px 0 4px; }
   .litbg-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:8px; }
   .group-photo{ aspect-ratio:1; padding:0; border:none; border-radius:8px; overflow:hidden; background:var(--card-2); }

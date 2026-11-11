@@ -233,6 +233,21 @@ for (const [w, h] of SIZES) {
   }
   await ctx.close();
 }
+// 'Add a send button for your search to go through' (#249 - owner, 11 Nov 2026): one tap on it opens the search.
+{
+  const ctx = await b.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); localStorage.setItem('story-tour', 'done'); } catch (e) {}
+    window.__urls = []; window.StoryNative = new Proxy({}, { get: (t, k) => (...a) => { if (k === 'openUrl') window.__urls.push(a[0]); return k === 'bottomRoom' ? 48 : ''; } }); });
+  await ctx.route('**/*', r => r.request().url().startsWith('http://localhost') ? r.continue() : r.abort());
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  await pg.evaluate(() => window.storyShow('dashboard', false)); await pg.waitForTimeout(500);
+  const has = await pg.evaluate(() => { const i = document.getElementById('dash-search-input'); if (!i || !document.getElementById('dash-search-send')) return false; i.removeAttribute('readonly'); i.value = 'weather'; i.dispatchEvent(new Event('input')); return true; });
+  if (!has) fail('search send button', 'Dashboard', 'no send button in the search bar');
+  else { await pg.tap('#dash-search-send'); await pg.waitForTimeout(300);
+    if (!(await pg.evaluate(() => window.__urls.length))) fail('search send button', 'Dashboard', 'tapping send did not open the search'); }
+  await ctx.close();
+}
 await within(b.close(), 15000);
 clearTimeout(WATCHDOG);
 if (fails.length) { console.log('OWNER RULES BROKEN (' + fails.length + '):\n' + fails.join('\n')); process.exit(1); }

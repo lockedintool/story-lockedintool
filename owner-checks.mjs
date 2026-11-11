@@ -184,9 +184,13 @@ for (const [w, h] of SIZES) {
       const out = []; a.querySelectorAll('*').forEach(el => { if (out.length > 3) return;
         if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
         const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
-        if (getComputedStyle(el).textShadow === 'none') out.push(el.textContent.trim().slice(0, 30)); });
+        // on the picture = nothing with its own background between the word and the picture (#247)
+        let onPic = true; for (let n = el; n && n !== a; n = n.parentElement) { const cs = getComputedStyle(n), m = cs.backgroundColor.match(/[\d.]+/g); if (cs.backgroundImage !== 'none' || (m && (m.length < 4 || +m[3] > 0.25))) { onPic = false; break; } }
+        const sh = getComputedStyle(el).textShadow !== 'none';
+        if (onPic && !sh) out.push('no halo: ' + el.textContent.trim().slice(0, 30));
+        if (!onPic && sh) out.push('halo inside a button / card: ' + el.textContent.trim().slice(0, 30)); });
       return out; }, [s, tiny]);
-    if (bare.length) fail('every word stays readable', s + ' on a background picture (no halo)', bare.join(', '));
+    if (bare.length) fail('every word stays readable', s + ' on a background picture', bare.join(', '));
   }
   await ctx.close();
 }

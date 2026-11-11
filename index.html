@@ -4101,7 +4101,11 @@
      as bright as the page's own text. */
   /* #243: !important + the extra class beat the app look's 'html.focus .phone-screen * { text-shadow:none !important }',
      which silently took the halo away on phones. Stacked thin layers = a solid edge round every letter, even tiny ones. */
-  .lit-has-bg, .lit-has-bg *, html.focus .phone-screen .lit-has-bg.lit-has-bg, html.focus .phone-screen .lit-has-bg.lit-has-bg *{ text-shadow:1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 3px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 6px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 12px rgba(var(--lit-halo, 0, 0, 0), 0.85) !important; }
+  /* #247 (owner's screenshots, 11 Nov 2026: 'The whole app has this style on words' - HOME / Tap to Pay unreadable): the halo is
+     ONLY for words lying straight on the picture (litMarkOnPic marks them .lit-on-pic); words inside buttons / cards with their
+     own background have none. */
+  .lit-has-bg .lit-on-pic, html.focus .phone-screen .lit-has-bg.lit-has-bg .lit-on-pic{ text-shadow:1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 3px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 6px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 12px rgba(var(--lit-halo, 0, 0, 0), 0.85) !important; }
+  .lit-has-bg *:not(.lit-on-pic), html.focus .phone-screen .lit-has-bg.lit-has-bg *:not(.lit-on-pic){ text-shadow:none !important; }
   .lit-has-bg .section-title, .lit-has-bg .page-shell > .row-sub, .lit-has-bg .story-screen > .row-sub{ color:rgba(var(--litc-text-rgb, 255, 255, 255), 1) !important; }   /* #238: the System switch is Second system's (customers) */
   /* Apps search + letter bar (#236 - owner). The two wiggles are the owner's own exception to the rule above. */
   .apps-shell{ padding-right:24px; }
@@ -4709,6 +4713,22 @@ function litBgArea(area, screen){
   area.style.setProperty('background-size', 'cover', 'important');
   area.style.setProperty('background-position', 'center', 'important');
 }
+// Words lying straight on the background picture get the halo; words inside anything with its own background don't (#247).
+function litMarkOnPic(area){
+  if(!area) return;
+  if(!area.classList.contains('lit-has-bg')){ area.querySelectorAll('.lit-on-pic').forEach(e=>e.classList.remove('lit-on-pic')); return; }
+  const solid = new Map();
+  const own = el=>{ if(solid.has(el)) return solid.get(el); const cs = getComputedStyle(el); const m = cs.backgroundColor.match(/[\d.]+/g);
+    const v = cs.backgroundImage !== 'none' || !!(m && (m.length < 4 || +m[3] > 0.25)); solid.set(el, v); return v; };
+  const onPic = el=>{ for(let n = el; n && n !== area; n = n.parentElement){ if(own(n)) return false; } return true; };
+  area.querySelectorAll('*').forEach(el=>{
+    if(![...el.childNodes].some(n=>n.nodeType === 3 && n.textContent.trim())){ if(el.classList.contains('lit-on-pic')) el.classList.remove('lit-on-pic'); return; }
+    el.classList.toggle('lit-on-pic', onPic(el));
+  });
+  if(!area.__litPicObs && window.MutationObserver){ let q = false;
+    area.__litPicObs = new MutationObserver(()=>{ if(q) return; q = true; requestAnimationFrame(()=>{ q = false; litMarkOnPic(area); }); });
+    area.__litPicObs.observe(area, { childList:true, subtree:true, characterData:true }); }
+}
 function litApplyColors(){
   const area = document.getElementById('content-area');
   if(!area) return;
@@ -4735,6 +4755,7 @@ function litApplyColors(){
   }
   litRecolorArea(area, state.current || 'dashboard');
   litBgArea(area, (document.querySelector('.lit-auth') || (state.pageStyleOn && state.pageStyleViewOpen) || state.rowsViewOpen || state.current === 'layouts-bg') ? null : (state.current || 'dashboard'));
+  litMarkOnPic(area);
 }
 // Puts one colour system on an element (its own colours and everything inside it).
 function litSetVars(el, sys){
@@ -21897,7 +21918,7 @@ function buildNeighbor(pg){
   host.innerHTML = frameHTML;
   document.body.appendChild(host);
   const area = host.querySelector('#content-area');
-  if(area){ area.innerHTML = contentHTML; if(!SCROLL_PAGES.has(pg) && pg !== 'apps') area.classList.add('lit-noscroll'); try{ litRecolorArea(area, pg); litBgArea(area, pg); }catch(e){} try{ fitPageToScreen(area, null, pg); }catch(e){} }   // recolour the neighbour so a swipe never flashes its plain look
+  if(area){ area.innerHTML = contentHTML; if(!SCROLL_PAGES.has(pg) && pg !== 'apps') area.classList.add('lit-noscroll'); try{ litRecolorArea(area, pg); litBgArea(area, pg); litMarkOnPic(area); }catch(e){} try{ fitPageToScreen(area, null, pg); }catch(e){} }   // recolour the neighbour so a swipe never flashes its plain look
   NEIGHBORS[pg] = { host, w:r.width, h:r.height };
   return NEIGHBORS[pg];
 }

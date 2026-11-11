@@ -49,8 +49,8 @@ object Updater {
     }
 
     // ---- What the setup screen shows ----
-    fun setStatus(ctx: Context, s: String) {
-        if (Regex("failed|stopped|Couldn't start|Couldn't download", RegexOption.IGNORE_CASE).containsMatchIn(s)) ProblemLog.record(ctx, "update", s, "updater")
+    fun setStatus(ctx: Context, s: String, report: Boolean = true) {
+        if (report && Regex("failed|stopped|Couldn't start|Couldn't download", RegexOption.IGNORE_CASE).containsMatchIn(s)) ProblemLog.record(ctx, "update", s, "updater")
         ctx.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putString("upd_status", s).putLong("upd_status_at", System.currentTimeMillis()).apply()
     }
     /** Download progress 0-100 while downloading, -1 while installing (no percentage), null otherwise. */
@@ -314,7 +314,10 @@ class InstallResultReceiver : BroadcastReceiver() {
                 Updater.doneProgress(c)
                 val why = i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
                 OverlayService.instance?.resumeNow()
-                Updater.setStatus(c, "Quiet update stopped${if (why != null) " ($why)" else ""} - it will try again")
+                // Not a problem (#240): the phone refused the quiet install on purpose (Samsung's own check:
+                // INSTALL_FAILED_VERIFICATION_FAILURE) or the installer was closed (ABORTED) - Android's own install
+                // screen takes over (fallback), so it isn't sent to the problem report any more.
+                Updater.setStatus(c, "Quiet update stopped${if (why != null) " ($why)" else ""} - it will try again", report = false)
                 fallback(c)
             }
             else -> {

@@ -2719,6 +2719,21 @@
   #story-profile .up-fcs-bar{ display:flex; gap:8px; padding-top:8px; border-top:1px solid var(--pf-hair); }
   #story-profile .up-fcs-bar input{ flex:1; min-width:0; border:1px solid var(--pf-hair); border-radius:20px; padding:10px 14px; background:transparent; color:var(--pf-fg); font:inherit; font-size:14px; outline:none; }
   #story-profile .up-fcs-bar button{ border:none; background:transparent; color:var(--pf-fg); font:inherit; font-weight:800; font-size:14px; }
+  /* #253: the bell (your activity) and the ⋮ (who can see your status) beside Updates' search bar. */
+  #story-profile .up-top-btn{ position:relative; flex:none; width:40px; height:40px; border-radius:12px; border:1px solid var(--pf-hair); background:transparent; color:inherit; display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer; }
+  #story-profile .up-bell-dot{ position:absolute; top:7px; right:8px; min-width:8px; height:8px; border-radius:4px; background:#FF3B30; }
+  #story-profile .up-actview{ position:fixed; inset:0; z-index:34; background:var(--pf-bg); overflow-y:auto; padding:calc(var(--pf-top, 24px) + 16px) 20px 60px; box-sizing:border-box; scrollbar-width:none; }
+  #story-profile .up-actview::-webkit-scrollbar{ display:none; }
+  #story-profile .act-row{ display:flex; align-items:center; gap:10px; padding:11px 0; border-top:1px solid var(--pf-hair); cursor:pointer; }
+  #story-profile .act-row .msg-pic{ width:40px; height:40px; flex:none; }
+  #story-profile .act-txt{ flex:1; min-width:0; font-size:14px; line-height:1.35; }
+  #story-profile .act-txt b{ font-weight:700; }
+  #story-profile .act-txt i{ display:block; font-style:normal; font-size:12px; opacity:.6; margin-top:2px; }
+  #story-profile .act-row.new .act-txt{ font-weight:600; }
+  #story-profile .act-btns{ display:flex; gap:6px; flex:none; }
+  #story-profile .act-btns button{ font:inherit; font-size:12.5px; font-weight:600; border-radius:999px; padding:6px 11px; cursor:pointer; }
+  #story-profile .act-no{ background:transparent; border:1px solid #4a4a4a; color:#ffffff; }
+  #story-profile .act-yes{ background:#ffffff; border:1px solid #ffffff; color:#000000; }
   #story-profile .up-postview{ position:fixed; inset:0; z-index:35; background:var(--pf-bg); overflow-y:auto; padding:calc(var(--pf-top, 24px) + 16px) 20px 60px; box-sizing:border-box; scrollbar-width:none; }
   #story-profile .up-postview::-webkit-scrollbar{ display:none; }
   #story-profile .up-cell-t{ display:flex; align-items:center; justify-content:center; padding:8px; color:var(--pf-fg); font:inherit; font-size:11px; font-weight:700; line-height:1.3; text-align:center; overflow:hidden; }
@@ -11386,7 +11401,7 @@ window.storyProfileOnly = function(){
     </div>
     <div class="pf-scroll pf-updates" hidden>
       <div class="pf-msgs-top">
-        <label class="pf-msgs-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search anyone on Lockedintool" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></label>
+        <label class="pf-msgs-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search people" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></label><button class="up-top-btn" data-pf="up-activity" aria-label="Activity"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="up-bell-dot" hidden></span></button><button class="up-top-btn" data-pf="up-more" aria-label="Status privacy"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>
       </div>
       <div class="up-status-row"></div>
       <div class="up-lives" hidden></div>
@@ -11410,6 +11425,7 @@ window.storyProfileOnly = function(){
       <div class="up-cp-n"></div>
     </div>
     <div class="up-postview" hidden></div>
+    <div class="up-actview" hidden></div>
     <div class="up-fcs" hidden>
       <div class="up-fcs-head"><span>Comments</span><button data-pf="fcs-close" aria-label="Close">×</button></div>
       <div class="up-fcs-list"></div>
@@ -11607,6 +11623,11 @@ window.storyProfileOnly = function(){
     else if(k === 'up-st-new'){ e.stopPropagation(); upNewStatus(); }
     else if(k === 'up-st-open'){ const s = ((UP.data || {}).statuses || []).find(x=>x.user.id === b.getAttribute('data-id')); if(s){ const seen = upSeen(); const first = s.items.findIndex(i=>!seen[i.id]); upView(s.user, s.items, first < 0 ? 0 : first, true); } }
     else if(k === 'up-person') upOpenPerson(b.getAttribute('data-id'));
+    else if(k === 'up-activity') actOpen();
+    else if(k === 'act-close') actClose();
+    else if(k === 'act-req'){ e.stopPropagation(); actRequest(b.getAttribute('data-id'), b.getAttribute('data-a') === 'accept'); }
+    else if(k === 'act-row') actTap(b.getAttribute('data-i'));
+    else if(k === 'up-more') upStatusPrivacySheet();
     else if(k === 'up-follow'){ e.stopPropagation(); upFollow(b.getAttribute('data-id'), b); }
     else if(k === 'up-person-back') upClosePerson();
     else if(k === 'up-p-status'){ const p = UP.person; if(p && (p.statuses || []).length) upView(p, p.statuses, 0, true); }
@@ -12208,6 +12229,65 @@ function upPersonRowHTML(u){
     (u.about ? '<span class="up-about">' + escText(u.about) + '</span>' : '') + '</span>' +
     (me ? '' : '<button class="up-follow' + (u.isFollowing || u.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(u.id) + '">' + (u.isFollowing ? 'Following' : u.requested ? 'Requested' : 'Follow') + '</button>') + '</div>';
 }
+// ---- Your activity (#253 - owner, 11 Nov 2026: 'a notification icon - tapped you see lockedintool notifications: people
+// you follow that they posted, or requests, or who comment on your posts, likes, shares - your account activity basically')
+// and the ⋮ beside it: who can see your status ('settings there for status privacy'). ----
+const ACT = { list:null };
+function actLine(a){
+  const k = a.kind, t = a.text || '';
+  if(k === 'status') return 'posted a status';
+  if(k === 'post') return 'shared a new post';
+  if(k === 'highlight') return 'added to a highlight';
+  if(k === 'request') return a.pending ? 'wants to follow you' : 'asked to follow you';
+  if(k === 'follow') return 'started following you';
+  if(k === 'accepted') return 'accepted your follow request';
+  if(k === 'like') return t === 'status' ? 'liked your status' : 'liked your post';
+  if(k === 'share') return 'shared your post';
+  if(k === 'comment'){ const st = t.indexOf('s:') === 0; return 'commented on your ' + (st ? 'status' : 'post') + ': “' + escText(st ? t.slice(2) : t) + '”'; }
+  return '';
+}
+function actRender(){
+  const el = upEl(); if(!el) return;
+  const v = el.querySelector('.up-actview'); if(!v || v.hidden) return;
+  const head = '<div class="pf-ed-head"><button class="pf-ed-back" data-pf="act-close" aria-label="Back">‹</button><div class="pf-ed-title">Activity</div></div>';
+  if(!ACT.list){ v.innerHTML = head + '<div class="up-feed-note">Loading…</div>'; return; }
+  if(ACT.list.error){ v.innerHTML = head + '<div class="up-feed-note">No connection right now</div>'; return; }
+  if(!ACT.list.length){ v.innerHTML = head + '<div class="up-feed-note">Nothing yet - posts from people you follow, follow requests, likes, comments and shares on your posts show here.</div>'; return; }
+  v.innerHTML = head + ACT.list.map((a, i)=>'<div class="act-row' + (a.seen ? '' : ' new') + '" data-pf="act-row" data-i="' + i + '">' + upPic(a.user) +
+    '<span class="act-txt"><b>' + escText(upName(a.user)) + '</b> ' + actLine(a) + '<i>' + escText(msgTime(a.at)) + '</i></span>' +
+    (a.kind === 'request' && a.pending ? '<span class="act-btns"><button class="act-no" data-pf="act-req" data-a="decline" data-id="' + escText(a.user.id) + '">Decline</button><button class="act-yes" data-pf="act-req" data-a="accept" data-id="' + escText(a.user.id) + '">Accept</button></span>' : '') +
+    '</div>').join('');
+}
+async function actOpen(){
+  const el = upEl(); if(!el) return;
+  const v = el.querySelector('.up-actview'); v.hidden = false; v.scrollTop = 0;
+  ACT.list = null; actRender();
+  try{ ACT.list = (await msgApi('/v1/activity')).activity || []; }catch(e){ ACT.list = []; ACT.list.error = true; }
+  if(UP.data) UP.data.activityNew = 0;
+  actRender(); upBellPaint();
+}
+function actClose(){ const el = upEl(); if(!el) return; const v = el.querySelector('.up-actview'); v.hidden = true; v.innerHTML = ''; }
+async function actRequest(id, accept){
+  try{ await msgApi('/v1/follow/respond', { id, accept }); showToast(accept ? 'Request accepted' : 'Request declined');
+    (ACT.list || []).forEach(a=>{ if(a.kind === 'request' && a.user.id === id) a.pending = false; }); actRender(); upLoad(); }
+  catch(e){ showToast('No connection right now'); }
+}
+function actTap(i){
+  const a = (ACT.list || [])[+i]; if(!a) return;
+  const post = a.ref && (a.kind === 'post' || a.kind === 'share' || (a.kind === 'like' && a.text !== 'status') || (a.kind === 'comment' && (a.text || '').indexOf('s:') !== 0));
+  actClose();
+  if(post) upShowPost(a.ref); else upOpenPerson(a.user.id);
+}
+function upBellPaint(){
+  const el = upEl(); if(!el) return;
+  const dot = el.querySelector('.up-bell-dot'); if(dot) dot.hidden = !(UP.data && UP.data.activityNew > 0);
+}
+function upStatusPrivacySheet(){
+  const p = storyPrivacy(), cur = ['following', 'followers', 'nobody'].includes(p.status) ? p.status : 'public';
+  const opt = (v, label)=>({ label: (cur === v ? '✓ ' : '') + label, fn: ()=>{ const q = storyPrivacy(); q.status = v; setStoryPrivacy(q); showToast('Status: ' + label); } });
+  litSheet({ title:'Who can see your status', text: profilePrivacy() === 'private' ? 'Your account is private, so only followers you accepted can see it - within this choice.' : '',
+    items:[opt('public', 'Public - people you follow and your followers'), opt('following', 'Only people you follow'), opt('followers', 'Only your followers'), opt('nobody', 'No one')] });
+}
 function upRender(){
   const el = upEl(); if(!el) return;
   const box = el.querySelector('.pf-updates'); if(!box || box.hidden) return;
@@ -12222,7 +12302,7 @@ function upRender(){
   empty.querySelector('.pf-msgs-empty-t').textContent = !msgAccount() ? 'Connecting to Lockedintool…'
     : searching ? (UP.found === null ? 'Searching…' : 'No one on Lockedintool by that name yet.')
     : UP.loading && !d ? 'Loading…' : d && d.error ? 'No connection right now' : 'No other profiles yet.';
-  feedRender();
+  feedRender(); upBellPaint();
 }
 // ---- The feed (owner): everything posted on Lockedintool, newest first. The Profiles list shows after the first few
 // posts ("after a couple of scrolls into the feed"); more posts load as you scroll (no loop - only on scroll). ----
@@ -12351,6 +12431,7 @@ function fpShare(id){
     const m = { id: 'm' + Date.now() + Math.random().toString(36).slice(2, 6), from:'me', text, at: Date.now(), status:'sending' };
     (c.messages = c.messages || []).push(m); saveMsgChats(); msgOut({ type:'send', chatId: c.id, id: m.id, text }); renderMsgList();
     showToast('Sent to ' + (c.name || '@' + c.username));
+    msgApi('/v1/uposts/share', { id: p.id }).catch(()=>{});   // the owner of the post sees it in their activity (#253)
   } })) });
 }
 function fpMore(id){

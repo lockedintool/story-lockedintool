@@ -175,6 +175,10 @@ export class Hub {
     this.sql.exec(`CREATE INDEX IF NOT EXISTS follows_fid ON follows(fid)`);
     // Follow requests (#246): a follow of a PRIVATE account waits (ok = 0) until its owner accepts; NULL / 1 = following.
     try { this.sql.exec(`ALTER TABLE follows ADD COLUMN ok INTEGER`); } catch (e) {}
+    // Your activity (#253 - owner, 11 Nov 2026: 'a notification icon - tapped you see lockedintool notifications: people you
+    // follow that they posted, or requests, or who comment on your posts, likes, shares - your account activity basically').
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS activity (id TEXT PRIMARY KEY, uid TEXT, kind TEXT, fromuid TEXT, ref TEXT, text TEXT, at INTEGER, seen INTEGER DEFAULT 0)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS activity_uid ON activity(uid, at)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS media (id TEXT, i INTEGER, n INTEGER, uid TEXT, mime TEXT, data BLOB, at INTEGER, PRIMARY KEY (id, i))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS uposts (id TEXT PRIMARY KEY, uid TEXT, kind TEXT, type TEXT, media TEXT, thumb TEXT, at INTEGER)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS uposts_uid ON uposts(uid, kind, at)`);
@@ -289,6 +293,7 @@ export class Hub {
       if (path.startsWith('/v1/bank/')) return this.bank(me, path.slice(9), url);
       if (path === '/v1/follow') return this.follow(me, body);
       if (path === '/v1/follow/requests') return this.followRequests(me);
+      if (path === '/v1/activity') return this.activityList(me);
       if (path === '/v1/follow/respond') return this.followRespond(me, body);
       if (path === '/v1/profile') return this.profile(me, url.searchParams.get('id') || me.id);
       if (path === '/v1/updates') return this.updates(me);
@@ -477,6 +482,22 @@ export class Hub {
     for (const id of ids) storeOf(this.env, id).fetch('https://store/del?id=' + encodeURIComponent(id), { method: 'POST' }).catch(() => {});
   }
   follows(a, b) { return !!this.one('SELECT 1 AS x FROM follows WHERE uid = ? AND fid = ? AND (ok IS NULL OR ok = 1)', a, b); }
+  act(uid, kind, from, ref, text) {
+    if (!uid || !from || uid === from || this.blocked(uid, from)) return;
+    // one row per person + thing (a second like of the same post just moves it to the top)
+    if (['like', 'follow', 'request', 'accepted', 'share'].includes(kind)) this.sql.exec('DELETE FROM activity WHERE uid = ? AND kind = ? AND fromuid = ? AND ref = ?', uid, kind, from, ref || '');
+    this.sql.exec('INSERT INTO activity (id, uid, kind, fromuid, ref, text, at, seen) VALUES (?, ?, ?, ?, ?, ?, ?, 0)', 'a' + rand(10), uid, kind, from, ref || '', String(text || '').slice(0, 120), Date.now());
+    if (Math.random() < 0.05) this.sql.exec('DELETE FROM activity WHERE uid = ? AND at < (SELECT at FROM activity WHERE uid = ? ORDER BY at DESC LIMIT 1 OFFSET 299)', uid, uid);
+  }
+  activityList(me) {
+    const rows = this.sql.exec('SELECT a.*, u.name, u.username, u.photo FROM activity a LEFT JOIN users u ON u.id = a.fromuid WHERE a.uid = ? ORDER BY a.at DESC LIMIT 150', me.id).toArray()
+      .filter(r => (r.name != null || r.username != null) && !this.blocked(me.id, r.fromuid));
+    const out = rows.map(r => ({ id: r.id, kind: r.kind, ref: r.ref, text: r.text || '', at: r.at, seen: !!r.seen,
+      pending: r.kind === 'request' ? this.requested(r.fromuid, me.id) : undefined,
+      user: { id: r.fromuid, name: r.name || '', username: r.username || '', photo: this.mediaUrl(r.photo) } }));
+    this.sql.exec('UPDATE activity SET seen = 1 WHERE uid = ? AND seen = 0', me.id);
+    return json({ activity: out });
+  }
   requested(a, b) { return !!this.one('SELECT 1 AS x FROM follows WHERE uid = ? AND fid = ? AND ok = 0', a, b); }
   canSeeStatus(viewer, owner) {
     if (viewer.id === owner.id) return true;
@@ -537,6 +558,7 @@ export class Hub {
       if (this.blocked(me.id, f.uid)) continue;
       if (kind === 'status') { const u = this.one('SELECT * FROM users WHERE id = ?', f.uid); if (!u || !this.canSeeStatus(u, me)) continue; }
       this.deliver(f.uid, { t: 'fnote', kind, id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
+      if (kind !== 'live') this.act(f.uid, kind, me.id, id);
     }
   }
   statusesOf(u, me) {
@@ -552,6 +574,7 @@ export class Hub {
       const ask = this.isPrivate(u);
       this.sql.exec('INSERT INTO follows (uid, fid, at, ok) VALUES (?, ?, ?, ?)', me.id, u.id, Date.now(), ask ? 0 : 1);
       if (ask) this.deliver(u.id, { t: 'fnote', kind: 'request', id: me.id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
+      this.act(u.id, ask ? 'request' : 'follow', me.id, '');
     }
     return json(this.personView(u, me));
   }
@@ -566,6 +589,7 @@ export class Hub {
     if (b.accept) {
       this.sql.exec('UPDATE follows SET ok = 1 WHERE uid = ? AND fid = ?', id, me.id);
       this.deliver(id, { t: 'fnote', kind: 'accepted', id: me.id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
+      this.act(id, 'accepted', me.id, '');
     } else this.sql.exec('DELETE FROM follows WHERE uid = ? AND fid = ?', id, me.id);
     return this.followRequests(me);
   }
@@ -585,7 +609,7 @@ export class Hub {
       .sort((a, b) => (b.user.id === me.id) - (a.user.id === me.id) || b.items[b.items.length - 1].at - a.items[a.items.length - 1].at);
     const profiles = this.sql.exec(`SELECT u.*, (SELECT COUNT(*) FROM follows f WHERE f.fid = u.id AND (f.ok IS NULL OR f.ok = 1)) AS fc FROM users u
        WHERE u.id != ? AND (u.name IS NOT NULL OR u.username IS NOT NULL) ORDER BY (u.official = 1) DESC, fc DESC, u.created DESC LIMIT 300`, me.id).toArray().filter(u => this.canSeeProfile(me, u)).slice(0, 60).map(lite);
-    return json({ me: this.personView(me, me), statuses, profiles });
+    return json({ me: this.personView(me, me), statuses, profiles, activityNew: this.one('SELECT COUNT(*) AS n FROM activity WHERE uid = ? AND seen = 0', me.id).n });
   }
   uposts(me, op, b) {
     if (op === 'create') {
@@ -614,19 +638,21 @@ export class Hub {
       return json(Object.assign(this.postView(p, me), { user: this.feedUser(owner, me) }));
     }
     // A status / post you're allowed to see: heart it, comment under it, read its comments.
-    if (['heart', 'comment', 'comments', 'uncomment'].includes(op)) {
+    if (['heart', 'comment', 'comments', 'uncomment', 'share'].includes(op)) {
       const p = this.one("SELECT * FROM uposts WHERE id = ? AND (kind = 'post' OR (kind = 'status' AND at >= ?))", String(b.id || ''), Date.now() - 86400000);
       const owner = p && this.one('SELECT * FROM users WHERE id = ?', p.uid);
       if (!p || !owner || !(p.kind === 'status' ? this.canSeeStatus(me, owner) : this.canSeeProfile(me, owner))) return json({ error: 'notfound' }, 404);
       if (op === 'heart') {
         if (b.on === false) this.sql.exec('DELETE FROM ulikes WHERE pid = ? AND uid = ?', p.id, me.id);
-        else this.sql.exec('INSERT OR IGNORE INTO ulikes (pid, uid, at) VALUES (?, ?, ?)', p.id, me.id, Date.now());
+        else { this.sql.exec('INSERT OR IGNORE INTO ulikes (pid, uid, at) VALUES (?, ?, ?)', p.id, me.id, Date.now()); this.act(p.uid, 'like', me.id, p.id, p.kind); }
       }
       if (op === 'comment') {
         const text = String(b.text || '').trim().slice(0, 500);
         if (!text) return json({ error: 'empty' }, 400);
         this.sql.exec('INSERT INTO ucomments (id, pid, uid, text, at) VALUES (?, ?, ?, ?, ?)', 'c' + rand(9), p.id, me.id, text, Date.now());
+        this.act(p.uid, 'comment', me.id, p.id, (p.kind === 'status' ? 's:' : '') + text);
       }
+      if (op === 'share') { this.act(p.uid, 'share', me.id, p.id, p.kind); return json({ ok: true }); }
       if (op === 'uncomment') this.sql.exec('DELETE FROM ucomments WHERE id = ? AND pid = ? AND (uid = ? OR ? = ?)', String(b.cid || ''), p.id, me.id, p.uid, me.id);
       const list = this.sql.exec('SELECT c.*, u.name, u.username, u.photo FROM ucomments c LEFT JOIN users u ON u.id = c.uid WHERE c.pid = ? ORDER BY c.at LIMIT 300', p.id).toArray()
         .filter(c => !this.blocked(me.id, c.uid)).map(c => ({ id: c.id, text: c.text, at: c.at, mine: c.uid === me.id, canDelete: c.uid === me.id || p.uid === me.id, user: { id: c.uid, name: c.name || '', username: c.username || '', photo: this.mediaUrl(c.photo) } }));
@@ -1147,7 +1173,7 @@ export class Hub {
     this.sql.exec('UPDATE gposts SET likes = likes - 1 WHERE id IN (SELECT pid FROM glikes WHERE uid = ?)', uid);
     this.mediaDel('uid = ?', uid);
     const del = [['uposts', 'uid'], ['ulikes', 'uid'], ['ucomments', 'uid'], ['gposts', 'uid'], ['glikes', 'uid'], ['gcomments', 'uid'],
-      ['follows', 'uid'], ['follows', 'fid'], ['contacts', 'uid'], ['contacts', 'cid'], ['blocks', 'uid'], ['blocks', 'bid'], ['queue', 'uid'],
+      ['follows', 'uid'], ['follows', 'fid'], ['activity', 'uid'], ['activity', 'fromuid'], ['contacts', 'uid'], ['contacts', 'cid'], ['blocks', 'uid'], ['blocks', 'bid'], ['queue', 'uid'],
       ['paybank', 'uid'], ['banklinks', 'uid'], ['subs', 'uid'], ['reports', 'uid']];
     for (const [t, c] of del) this.sql.exec(`DELETE FROM ${t} WHERE ${c} = ?`, uid);
     const gone = this.one('SELECT token FROM users WHERE id = ?', uid);

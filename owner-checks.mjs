@@ -144,6 +144,8 @@ for (const [w, h] of SIZES) {
   const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
   await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' }));
     localStorage.setItem('story-color-systems', JSON.stringify({ all: { bg: '#2b5f66', text: '#f2c200' }, dash: { bg: '#2b5f66', text: '#f2c200' } })); } catch (e) {} });
+  // Only this page - the real server would refuse the stand-in account and put the log-in screen over everything.
+  await ctx.route('**/*', r => /^(http:\/\/localhost|data:|blob:)/.test(r.request().url()) ? r.continue() : r.abort());
   const pg = await ctx.newPage();
   await pg.goto(URL); await pg.waitForTimeout(2500);
   await pg.evaluate(() => document.documentElement.classList.add('focus'));   // the app's look
@@ -173,8 +175,12 @@ for (const [w, h] of SIZES) {
   // the picture, because the app look's 'text-shadow:none !important' had silently removed the halo on phones).
   const tiny = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
   for (const s of ['dashboard', 'money', 'wallet', 'trading', 'settings']) {
-    const bare = await pg.evaluate(([s, img]) => { LIT_BG.all = img; LIT_BG.dashboard = img; state.current = s; renderDevice();
-      const a = document.querySelector('#device-wrap #content-area'); if (!a || !a.classList.contains('lit-has-bg')) return ['no picture shown'];
+    await pg.evaluate(([s, img]) => { LIT_BG.all = img; LIT_BG.dashboard = img; state.current = s; renderDevice(); }, [s, tiny]);
+    await pg.waitForTimeout(600);
+    const bare = await pg.evaluate(([s, img]) => { LIT_BG.all = img; LIT_BG.dashboard = img;
+      let a = document.querySelector('#device-wrap #content-area');
+      if (a && !a.classList.contains('lit-has-bg')) { litApplyColors(); a = document.querySelector('#device-wrap #content-area'); }
+      if (!a || !a.classList.contains('lit-has-bg')) return ['no picture shown (screen ' + state.current + ', gate ' + !!document.querySelector('.lit-auth') + ', classes ' + (a ? a.className : '-') + ')'];
       const out = []; a.querySelectorAll('*').forEach(el => { if (out.length > 3) return;
         if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
         const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
@@ -191,6 +197,7 @@ for (const [w, h] of SIZES) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, userAgent: UA });
   await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); } catch (e) {}
     window.StoryNative = new Proxy({}, { get: (t, k) => k === 'bottomRoom' ? (() => 48) : (() => '') }); });
+  await ctx.route('**/*', r => r.request().url().startsWith('http://localhost') ? r.continue() : r.abort());
   const pg = await ctx.newPage();
   await pg.goto(URL); await pg.waitForTimeout(2500);
   for (const [from, to] of [['money', 'wallet'], ['wallet', 'money'], ['wallet', 'trading']]) {

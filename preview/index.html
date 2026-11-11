@@ -4086,7 +4086,9 @@
      wallpaper or background colors or text colors. Nothing affects visibility'): every word on a picture gets a soft
      halo in the colour opposite to the words, and the grey section titles / sub-lines lying straight on the picture are
      as bright as the page's own text. */
-  .lit-has-bg, .lit-has-bg *{ text-shadow:0 0 1px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 2px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 4px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 8px rgba(var(--lit-halo, 0, 0, 0), 0.9); }
+  /* #243: !important + the extra class beat the app look's 'html.focus .phone-screen * { text-shadow:none !important }',
+     which silently took the halo away on phones. Stacked thin layers = a solid edge round every letter, even tiny ones. */
+  .lit-has-bg, .lit-has-bg *, html.focus .phone-screen .lit-has-bg.lit-has-bg, html.focus .phone-screen .lit-has-bg.lit-has-bg *{ text-shadow:1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 0px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px 1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), -1px -1px 0 rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 3px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 6px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 12px rgba(var(--lit-halo, 0, 0, 0), 0.85) !important; }
   .lit-has-bg .section-title, .lit-has-bg .page-shell > .row-sub, .lit-has-bg .story-screen > .row-sub{ color:rgba(var(--litc-text-rgb, 255, 255, 255), 1) !important; }   /* #238: the System switch is Second system's (customers) */
   /* Apps search + letter bar (#236 - owner). The two wiggles are the owner's own exception to the rule above. */
   .apps-shell{ padding-right:24px; }
@@ -4351,6 +4353,32 @@ const PAGE_SWITCH_ITEMS = [
 // left edge brings the Pages back (OverlayService appPageOpen).
 const CORE_PAGE_COUNT = PAGES.length;
 function isAppPage(key){ return typeof key === 'string' && key.indexOf('app:') === 0; }
+// An app page after Clear (owner, 11 Nov 2026): it stays in its row as an EMPTY page with a + (pkg '~e...', empty:true);
+// the + puts any app on it again. Money / Wallet never have Clear; the Trading Page stays on Focus only.
+function isEmptyAppPage(key){ return typeof key === 'string' && key.indexOf('app:~') === 0; }
+function appPageRekey(oldKey, newKey){
+  const o = rowOrders(); Object.keys(o).forEach(id=>{ o[id] = (o[id] || []).map(k=>k === oldKey ? newKey : k); });
+  try{ localStorage.setItem('story-row-order', JSON.stringify(o)); }catch(e){}
+  if(state.current === oldKey) state.current = newKey;
+  if(state.lastPage === oldKey) state.lastPage = newKey;
+  if(state.row1Page === oldKey) state.row1Page = newKey;
+}
+function appPageReplace(oldKey, entry){
+  const list = appPagesStored(), i = list.findIndex(x=>'app:' + x.pkg === oldKey); if(i < 0) return false;
+  list[i] = Object.assign({ row: list[i].row || 1 }, entry);
+  try{ localStorage.setItem('story-app-pages', JSON.stringify(list)); }catch(e){}
+  appPageRekey(oldKey, 'app:' + entry.pkg);
+  rowPagesChanged();
+  return true;
+}
+function appPageClear(key){
+  const info = appPageInfo(key);
+  if(appPageReplace(key, { pkg:'~e' + Date.now().toString(36), name:'Empty page', empty:true })) showToast(info.name + ' was taken off the page');
+}
+function appPageFill(key, a){
+  if(appPagesStored().some(x=>x.pkg === a.pkg)){ showToast(a.name + ' is already a page'); return; }
+  if(appPageReplace(key, { pkg:a.pkg, name:a.name })) showToast(a.name + ' is on the page now');
+}
 function appPagesStored(){
   try{ const a = JSON.parse(localStorage.getItem('story-app-pages') || '[]'); return Array.isArray(a) ? a.filter(x=>x && x.pkg) : []; }catch(e){ return []; }
 }
@@ -4740,6 +4768,7 @@ function appPageIconHTML(info){
   return `<span class="app-page-letter">${escText((info.name || '?').charAt(0).toUpperCase())}</span>`;
 }
 function appPageScreen(key){
+  if(isEmptyAppPage(key || state.current)) return emptyAppPageScreen(key || state.current);
   const info = appPageInfo(key || state.current);
   return `
     <div class="page-shell app-page">
@@ -8080,6 +8109,22 @@ function focusAddSheetHTML(st){
   }
   return '';
 }
+// An app page after Clear: empty with a + that puts any app on it (the same look as the empty Focus page).
+function emptyAppPageScreen(key){
+  const open = state.pageFill === key;
+  const apps = open ? (state.installedApps || []).filter(a=>a.pkg && !appPagesStored().some(x=>x.pkg === a.pkg)) : [];
+  return `
+    <div class="page-shell focus-empty">
+    ${topBar('Empty page', true)}
+    <div class="focus-empty-body"><button class="focus-plus" data-action="page-fill" data-k="${escText(key)}" aria-label="Put an app on this page">+</button></div>
+    </div>
+    ${open ? `
+    <div class="modal-overlay" data-action="page-fill-cancel"><div class="confirm-sheet" onclick="event.stopPropagation()">
+      <div class="confirm-title">Put an app on this page</div>
+      <div class="focus-app-list">${apps.length ? apps.map(a=>`<div class="row" data-action="page-fill-go" data-k="${escText(key)}" data-v="${escText(a.pkg)}" style="cursor:pointer;"><div class="row-left"><div class="row-icon focus-app-ico">${appIconHTML(a)}</div><div class="row-name">${escText(a.name)}</div></div></div>`).join('') : `<div class="confirm-sub">No apps to add.</div>`}</div>
+      <button class="btn-wide" data-action="page-fill-cancel">Cancel</button>
+    </div></div>` : ''}`;
+}
 // A picture of the add-on as it looks (the real page, shrunk).
 function focusPreviewHTML(key){
   if(key !== 'trading') return '';
@@ -9837,6 +9882,33 @@ function layoutsScreen(){
   `;
 }
 
+// Clear / Remove in a row say what they do first, with Cancel (owner, 11 Nov 2026: 'clicking clear should let you know
+// what this does and you can confirm or cancel same as remove').
+function rowConfirmHTML(r){
+  const c = state.rowConfirm; if(!c) return '';
+  const it = (rowsList()[r] || []).find(x=>x.key === c.k); if(!it) return '';
+  const name = String(it.label || '');
+  let title, sub, btn;
+  if(c.kind === 'clear'){
+    const what = c.k === 'trading' ? (focusAddon() === 'trading' ? 'the Trading Page' : escText(appPageInfo(focusAddon()).name)) : name;
+    title = c.k === 'trading' ? 'Clear the Focus page?' : 'Clear this page?';
+    sub = `Takes ${what} off ${c.k === 'trading' ? 'the Focus page' : 'this page'}. The page stays in Row ${r + 1}, empty with a +, so you can put something else on it.`;
+    btn = 'Clear';
+  } else {
+    title = `Remove ${name}?`;
+    sub = `The whole page leaves Row ${r + 1}.` + (isEmptyAppPage(c.k) ? '' : isAppPage(c.k) ? ' You can make the app a page again from Apps.' : ' You can add it back under Removed pages.');
+    btn = 'Remove';
+  }
+  return `
+    <div class="modal-overlay" data-action="row-confirm-no"><div class="confirm-sheet" onclick="event.stopPropagation()">
+      <div class="confirm-title">${title}</div>
+      <div class="confirm-sub">${sub}</div>
+      <div class="confirm-btn-row">
+        <button class="btn-wide" style="margin-top:0;" data-action="row-confirm-no">Cancel</button>
+        <button class="btn-wide" style="margin-top:0;color:var(--red);" data-action="row-confirm-yes">${btn}</button>
+      </div>
+    </div></div>`;
+}
 // Page layout (owner): every row ('Row 2 · tap to edit'); in a row, move each page left / right to where you want it.
 function layoutsPageLayoutScreen(){
   const rows = rowsList(), r = state.layoutRowEdit;
@@ -9853,11 +9925,14 @@ function layoutsPageLayoutScreen(){
         // Focus is the page you add to (Trading Page add-on, or an app). "Clear" empties it (the Focus page stays);
         // "Remove" still removes the whole page.
         const fc = it.key === 'trading' ? focusAddon() : '';
-        const fcLabel = fc === 'trading' ? 'Trading Page' : fc.indexOf('app:') === 0 ? 'an app' : '';
-        return `<div class="row"><div class="row-left"><div class="row-name">${i + 1}. ${it.label}</div><div class="row-sub">${posSub}${fcLabel ? ' · has ' + fcLabel : ''}</div></div>
-        <span style="display:flex;gap:6px;">${fcLabel ? `<button class="edit-remove" data-action="focus-clear" title="Take the add-on / app off the Focus page - the Focus page stays (empty)">Clear</button>` : ''}<button class="edit-remove" data-action="row-remove" data-k="${escText(it.key)}">Remove</button><button class="order-corner-btn" data-action="row-move" data-k="${escText(it.key)}" data-by="-1" title="Move left"${i === 0 ? ' disabled style="opacity:0.3;"' : ''}>‹</button><button class="order-corner-btn" data-action="row-move" data-k="${escText(it.key)}" data-by="1" title="Move right"${i === items.length - 1 ? ' disabled style="opacity:0.3;"' : ''}>›</button></span></div>`;
+        // Owner (11 Nov 2026): Clear on every customizable page - Focus and pages made from an app (never Money / Wallet);
+        // Clear and Remove both say what they do first, with Cancel.
+        const fcLabel = fc === 'trading' ? 'Trading Page' : fc.indexOf('app:') === 0 ? 'an app' : isAppPage(it.key) && !isEmptyAppPage(it.key) ? 'the app' : '';
+        return `<div class="row" style="flex-wrap:wrap;row-gap:8px;"><div class="row-left" style="min-width:0;flex:1 1 140px;"><div class="row-name">${i + 1}. ${it.label}</div><div class="row-sub">${posSub}${fc && fcLabel ? ' · has ' + fcLabel : ''}</div></div>
+        <span style="display:flex;gap:6px;flex-wrap:nowrap;margin-left:auto;">${fcLabel ? `<button class="edit-remove" data-action="row-clear-ask" data-k="${escText(it.key)}">Clear</button>` : ''}<button class="edit-remove" data-action="row-remove-ask" data-k="${escText(it.key)}">Remove</button><button class="order-corner-btn" data-action="row-move" data-k="${escText(it.key)}" data-by="-1" title="Move left"${i === 0 ? ' disabled style="opacity:0.3;"' : ''}>‹</button><button class="order-corner-btn" data-action="row-move" data-k="${escText(it.key)}" data-by="1" title="Move right"${i === items.length - 1 ? ' disabled style="opacity:0.3;"' : ''}>›</button></span></div>`;
       }).join('')}
     </div>
+    ${rowConfirmHTML(r)}
     </div>`;
   }
   return `
@@ -10744,11 +10819,11 @@ function loadNativeApps(){
     // An app that's gone from the phone stops being a page.
     if(list.length){
       const have = new Set(list.map(a=>a.pkg)), kept = appPagesStored();
-      const still = kept.filter(x=>have.has(x.pkg));
+      const still = kept.filter(x=>x.empty || have.has(x.pkg));
       if(still.length !== kept.length){
         try{ localStorage.setItem('story-app-pages', JSON.stringify(still)); }catch(e){}
-        if(isAppPage(state.current) && !have.has(state.current.slice(4))) state.current = 'trading';
-        if(isAppPage(state.lastPage) && !have.has(state.lastPage.slice(4))) state.lastPage = 'trading';
+        if(isAppPage(state.current) && !isEmptyAppPage(state.current) && !have.has(state.current.slice(4))) state.current = 'trading';
+        if(isAppPage(state.lastPage) && !isEmptyAppPage(state.lastPage) && !have.has(state.lastPage.slice(4))) state.lastPage = 'trading';
         syncAppPages();
       }
     }
@@ -18804,7 +18879,18 @@ function attachHandlers(){
           break;
         }
         case 'color-remove': litScopeSet(state.colorEditTarget, null); showToast('Colours removed'); break;
-        case 'row-remove': { rowRemovePage(state.layoutRowEdit, el.getAttribute('data-k')); if(!rowsList()[state.layoutRowEdit]) state.layoutRowEdit = null; break; }
+        case 'row-remove-ask': state.rowConfirm = { kind:'remove', k: el.getAttribute('data-k') }; break;
+        case 'row-clear-ask': state.rowConfirm = { kind:'clear', k: el.getAttribute('data-k') }; break;
+        case 'row-confirm-no': state.rowConfirm = null; break;
+        case 'row-confirm-yes': { const c = state.rowConfirm; state.rowConfirm = null; if(!c) break;
+          if(c.kind === 'remove'){ rowRemovePage(state.layoutRowEdit, c.k); if(!rowsList()[state.layoutRowEdit]) state.layoutRowEdit = null; }
+          else if(c.k === 'trading'){ focusSet(''); state.focusAdd = null; showToast('The Focus page is empty now'); }
+          else appPageClear(c.k);
+          break; }
+        case 'page-fill': state.pageFill = el.getAttribute('data-k'); if(NATIVE) loadNativeApps(); break;
+        case 'page-fill-cancel': state.pageFill = null; break;
+        case 'page-fill-go': { const k = el.getAttribute('data-k'), v = el.getAttribute('data-v'); state.pageFill = null;
+          const a = (state.installedApps || []).find(x=>x.pkg === v); if(a) appPageFill(k, a); break; }
         case 'row-addback': rowAddBack(el.getAttribute('data-k')); break;
         case 'row-move': rowMovePage(state.layoutRowEdit, el.getAttribute('data-k'), +el.getAttribute('data-by')); break;
         case 'focus-clear': { focusSet(''); state.focusAdd = null; showToast('Focus is empty now'); renderDevice(); break; }   // owner: remove what's on Focus, keep the Focus page
@@ -21574,11 +21660,15 @@ function fitPageToScreen(area, el, pageKey){
     let k = z;
     for(const c of el.children){ if(c === topBarEl || c.style.zoom) continue; const h = c.offsetHeight; if(h > 20){ const gh = c.getBoundingClientRect().height; if(gh > 0){ k = gh / h; break; } } }
     const f = k > 0 ? z / k : 1;
+    // A page measured ahead of time sits in an invisible copy (visibility:hidden), so every part of it reads 'hidden':
+    // skipping those made it look empty and zoomed it to the maximum, so it slid in too big and then snapped back to
+    // its real size (#244 - owner's video, 11 Nov 2026: 'things are bouncing'). Only parts hidden on their own count.
+    const hostHidden = getComputedStyle(el).visibility === 'hidden';
     Array.from(el.children).forEach(c=>{
       // Things pinned to the screen (Money's $ transfer button...) aren't part of the page's height: counting them
       // shrank a fresh phone's Money page to ~half with a third of the screen empty (owner, 3 Nov 2026).
       const cs = getComputedStyle(c);
-      if(cs.position === 'fixed' || cs.position === 'absolute' || cs.display === 'none' || cs.visibility === 'hidden') return;
+      if(cs.position === 'fixed' || cs.position === 'absolute' || cs.display === 'none' || (cs.visibility === 'hidden' && !hostHidden)) return;
       const b = r.top + (c.getBoundingClientRect().bottom - r.top) * f + (parseFloat(cs.marginBottom) || 0) * z;
       if(b > cb) cb = b;
     });

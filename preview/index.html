@@ -4067,6 +4067,19 @@
   [data-action="legal-open"]::after{ content:''; position:absolute; inset:-12px -3px; }
   .notes-swatch::after{ content:''; position:absolute; inset:-4px; }
   .brightness-arrow::after, .controls-expand::after, [data-action="controls-expand"]::after{ content:''; position:absolute; inset:-6px; }
+  /* ===== The tour for new users (#245) - a spotlight on the real button + a card with Skip tour / Back / Next. */
+  #lit-tour{ position:fixed; inset:0; z-index:2147483000; pointer-events:auto; }
+  #lit-tour .tour-veil{ position:absolute; inset:0; background:rgba(0,0,0,0.74); }
+  #lit-tour .tour-hole{ position:fixed; border-radius:14px; box-shadow:0 0 0 200vmax rgba(0,0,0,0.74); outline:2px solid #ffffff; outline-offset:0; pointer-events:none; }
+  #lit-tour .tour-card{ position:fixed; left:16px; right:16px; background:#111111; color:#ffffff; border:1px solid #3a3a3a; border-radius:18px; padding:16px 16px 12px; box-shadow:0 10px 30px rgba(0,0,0,0.6); font-family:inherit; }
+  #lit-tour .tour-step{ font-size:11px; font-weight:600; letter-spacing:1.2px; color:#9a9a9a; text-transform:uppercase; }
+  #lit-tour .tour-title{ font-size:17px; font-weight:700; margin:4px 0 6px; color:#ffffff; }
+  #lit-tour .tour-body{ font-size:13.5px; line-height:1.45; color:#d8d8d8; }
+  #lit-tour .tour-btns{ display:flex; align-items:center; gap:8px; margin-top:14px; }
+  #lit-tour .tour-btns button{ font:inherit; font-size:13.5px; font-weight:600; border-radius:999px; padding:9px 14px; cursor:pointer; min-height:38px; }
+  #lit-tour .tour-skip{ background:transparent; border:none; color:#9a9a9a; padding-left:2px !important; margin-right:auto; }
+  #lit-tour .tour-back{ background:transparent; border:1px solid #4a4a4a; color:#ffffff; }
+  #lit-tour .tour-next{ background:#ffffff; border:1px solid #ffffff; color:#000000; }
   /* ===== NO MOTION ANYWHERE IN LOCKEDINTOOL (owner, 29 Oct 2026: 'I dont want any animations or transitions or
      delay on the whole app. Nothing in this app should have that. So please fix the whole app if it means to'). Every
      transition and animation snaps straight to its end state, so nothing slides, fades, pulses, bounces or waits -
@@ -10630,6 +10643,10 @@ function informationScreen(){
       ['Your system, everywhere', 'Every one of them comes with your Lockedintool system and your data stored - for each user\u2019s own account.'],
       ['USBs and SD cards', 'For your backup, or to use Lockedintool for a while on another device without having to install Lockedintool on it.'],
     ])}
+    <div class="section-title">TOUR</div>
+    <div class="set2-card">
+      <div class="set2-row legal-link" data-action="tour-start"><div class="set2-text"><div class="set2-name">Take the tour again</div><div class="set2-sub">A quick walk through Lockedintool's screens and buttons.</div></div><span class="chev-right">›</span></div>
+    </div>
     <div class="section-title">LEGAL</div>
     <div class="set2-card">
       <div class="set2-row legal-link" data-action="legal-open" data-v="legal-safety" data-from="information"><div class="set2-text"><div class="set2-name">Safety &amp; Rules</div><div class="set2-sub">How Lockedintool blocks adult content for your safety.</div></div><span class="legal-arrow">›</span></div>
@@ -17243,6 +17260,7 @@ function renderDevice(){
   if(typeof updatePhoneStatusClock === 'function') updatePhoneStatusClock();
   updateScrollHint();
   updateScrollbarThumb();
+  try{ tourPaint(); tourCheck(); }catch(e){}
 }
 
 // Shows the bouncing down-chevron hint whenever #content-area has more content below the
@@ -18882,6 +18900,7 @@ function attachHandlers(){
         case 'row-remove-ask': state.rowConfirm = { kind:'remove', k: el.getAttribute('data-k') }; break;
         case 'row-clear-ask': state.rowConfirm = { kind:'clear', k: el.getAttribute('data-k') }; break;
         case 'row-confirm-no': state.rowConfirm = null; break;
+        case 'tour-start': state.tourStep = 0; tourGo(0); return;
         case 'row-confirm-yes': { const c = state.rowConfirm; state.rowConfirm = null; if(!c) break;
           if(c.kind === 'remove'){ rowRemovePage(state.layoutRowEdit, c.k); if(!rowsList()[state.layoutRowEdit]) state.layoutRowEdit = null; }
           else if(c.k === 'trading'){ focusSet(''); state.focusAdd = null; showToast('The Focus page is empty now'); }
@@ -21064,6 +21083,7 @@ async function litAuthAct(k, btn){
       profileLocksSave(me); saveProfileData({ name: me.name || name, username: me.username || username });
       await litAccountSave(acct, null, pw, pwsalt);
       try{ localStorage.removeItem('story-signed-out'); }catch(e){}
+      if(!setpw){ try{ localStorage.setItem('story-tour', 'start'); }catch(e){} }   // a new user gets the tour (#245)
       litAuthDone(setpw ? 'Your account is protected' : 'Welcome to Lockedintool');
     }catch(e){
       litAuthBusySet(false, setpw ? 'Save' : 'Create account');
@@ -21071,6 +21091,73 @@ async function litAuthAct(k, btn){
     }
   }
 }
+// ---- The tour for new users (#245 - owner, 11 Nov 2026: 'new users should get a tour guide around the whole app. Also
+// they can skip the tutorial if they want'; chose 'On the real screens' and 'Yes, from Information'). Shown once, right
+// after Create your account (story-tour 'start' -> 'done'), in the Pages window: it opens each real screen and puts a
+// spotlight on the real part with a short note. Skip tour on every step; Information > Take the tour again. No motion.
+const TOUR_PAGES_OK = k=>!planFree() && PAGES.includes(k);
+const TOUR = [
+  { s:'dashboard', t:'Welcome to Lockedintool', b:'A quick look around your new phone experience. It takes about a minute, and you can skip it at any time.' },
+  { s:'dashboard', sel:'.search-row', t:'Search', b:'Search the web from here. Safe search is always on.' },
+  { s:'dashboard', sel:'.story-sidebar', t:'Your menu', b:'Notes, Settings, Information, your camera, gallery and alarms, and every app on your phone.' },
+  { s:'dashboard', sel:'#quotes-card', t:'Your quote', b:'Tap the lock, then hold the card to write a quote of your own.' },
+  { s:'dashboard', sel:'.story-bottom', t:'Quick controls', b:'Your phone\u2019s sound output, brightness, music and controls - the real ones, right here.' },
+  { s:'dashboard', sel:'#dash-s3', t:'Station 3', b:'Messages, your Profile, Updates, Create (+), Call history and the dial pad.' },
+  { s:'dashboard', sel:'.layouts-btn', t:'Layouts', b:'Make Lockedintool yours: your own colours, a background picture, your Home Screen and the order of your pages.' },
+  { s:'dashboard', sel:'.arrow-btn', t:'Your Pages', b:'This arrow opens your Pages: Money, Wallet and your Focus page.', need:()=>TOUR_PAGES_OK('money') || TOUR_PAGES_OK('wallet') },
+  { s:'money', sel:'.big-num', t:'Money', b:'Every payment into and out of your cards, read from your bank\u2019s own messages. The big number is what you have.', need:()=>TOUR_PAGES_OK('money') },
+  { s:'wallet', sel:'.paycard-wrap', t:'Wallet', b:'Your real cards. Add a card, then tap it to see its details after your fingerprint, face or PIN.', need:()=>TOUR_PAGES_OK('wallet') },
+  { s:'wallet', sel:'[data-action="tap-to-pay"]', t:'Tap to Pay', b:'Pay at the till: hold the back of your phone near the card reader.', need:()=>TOUR_PAGES_OK('wallet') },
+  { s:'wallet', sel:'.wallet-float-dock', t:'Transfer Money', b:'Send and receive money from here.', need:()=>TOUR_PAGES_OK('wallet') },
+  { s:'trading', sel:'.focus-plus, .acct-title', t:'Focus page', b:'The page you make your own: add the Trading Page or any app. Swipe left and right to move between your pages, and up and down for your other rows.', need:()=>TOUR_PAGES_OK('trading') },
+  { s:'settings', sel:'.set2-card:has(.set2-link), .set2-card', t:'Settings', b:'Your system, theme, security, privacy and notifications - and your plan, at the very bottom.' },
+  { s:'dashboard', t:'You\u2019re all set', b:'You can take this tour again at any time from Information.' },
+];
+function tourSteps(){ return TOUR.filter(st=>!st.need || st.need()); }
+function tourCheck(){
+  if(state.tourStep != null || IN_STATION3_WINDOW || document.documentElement.classList.contains('story-widget') || /[?&]widget=/.test(location.search)) return;
+  let v = null; try{ v = localStorage.getItem('story-tour'); }catch(e){}
+  if(v === 'start' && !document.querySelector('.lit-auth') && litSignedIn()) tourStart();
+}
+function tourStart(){ state.tourStep = 0; tourGo(0); }
+function tourEnd(){
+  state.tourStep = null; try{ localStorage.setItem('story-tour', 'done'); }catch(e){}
+  const el = document.getElementById('lit-tour'); if(el) el.remove();
+  state.current = 'dashboard'; renderDevice();
+}
+function tourGo(i){
+  const steps = tourSteps(); if(i < 0 || i >= steps.length){ tourEnd(); return; }
+  state.tourStep = i;
+  const st = steps[i];
+  state.appMenuId = null; state.station3Open = false; state.rowsViewOpen = false; state.pageStyleViewOpen = false;
+  if(state.current !== st.s){ state.current = st.s; if(['money','wallet','trading'].includes(st.s)) state.lastPage = st.s; }
+  renderDevice();   // paints the tour at its end (tourPaint)
+}
+function tourPaint(){
+  let ov = document.getElementById('lit-tour');
+  if(state.tourStep == null){ if(ov) ov.remove(); return; }
+  const steps = tourSteps(), i = Math.min(state.tourStep, steps.length - 1), st = steps[i];
+  if(!ov){ ov = document.createElement('div'); ov.id = 'lit-tour'; document.body.appendChild(ov);
+    ov.addEventListener('click', e=>{ const b = e.target.closest('[data-tour]'); e.stopPropagation(); e.preventDefault(); if(!b) return;
+      const a = b.getAttribute('data-tour'); if(a === 'skip') tourEnd(); else if(a === 'back') tourGo(state.tourStep - 1); else tourGo(state.tourStep + 1); }, true);
+    ['pointerdown', 'touchstart', 'touchmove', 'wheel'].forEach(t=>ov.addEventListener(t, e=>{ e.stopPropagation(); if(t !== 'pointerdown' && t !== 'touchstart' && e.cancelable) e.preventDefault(); }, { passive:false })); }
+  let el = null;
+  if(st.sel){ for(const sel of st.sel.split(',')){ const q = sel.trim(); el = document.querySelector('#device-wrap #content-area ' + q) || document.querySelector('#device-wrap ' + q); if(el && el.getBoundingClientRect().height > 0) break; el = null; } }
+  const H = innerHeight, room = (typeof litBottomPx === 'function' ? litBottomPx() : 0) + (state.current === 'dashboard' ? 12 : 60);
+  let hole = '', cardPos = `top:${Math.round(H * 0.3)}px;`;
+  if(el){
+    const r = el.getBoundingClientRect(), p = 6;
+    const top = Math.max(4, r.top - p), left = Math.max(4, r.left - p), w = Math.min(innerWidth - 8, r.width + p * 2), h = Math.min(H - top - 4, r.height + p * 2);
+    hole = `<div class="tour-hole" style="top:${top}px;left:${left}px;width:${w}px;height:${h}px;"></div>`;
+    cardPos = (top + h / 2 > H / 2) ? `top:${Math.max(12, Math.round(top - 12))}px;transform:translateY(-100%);` : `top:${Math.round(top + h + 12)}px;`;
+    if(top + h + 12 + 170 > H - room && top - 12 < 170) cardPos = `bottom:${room}px;`;
+  }
+  ov.innerHTML = (hole || '<div class="tour-veil"></div>') + `<div class="tour-card" style="${cardPos}" role="dialog" aria-label="Tour">
+    <div class="tour-step">${i + 1} of ${steps.length}</div><div class="tour-title">${st.t}</div><div class="tour-body">${st.b}</div>
+    <div class="tour-btns">${i < steps.length - 1 ? '<button class="tour-skip" data-tour="skip">Skip tour</button>' : '<span style="margin-right:auto;"></span>'}${i > 0 ? '<button class="tour-back" data-tour="back">Back</button>' : ''}<button class="tour-next" data-tour="next">${i === 0 ? 'Start' : i < steps.length - 1 ? 'Next' : 'Done'}</button></div></div>`;
+  try{ if(typeof tvPlace === 'function') tvPlace(); }catch(e){}
+}
+window.addEventListener('storage', e=>{ if(e.key === 'story-tour') try{ tourCheck(); }catch(err){} });
 function litAuthDone(msg){
   litAuthBusy = false; litAuthClose(); showToast(msg);
   if(MSG_ENGINE){ setTimeout(()=>location.reload(), 300); }

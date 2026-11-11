@@ -6706,10 +6706,8 @@ function moneyScreen(){
       <div class="row-card" style="text-align:center;padding:12px 0;"><div class="row-sub">SAVINGS RATE</div><div class="row-amt" style="color:${state.moneySavingsRate != null && state.moneySavingsRate < 0 ? 'var(--red)' : 'var(--green)'};">${state.moneySavingsRate == null ? '—' : state.moneySavingsRate + '%'}</div></div>
     </div>
 
-    <div class="money-transfer-fab-wrap">
-      <button class="money-transfer-fab" data-action="money-transfer-open" title="Transfer Money">$</button>
-      <span class="mtf-arrow">↗</span>
-    </div>
+    <!-- Money's own $ transfer button is gone (#239 - owner, 11 Nov 2026: 'the money transfer button inside the money page
+         remove it ... it's literally the same as the money transfer station in the wallet page'). -->
     </div>
 
     ${state.notifPopupId ? notifDetailTemplate() : ''}

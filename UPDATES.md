@@ -246,3 +246,4 @@ commits, pushed as a new update) - nothing else changes.
 | 238 | 2026-11-11 | Customers can switch between the app and a system only on Second system (Only system / no plan: the switch is locked with a note); the owner's phone keeps full access | 294afee |
 | 239 | 2026-11-11 | Money: the $ transfer button is removed (the Wallet page's Transfer Money station does the same) | e5e9f99 |
 | 240 | 2026-11-11 | Problem reports: Samsung refusing the quiet install (Android's own install screen then takes over) is no longer reported as a problem; the 'closed by Android for memory' reports (none since 1.308) are marked fixed | 72763d1 |
+| 241 | 2026-11-11 | As an app, swiping up always leaves Lockedintool: if the phone still sends Home to Lockedintool, it hands over to the phone's own home screen at once, and nothing of Lockedintool stays on screen after you leave the app | (this) |

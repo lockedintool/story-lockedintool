@@ -2055,12 +2055,15 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     /** The app went out of sight: everything of Lockedintool goes with it (never left over another app). */
     fun appStopped(act: android.app.Activity) {
-        if (homeHostWm !== act.windowManager) return
+        val attached = homeHostWm === act.windowManager
+        // As an app nothing of Lockedintool may stay on screen once the app is left - even Pages that never made it
+        // inside the app's window (#241 - owner: 'I cant close the app').
+        if (!attached && !AppMode.appOnly(this)) return
         if (pickerHid.isNotEmpty() || createActive) return   // Lockedintool's own picker / camera opened over it
         listOfNotNull(dialPane, s3Pane).filter { it.shown }.forEach { hideOne(it) }
         profilePane?.takeIf { it.shown && !callActive }?.let { hideOne(it) }
         pagesPane?.takeIf { it.shown }?.let { hideOne(it) }
-        homeDetach()
+        if (attached) homeDetach()
         updateBubble()
     }
     /** Settings > System (owner, 6 Nov 2026: 'put a pin or biometrics lock for it to be turned on or off') - the

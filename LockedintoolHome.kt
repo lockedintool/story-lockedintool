@@ -19,8 +19,28 @@ import android.os.Bundle
 class LockedintoolHome : Activity() {
     companion object { @Volatile var current: LockedintoolHome? = null }
     private var shot: android.widget.ImageView? = null
+    /** Lockedintool's Home only belongs to Only system (#241 - owner, 11 Nov 2026, as an app: 'I cant close the app' -
+     *  swiping up landed back in Lockedintool). Opened any other time (the phone still had it as its Home app), it
+     *  switches its Home role off again and hands straight over to the phone's OWN home screen - never imitating it. */
+    private fun notOurs(): Boolean {
+        if (SystemMode.on(this) && AppMode.systemOn(this)) return false
+        SystemMode.syncHome(this)
+        ProblemLog.record(this, "home", "Lockedintool's Home opened while not Only system", "home")
+        runCatching {
+            val pm = packageManager
+            val homes = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
+                .filter { it.activityInfo.packageName != packageName && it.activityInfo.packageName != "com.android.settings" }
+            val pick = homes.firstOrNull { (it.activityInfo.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0 } ?: homes.firstOrNull()
+            if (pick != null) startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                .setClassName(pick.activityInfo.packageName, pick.activityInfo.name)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION))
+        }
+        finish()
+        return true
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (notOurs()) return
         // Black, never see-through (owner, 4 Nov 2026: a frozen picture of the old home screen showed behind it and nothing
         // could be swiped) - the Dashboard is drawn over it the moment it shows.
         window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
@@ -64,6 +84,7 @@ class LockedintoolHome : Activity() {
         v.setImageBitmap(b)
     } } }
     override fun onNewIntent(intent: Intent?) { super.onNewIntent(intent); setIntent(intent)
+        if (notOurs()) return
         if (OverlayService.instance?.homeShowFast(this) == true) { OverlayService.instance?.phoneScreenShown(); return }
         showHome() }
     // The Pages go INSIDE this window first (so the phone's floating windows and bubbles sit above the Dashboard - owner,

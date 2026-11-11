@@ -184,6 +184,25 @@ for (const [w, h] of SIZES) {
   }
   await ctx.close();
 }
+// 'things are bouncing' (#244 - owner's video, 11 Nov 2026): a page got ready ahead of time for a swipe must already be
+// the size it will have on screen - it was measured while invisible, came out far too big (Money 1.35 instead of ~0.9),
+// slid in like that and then snapped to its real size. Checked as the app (a stand-in StoryNative, so pages fill the screen).
+for (const [w, h] of SIZES) {
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); } catch (e) {}
+    window.StoryNative = new Proxy({}, { get: (t, k) => k === 'bottomRoom' ? (() => 48) : (() => '') }); });
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  for (const [from, to] of [['money', 'wallet'], ['wallet', 'money'], ['wallet', 'trading']]) {
+    await pg.evaluate(f => window.storyShow(f, false), from); await pg.waitForTimeout(1200);
+    const z = await pg.evaluate(async t => { Object.keys(FIT_CACHE).forEach(k => { if (k.indexOf(t + '|') === 0) delete FIT_CACHE[k]; });
+      const nb = buildNeighbor(t); if (!nb) return null; const a = nb.host.querySelector('#content-area').firstElementChild.style.zoom || '1';
+      state.current = t; renderDevice(); await new Promise(r => setTimeout(r, 900));
+      return [a, document.querySelector('#device-wrap #content-area').firstElementChild.style.zoom || '1']; }, to);
+    if (z && Math.abs(parseFloat(z[0]) - parseFloat(z[1])) > 0.03) fail('pages never bounce', `${from} -> ${to} @ ${w}x${h}`, `ready-made size ${z[0]}, real size ${z[1]}`);
+  }
+  await ctx.close();
+}
 await within(b.close(), 15000);
 clearTimeout(WATCHDOG);
 if (fails.length) { console.log('OWNER RULES BROKEN (' + fails.length + '):\n' + fails.join('\n')); process.exit(1); }

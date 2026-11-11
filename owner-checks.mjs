@@ -136,6 +136,41 @@ for (const [w, h] of SIZES) {
   }
   await ctx.close();
 }
+// EVERY WORD STAYS READABLE, WHATEVER COLOURS YOU PICK (#242 - owner, 11 Nov 2026: 'See thes some not visible words and
+// buttons. So this needs to be a check for the whole entire app. So that no matter what type of background wallpaper or
+// background colors or text colors. Nothing affects visibility'). With a colour system (teal + gold), every word that is
+// in your text colour (labels, times, sub-lines - not the real green / red amounts) must stand out from what is behind it.
+{
+  const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' }));
+    localStorage.setItem('story-color-systems', JSON.stringify({ all: { bg: '#2b5f66', text: '#f2c200' }, dash: { bg: '#2b5f66', text: '#f2c200' } })); } catch (e) {} });
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  await pg.evaluate(() => document.documentElement.classList.add('focus'));   // the app's look
+  for (const s of ['dashboard', 'money', 'wallet', 'trading', 'settings', 'apps', 'information', 'layouts', 'notes', 'community']) {
+    await pg.evaluate(s => { state.current = s; renderDevice(); }, s); await pg.waitForTimeout(500);
+    const low = await pg.evaluate(() => {
+      const P = v => { const m = v.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0]; };
+      const L = (r, g, b) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+      const out = [];
+      document.querySelectorAll('#device-wrap #content-area *').forEach(el => {
+        if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+        const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
+        const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || +cs.opacity < 0.3) return;
+        const c = P(cs.color), ca = c[3] == null ? 1 : c[3];
+        if (Math.abs(c[0] - 242) + Math.abs(c[1] - 194) + Math.abs(c[2] - 0) > 60) return;   // only words in your text colour
+        let n = el, bg = null; while (n) { const x = P(getComputedStyle(n).backgroundColor); if (x.length >= 3 && (x[3] == null || x[3] > 0.5)) { bg = x; break; } n = n.parentElement; }
+        if (!bg) return;
+        const t = [0, 1, 2].map(i => c[i] * ca + bg[i] * (1 - ca));
+        const l1 = L(...t), l2 = L(bg[0], bg[1], bg[2]); const k = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        if (k < 2.6) out.push(el.textContent.trim().slice(0, 30) + ' (' + k.toFixed(2) + ')');
+      });
+      return out;
+    });
+    if (low.length) fail('every word stays readable', s + ' with your colours', low.slice(0, 4).join(', '));
+  }
+  await ctx.close();
+}
 await within(b.close(), 15000);
 clearTimeout(WATCHDOG);
 if (fails.length) { console.log('OWNER RULES BROKEN (' + fails.length + '):\n' + fails.join('\n')); process.exit(1); }

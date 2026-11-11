@@ -4081,7 +4081,13 @@
     animation-iteration-count:1 !important;
     scroll-behavior:auto !important;
   }
-  .toggle-switch.sys-locked{ opacity:.4; }   /* #238: the System switch is Second system's (customers) */
+  .toggle-switch.sys-locked{ opacity:.4; }
+  /* Words stay readable on ANY background picture (#242 - owner, 11 Nov 2026: 'no matter what type of background
+     wallpaper or background colors or text colors. Nothing affects visibility'): every word on a picture gets a soft
+     halo in the colour opposite to the words, and the grey section titles / sub-lines lying straight on the picture are
+     as bright as the page's own text. */
+  .lit-has-bg, .lit-has-bg *{ text-shadow:0 0 1px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 2px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 4px rgba(var(--lit-halo, 0, 0, 0), 1), 0 0 8px rgba(var(--lit-halo, 0, 0, 0), 0.9); }
+  .lit-has-bg .section-title, .lit-has-bg .page-shell > .row-sub, .lit-has-bg .story-screen > .row-sub{ color:rgba(var(--litc-text-rgb, 255, 255, 255), 1) !important; }   /* #238: the System switch is Second system's (customers) */
   /* Apps search + letter bar (#236 - owner). The two wiggles are the owner's own exception to the rule above. */
   .apps-shell{ padding-right:24px; }
   .apps-search{ display:flex; align-items:center; gap:8px; margin:4px 0 10px; padding:0 12px; height:40px; border-radius:12px; background:#141414; border:1px solid #262626; color:#8e8e93; }
@@ -4521,7 +4527,8 @@ function litCssBuild(){
       for(let i = 0; i < r.style.length; i++){
         const p = r.style[i]; const v = r.style.getPropertyValue(p).trim(); const pri = r.style.getPropertyPriority(p);
         if(p.indexOf('--') === 0){
-          if(/^(:root|html)$/.test(r.selectorText.trim())){ const c = litParseColor(v); if(c && litRole(c, white)) LITC_ROOTVARS[p] = { v, c, role: litRole(c, white) }; }
+          if(/^(:root|html)$/.test(r.selectorText.trim())){ const c = litParseColor(v); if(c && litRole(c, white)) LITC_ROOTVARS[p] = { v, c, role: litRole(c, white) };
+            else if(c && Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) <= 16 && /muted|dim|sub|faint|soft|grey|gray|label/i.test(p)) LITC_ROOTVARS[p] = { v, c, role: 'sub' }; }   // grey words (#242)
           continue;
         }
         if(v.indexOf('var(') >= 0) continue;
@@ -4531,7 +4538,14 @@ function litCssBuild(){
           decl.push(p + ':' + nv + (pri ? ' !important' : '')); continue;
         }
         if(!LIT_C_PROPS.includes(p)) continue;
-        const nv = conv(v, pri); if(nv == null) continue;
+        // Grey words (labels, times, sub-lines) follow your text colour, a little softer, so they never fade into your
+        // background colour (#242 - owner, 11 Nov 2026: 'Nothing affects visibility').
+        if(p === 'color'){ const gc = litParseColor(v);
+          if(gc && Math.max(gc.r, gc.g, gc.b) - Math.min(gc.r, gc.g, gc.b) <= 16){ const av = (gc.r + gc.g + gc.b) / 3;
+            if(av > 56 && av < 200){ decl.push(p + ':var(--litc-sub, ' + v + ')' + (pri ? ' !important' : '')); continue; } } }
+        let nv = conv(v, pri); if(nv == null) continue;
+        // Faint words (hints, handles) in your text colour stay readable on your background (#242).
+        if(p === 'color' && nv.indexOf('--litc-text-rgb') >= 0) nv = nv.replace(/, ([\d.]+)\)( !important)?$/, (m, a, imp)=>', ' + Math.max(+a, 0.85) + ')' + (imp || ''));
         decl.push(p + ':' + nv);
       }
       if(decl.length) sink.push(r.selectorText + '{' + decl.join(';') + '}');
@@ -4554,7 +4568,7 @@ function litCssBuild(){
 function litRecolorArea(area, screen){
   if(!area) return;
   const sys = screen ? litColorSystemFor(screen) : null;
-  const props = ['--litc-bg-rgb', '--litc-text-rgb'].concat(Object.keys(LITC_ROOTVARS));
+  const props = ['--litc-bg-rgb', '--litc-text-rgb', '--litc-sub'].concat(Object.keys(LITC_ROOTVARS));
   if(!sys || !sys.bg || !sys.text){
     if(area.__litc){ props.forEach(k=>area.style.removeProperty(k)); area.style.removeProperty('background-color'); area.__litc = null; }
     return;
@@ -4564,8 +4578,10 @@ function litRecolorArea(area, screen){
   area.__litc = sys.bg + sys.text;
   area.style.setProperty('--litc-bg-rgb', `${bg.r}, ${bg.g}, ${bg.b}`);
   area.style.setProperty('--litc-text-rgb', `${text.r}, ${text.g}, ${text.b}`);
+  area.style.setProperty('--litc-sub', `rgba(${text.r}, ${text.g}, ${text.b}, 0.85)`);
   for(const k of Object.keys(LITC_ROOTVARS)){
     const rv = LITC_ROOTVARS[k], col = rv.role === 'bg' ? bg : text;
+    if(rv.role === 'sub'){ area.style.setProperty(k, `rgba(${text.r}, ${text.g}, ${text.b}, 0.85)`); continue; }
     area.style.setProperty(k, rv.c.a == null ? `rgb(${col.r}, ${col.g}, ${col.b})` : `rgba(${col.r}, ${col.g}, ${col.b}, ${rv.c.a})`);
   }
   area.style.setProperty('background-color', sys.bg, 'important');
@@ -4581,7 +4597,10 @@ function litRecolorArea(area, screen){
       if(!own || own.indexOf('var(') >= 0) continue;
       const c = litParseColor(own);
       if(!c || c.a === '0' || c.a === 0) continue;
-      const mapped = litMapToken(c, bg, text, white);
+      let mapped = litMapToken(c, bg, text, white);
+      // Grey words written straight on an element (chart dates...) follow the text colour too (#242).
+      if(!mapped && (p === 'color' || (p === 'fill' && el.tagName && el.tagName.toLowerCase() === 'text')) && Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) <= 16)
+        mapped = `rgba(${text.r}, ${text.g}, ${text.b}, 0.85)`;
       if(mapped) el.style.setProperty(p, mapped, 'important');
     }
   }
@@ -4641,6 +4660,10 @@ function litBgArea(area, screen){
   if(area.__litbg === url) return;
   area.__litbg = url;
   area.classList.add('lit-has-bg');
+  // The halo behind words on the picture is your background colour (colour system), else black - white in White theme.
+  { const sys = litColorSystemFor(screen); const hb = sys && sys.bg ? litHexRgb(sys.bg) : null;
+    const white = !!(window.storyTheme && window.storyTheme() === 'white');
+    area.style.setProperty('--lit-halo', hb ? `${hb.r}, ${hb.g}, ${hb.b}` : (white ? '255, 255, 255' : '0, 0, 0')); }
   area.style.setProperty('background-image', `linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.28)), url("${url}")`, 'important');
   area.style.setProperty('background-size', 'cover', 'important');
   area.style.setProperty('background-position', 'center', 'important');
@@ -4678,8 +4701,10 @@ function litSetVars(el, sys){
   const bg = litHexRgb(sys.bg), text = litHexRgb(sys.text);
   el.style.setProperty('--litc-bg-rgb', `${bg.r}, ${bg.g}, ${bg.b}`);
   el.style.setProperty('--litc-text-rgb', `${text.r}, ${text.g}, ${text.b}`);
+  el.style.setProperty('--litc-sub', `rgba(${text.r}, ${text.g}, ${text.b}, 0.85)`);
   for(const k of Object.keys(LITC_ROOTVARS)){
     const rv = LITC_ROOTVARS[k], col = rv.role === 'bg' ? bg : text;
+    if(rv.role === 'sub'){ el.style.setProperty(k, `rgba(${text.r}, ${text.g}, ${text.b}, 0.85)`); continue; }
     el.style.setProperty(k, rv.c.a == null ? `rgb(${col.r}, ${col.g}, ${col.b})` : `rgba(${col.r}, ${col.g}, ${col.b}, ${rv.c.a})`);
   }
   el.style.setProperty('background-color', sys.bg, 'important');

@@ -1383,7 +1383,9 @@ class OverlayService : Service(), StoryBridge.Host {
      *  will avoid and remove or reduce accidental touches'). Gesture phones: the gesture line's area (at least the 26dp
      *  strip Lockedintool's own switch uses), in every mode - the app too. 3-button phones: the Pages already stop above
      *  the phone's buttons; as a system Lockedintool's own switch strip (26dp + 6dp) sits there. */
-    private fun bottomRoomPx(): Int = if (phoneHasGestureLine()) maxOf(navInsetPx(), (26 * dp).toInt())
+    // 48dp (#242 - owner, 11 Nov 2026, a screenshot of Money: 'Please make this fix. You didn't make it' - 26dp still let
+    // the last cards touch the bottom switch button; the Focus page's gap, which the owner called 'perfect', is ~50dp).
+    private fun bottomRoomPx(): Int = if (phoneHasGestureLine()) maxOf(navInsetPx(), (48 * dp).toInt())
         else if (sysQuiet()) 0 else (32 * dp).toInt()
     override fun bottomRoomCss(): Int = Math.round(bottomRoomPx() / dp)
     /** Station 3's bottom edge above the screen's bottom: 0 (the corner) everywhere but the Dashboard. */

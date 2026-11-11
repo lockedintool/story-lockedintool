@@ -233,6 +233,20 @@ for (const [w, h] of SIZES) {
   }
   await ctx.close();
 }
+// 'The indicator there its not visible' (#250 - owner, 11 Nov 2026): the Apps letter bubble stays solid on a background picture.
+{
+  const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); localStorage.setItem('story-tour', 'done');
+    localStorage.setItem('story-color-systems', JSON.stringify({ dash: { bg: '#2b5f66', text: '#f2c200' } })); } catch (e) {} });
+  await ctx.route('**/*', r => /^(http:\/\/localhost|data:|blob:)/.test(r.request().url()) ? r.continue() : r.abort());
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  const bg = await pg.evaluate(async () => { LIT_BG.dashboard = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='; window.storyShow('apps', false); await new Promise(r => setTimeout(r, 600));
+    const bb = document.querySelector('#device-wrap .az-bubble'); if (!bb) return 'none'; bb.style.display = 'flex'; return getComputedStyle(bb).backgroundColor; });
+  const m = String(bg).match(/[\d.]+/g);
+  if (bg !== 'none' && (!m || (m.length >= 4 && +m[3] < 0.9))) fail('every word stays readable', 'Apps letter bubble on a picture', 'the bubble is see-through (' + bg + ')');
+  await ctx.close();
+}
 // 'Add a send button for your search to go through' (#249 - owner, 11 Nov 2026): one tap on it opens the search.
 {
   const ctx = await b.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true, userAgent: UA });

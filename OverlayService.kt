@@ -1060,13 +1060,19 @@ class OverlayService : Service(), StoryBridge.Host {
         setInLit(true)
         if (p.shown) { p.web.evaluateJavascript(js, null); after(); return }
         runCatching { p.web.onResume() }
+        // #269 (owner's video, 12 Nov 2026: 'You see the flashes, the out-position then fix back ... It's acting like a
+        // site'): a hidden Pages window had its view at alpha 0, and Android doesn't draw a view at alpha 0 - so the new page
+        // never drew while hidden, the 'drawn' answer never came, and after 0.3 s the window showed its OLD picture (the
+        // page you were on before - Money - or black) and only then drew the new one. Now the window stays invisible
+        // (window alpha 0, untouchable) while its view DRAWS the new page, and shows only once that picture is ready.
+        if (!(p === pagesPane && pagesInHome())) p.frame.alpha = 1f
         var done = false
-        val go = Runnable { if (!done) { done = true; whenBgReady(p, Runnable { if (!p.shown) setShown(p, true); after() }) } }
+        val go = Runnable { if (!done) { done = true; whenBgReady(p, Runnable { if (!p.shown) setShown(p, true) else if (p.frame.alpha < 1f) p.frame.alpha = 1f; after() }) } }
         p.web.evaluateJavascript(js) {
             runCatching { p.web.postVisualStateCallback(1L, object : WebView.VisualStateCallback() { override fun onComplete(requestId: Long) { ui.post(go) } }) }
                 .onFailure { ui.post(go) }
         }
-        ui.postDelayed(go, 300)
+        ui.postDelayed(go, 600)   // at most (only if the phone never says the picture is drawn)
     }
 
     // ---- Home screen widgets (PageWidgets.kt): tapping one opens its page; each widget's picture is the real page,

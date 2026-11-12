@@ -9,7 +9,7 @@ OUT=phone-report; mkdir -p $OUT
 R=$OUT/report.txt; : > $R
 log(){ echo "$*" | tee -a $R; }
 shot(){ adb exec-out screencap -p > $OUT/$1.png 2>/dev/null; log "  screenshot: $1.png"; }
-js(){ node cdp.mjs "$1" "$2" 2>/dev/null; }
+js(){ timeout 15 node cdp.mjs "$1" "$2" 2>/dev/null || echo "(no answer)"; }
 tap(){ adb shell input tap $1 $2; sleep 1.2; }
 size(){ adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*'; }
 rot(){ adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation $1; sleep 2.5; }
@@ -17,6 +17,15 @@ cur_rot(){ local d; d=$(adb shell dumpsys window displays | grep -m1 -o 'cur=[0-
 targets(){ curl -s http://127.0.0.1:9222/json | grep -o '"url": *"[^"]*"' | tee -a $R; }
 forward(){ local pid; pid=$(adb shell pidof $P | tr -d '\r' | awk '{print $1}'); adb forward --remove-all >/dev/null 2>&1; adb forward tcp:9222 localabstract:webview_devtools_remote_$pid >/dev/null && log "  devtools on pid $pid"; }
 step(){ log ""; log "== $*"; }
+# Films the screen while something happens and reports black frames (#269 - the owner's video: black / the old page
+# flashing before the Pages showed). rec_start NAME ... rec_stop NAME
+rec_start(){ adb shell "screenrecord --time-limit 10 --bit-rate 4000000 /sdcard/$1.mp4" >/dev/null 2>&1 & RECPID=$!; sleep 1; }
+rec_stop(){ sleep 1; adb shell pkill -INT screenrecord >/dev/null 2>&1; wait $RECPID 2>/dev/null; sleep 1
+  adb pull /sdcard/$1.mp4 $OUT/$1.mp4 >/dev/null 2>&1 || { log "  (no recording)"; return; }
+  ffmpeg -v error -i $OUT/$1.mp4 -vf "fps=10,scale=160:-1,tile=10x5" -frames:v 1 $OUT/$1-frames.png 2>/dev/null && log "  frames: $1-frames.png (10 a second)"
+  local b; b=$(ffmpeg -i $OUT/$1.mp4 -vf "blackdetect=d=0.05:pic_th=0.90:pix_th=0.06" -an -f null - 2>&1 | grep -o 'black_duration:[0-9.]*' | tr '\n' ' ')
+  [ -n "$b" ] && log "  BLACK on screen: $b" || log "  no black frames"
+  rm -f $OUT/$1.mp4; }
 
 step "SETUP"
 adb install -r -g app-test.apk | tail -1 | tee -a $R
@@ -48,11 +57,12 @@ js all "(()=>{ localStorage.setItem('story-msg-account', JSON.stringify({id:'pho
 sleep 6
 shot 00-home
 
-step "PAGES OPEN FROM THE BOTTOM SWITCH (Second system)"
+step "PAGES OPEN FROM THE BOTTOM SWITCH (Second system) - filmed"
 B=""
+rec_start open-pages
 for dy in 10 24 40 60; do
   tap $((WW/2)) $((HH-dy))
-  adb shell uiautomator dump /sdcard/u.xml >/dev/null 2>&1
+  timeout 25 adb shell uiautomator dump /sdcard/u.xml >/dev/null 2>&1
   B=$(adb shell cat /sdcard/u.xml | grep -o '<node[^>]*text="Lockedintool"[^>]*package="'$P'"[^>]*bounds="[^"]*"' | grep -o 'bounds="[^"]*"' | head -1 | grep -o '[0-9]\+' | tr '\n' ' ')
   [ -n "$B" ] && { log "  the Apps | Lockedintool switch opened (tap $dy px from the bottom)"; break; }
 done
@@ -60,6 +70,7 @@ done
 shot 01-switch
 set -- $B; [ $# -ge 4 ] && tap $(( ($1+$3)/2 )) $(( ($2+$4)/2 ))
 sleep 2
+rec_stop open-pages
 log "  pages: $(js pages "JSON.stringify({cur:(window.state||{}).current, vis:document.visibilityState, gate:!!document.querySelector('.lit-auth')})")"
 shot 02-pages
 

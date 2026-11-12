@@ -1,0 +1,17 @@
+
+== SETUP
+Success
+  settings written (Second system, switched on)
+  screen 1080x2400
+  service: 3 (1+ = running)
+  devtools on pid 2614
+"url": "https://appassets.androidplatform.net/assets/index.html?s3=1&dial=1&v=1794514486545"
+"url": "https://appassets.androidplatform.net/assets/index.html?s3=1&v=1794514486438"
+"url": "https://appassets.androidplatform.net/assets/index.html?s3=1&profile=1&gap=1&v=1794514486253"
+"url": "https://appassets.androidplatform.net/assets/index.html?s3=1&profile=1&v=1794514486198"
+"url": "https://appassets.androidplatform.net/assets/index.html?v=1794514486097"
+[{"win":"pages","r":"ok"}]
+  test phone still there: device
+  (no screenshot 00-home)
+
+TEST PHONE LOST (emulator crashed) - stopping this attempt

@@ -372,6 +372,25 @@ class OverlayService : Service(), StoryBridge.Host {
         else { layerWm = wm; layerType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY }
     }
 
+    /** Adds one of Lockedintool's windows to its top layer - and NEVER crashes doing it (#270 - found by the phone test,
+     *  12 Nov 2026: 'Lockedintool keeps stopping'). When Lockedintool system actions (the accessibility service) has
+     *  only just connected, Android can refuse a window in its layer (BadTokenException) - that used to crash the whole
+     *  app. Now the window goes in the normal overlay layer instead, the problem is reported, and the top layer is
+     *  tried again a few seconds later (updateBubble -> rebuildLayer). Returns the WindowManager it was added to. */
+    @Volatile private var layerFailedAt = 0L
+    private fun layerAdd(v: View, lp: WindowManager.LayoutParams): WindowManager {
+        try { layerWm.addView(v, lp); return layerWm } catch (e: Exception) {
+            if (layerType == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) { ProblemLog.record(this, "layer", "window refused: ${e.javaClass.simpleName}", "service"); return wm }
+            layerFailedAt = SystemClock.uptimeMillis()
+            ProblemLog.record(this, "layer", "top layer refused: ${e.javaClass.simpleName}", "service")
+            layerWm = wm; layerType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            lp.type = layerType
+            runCatching { wm.addView(v, lp) }
+            ui.postDelayed({ updateBubble() }, 3500)
+            return wm
+        }
+    }
+
     /** Asks the STORY site which screens are current; if they changed, the panes reload (when closed). */
     private fun checkScreens() {
         val url = remoteBase() + (if (Release.testChannel(this)) "source.txt" else "live-source.txt") + "?t=" + System.currentTimeMillis()
@@ -545,9 +564,8 @@ class OverlayService : Service(), StoryBridge.Host {
             }
         }
         bubble = v
-        bubbleWm = layerWm
         bubbleLp = overlayParams(size, size, Gravity.BOTTOM or Gravity.END, 0, 0).also { it.type = layerType }
-        layerWm.addView(v, bubbleLp)  // flush in the bottom-right corner
+        bubbleWm = layerAdd(v, bubbleLp!!)  // flush in the bottom-right corner
         activityOn = false
         showActivityDot(getSharedPreferences("story", MODE_PRIVATE).getBoolean("activity_dot", false))
     }
@@ -604,10 +622,9 @@ class OverlayService : Service(), StoryBridge.Host {
         }
         bar = v
         val bottom = if (hasLine) 0 else navBarHeightPx() + (6 * dp).toInt()
-        barWm = layerWm
         barLp = overlayParams(w, h, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, bottom).also { it.type = layerType }
         barLp!!.flags = barFlags(barLp!!.flags)
-        layerWm.addView(v, barLp)
+        barWm = layerAdd(v, barLp!!)
         dashLineSync()
     }
     private var barLp: WindowManager.LayoutParams? = null
@@ -662,10 +679,10 @@ class OverlayService : Service(), StoryBridge.Host {
         row.addView(word("Apps") { setInLit(false); hidePanel() })
         row.addView(TextView(this).apply { text = "|"; setTextColor(th(Color.parseColor("#66FFFFFF"))); textSize = 18f })
         row.addView(word("Lockedintool") { setInLit(true); showPanel(station3Only = false) })  // the only way into Lockedintool itself (owner: it says Lockedintool, not Pages)
-        picker = row; pickerWm = layerWm
+        picker = row
         // A touch anywhere outside the switch just closes it - nothing is chosen.
         row.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hidePicker(); false }
-        layerWm.addView(row, overlayParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, if (dashGeom) dashBandYPx() + (48 * dp).toInt() else (64 * dp).toInt() + (if (phoneHasGestureLine()) 0 else navBarHeightPx()))
+        pickerWm = layerAdd(row, overlayParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, if (dashGeom) dashBandYPx() + (48 * dp).toInt() else (64 * dp).toInt() + (if (phoneHasGestureLine()) 0 else navBarHeightPx()))
             .also { it.type = layerType; it.flags = it.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH })
         ui.postDelayed({ hidePicker() }, 4000)
     }
@@ -881,11 +898,10 @@ class OverlayService : Service(), StoryBridge.Host {
         // Profile's main window sits in the Pages' layer (under the status bar, like the Pages) so the keyboard can
         // show above it when you type your name / username; Station 3, the gap and the strip stay in the top layer.
         val inLayer = small && !(profile && !gap)
-        val paneWm = if (inLayer) layerWm else wm
         if (inLayer) lp.type = layerType
+        val paneWm = if (inLayer) layerAdd(frame, lp) else { runCatching { wm.addView(frame, lp) }; wm }   // never a crash (#270)
         val p = Pane(frame, wv, lp, small, paneWm, dial, profile, gap, lock)
         paneRef = p; p.ver = screensSeen
-        paneWm.addView(frame, lp)
         return p
     }
 
@@ -1676,7 +1692,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // Station 3 must stay on top everywhere (owner): it can only sit above the keyboard and every app's screen in
         // the accessibility layer. If that layer came back (the system re-connected Lockedintool system actions) while
         // Station 3 was still in the normal layer, move everything up at once.
-        if (StoryAccessibilityService.instance != null && layerType != WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY && !relayerPending) {
+        if (StoryAccessibilityService.instance != null && layerType != WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY && !relayerPending && SystemClock.uptimeMillis() - layerFailedAt > 3000) {
             relayerPending = true; ui.post { relayerPending = false; rebuildLayer() }
         }
         if (!on && !dash && s3Pane?.shown == true) { closeStation3Now(); return }

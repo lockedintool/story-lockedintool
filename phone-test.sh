@@ -29,7 +29,7 @@ rec_stop(){ sleep 1; adb shell pkill -INT screenrecord >/dev/null 2>&1; wait $RE
 
 step "SETUP"
 adb install -r -g app-test.apk | tail -1 | tee -a $R
-adb shell svc wifi disable; adb shell svc data disable          # no internet: the built-in screens, no real servers
+adb shell svc wifi disable; adb shell svc data disable; adb shell cmd connectivity airplane-mode enable   # no internet: no real servers
 adb shell appops set $P SYSTEM_ALERT_WINDOW allow
 adb shell settings put secure enabled_accessibility_services $P/$P.StoryAccessibilityService
 adb shell settings put secure accessibility_enabled 1

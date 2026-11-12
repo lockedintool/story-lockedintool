@@ -86,6 +86,9 @@ jobs:
           perl -0pi -e 's/(fun ok\(ctx: Context\): Boolean \{)/$1 if (true) return true;/' $J/Genuine.kt
           # the test can look inside Lockedintool's own screens (WebView DevTools)
           perl -0pi -e 's/(override fun onCreate\(\) \{\n        super.onCreate\(\))/$1\n        android.webkit.WebView.setWebContentsDebuggingEnabled(true)/' $J/OverlayService.kt
+          # the screens built into this test app (never the published ones from the web)
+          perl -0pi -e 's/(private fun remoteBase\(\): String =\n)[^\n]*/$1        "https:\/\/appassets.androidplatform.net\/assets\/index.html"/' $J/OverlayService.kt
+          grep -A1 "private fun remoteBase" $J/OverlayService.kt
           # no self-updates on the test phone
           perl -0pi -e 's/(fun check\(ctx: Context, force: Boolean = false, now: Boolean = false\) \{)/$1 if (true) return;/' $J/Updater.kt
           grep -c "allowed(c: Context) = true" $J/Access.kt

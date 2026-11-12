@@ -8,7 +8,9 @@ P=com.story.launcher
 OUT=phone-report; mkdir -p $OUT
 R=$OUT/report.txt; : > $R
 log(){ echo "$*" | tee -a $R; }
-shot(){ adb exec-out screencap -p > $OUT/$1.png 2>/dev/null; log "  screenshot: $1.png"; }
+# Screenshots / films are taken by the emulator itself, from outside the phone (taking them inside the slow test phone
+# crashed it).
+shot(){ timeout 30 adb emu screenrecord screenshot "$PWD/$OUT/$1.png" >/dev/null 2>&1; [ -s $OUT/$1.png ] && log "  screenshot: $1.png" || log "  (no screenshot $1)"; }
 js(){ timeout 15 node cdp.mjs "$1" "$2" 2>/dev/null || echo "(no answer)"; }
 tap(){ adb shell input tap $1 $2; sleep 1.2; }
 size(){ adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*'; }
@@ -19,9 +21,10 @@ forward(){ local pid; pid=$(adb shell pidof $P | tr -d '\r' | awk '{print $1}');
 step(){ [ "$(adb get-state 2>/dev/null)" = "device" ] || { log ""; log "TEST PHONE LOST (emulator crashed) - stopping this attempt"; exit 3; }; log ""; log "== $*"; }
 # Films the screen while something happens and reports black frames (#269 - the owner's video: black / the old page
 # flashing before the Pages showed). rec_start NAME ... rec_stop NAME
-rec_start(){ adb shell "screenrecord --time-limit 10 --bit-rate 4000000 /sdcard/$1.mp4" >/dev/null 2>&1 & RECPID=$!; sleep 1; }
-rec_stop(){ sleep 1; adb shell pkill -INT screenrecord >/dev/null 2>&1; wait $RECPID 2>/dev/null; sleep 1
-  adb pull /sdcard/$1.mp4 $OUT/$1.mp4 >/dev/null 2>&1 || { log "  (no recording)"; return; }
+rec_start(){ timeout 15 adb emu screenrecord start --time-limit 12 --fps 15 "$PWD/$OUT/$1.webm" >/dev/null 2>&1; sleep 1; }
+rec_stop(){ sleep 1; timeout 20 adb emu screenrecord stop >/dev/null 2>&1; sleep 2
+  [ -s $OUT/$1.webm ] || { log "  (no recording)"; return; }
+  ffmpeg -v error -y -i $OUT/$1.webm $OUT/$1.mp4 && rm -f $OUT/$1.webm
   ffmpeg -v error -i $OUT/$1.mp4 -vf "fps=10,scale=160:-1,tile=10x5" -frames:v 1 $OUT/$1-frames.png 2>/dev/null && log "  frames: $1-frames.png (10 a second)"
   local b; b=$(ffmpeg -i $OUT/$1.mp4 -vf "blackdetect=d=0.05:pic_th=0.90:pix_th=0.06" -an -f null - 2>&1 | grep -o 'black_duration:[0-9.]*' | tr '\n' ' ')
   [ -n "$b" ] && log "  BLACK on screen: $b" || log "  no black frames"

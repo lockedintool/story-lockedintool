@@ -965,7 +965,10 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Lockedintool lands on your Home Screen (Layouts > Home Screen, owner). */
     private fun showPanel(station3Only: Boolean, back: Boolean = false) {
         if (WidgetMode.on(this)) return   // Only use widgets: only the widgets
-        if (AppMode.appOnly(this)) { if (!station3Only) LockedintoolApp.open(this, null); return }   // the app: its own window
+        // The app: the Pages open in its own window. Station 3's button on the Pages INSIDE the app opens Station 3 like
+        // anywhere else (#254 - owner, 12 Nov 2026: 'The apps and pages station 3 doesn't work. When I tap it nothing is
+        // showing' - this line used to refuse every tap in app mode).
+        if (AppMode.appOnly(this) && !(station3Only && pagesPane?.shown == true)) { if (!station3Only) LockedintoolApp.open(this, null); return }
         warmUp()
         if (station3Only) {
             // Station 3 opens exactly the same over the Pages as over any app -- the Pages stay put.

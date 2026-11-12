@@ -277,4 +277,4 @@ commits, pushed as a new update) - nothing else changes.
 | 268 | 2026-11-12 | With no internet, Station 3's windows (Messages, Profile, the dial pad...) switch to Lockedintool's built-in screens again instead of staying on 'Webpage not available' - found by the new phone test | abd5110 |
 | 269 | 2026-11-12 | Opening Lockedintool no longer flashes black or the page you were on before - the new page is drawn while still invisible and shown only once it's ready | 4237317 |
 | 270 | 2026-11-12 | Fixed a crash ('Lockedintool keeps stopping') that could happen right after Lockedintool system actions connects (after a restart or update) - found by the phone test | a17ded6 |
-| 271 | 2026-11-12 | On the lock screen, the unlock prompt for Station 3's features (and the Wallet page button's) now really appears - Android was quietly blocking it (found by the phone test) | (pending) |
+| 271 | 2026-11-12 | On the lock screen, the unlock prompt for Station 3's features (and the Wallet page button's) now really appears - Android was quietly blocking it (found by the phone test) | 266d960 |

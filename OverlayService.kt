@@ -1558,6 +1558,8 @@ class OverlayService : Service(), StoryBridge.Host {
         // (owner's recording, 29 Oct 2026: Lockedintool opened by itself while they were in another app).
         val home = homePkg() ?: return
         if (StoryAccessibilityService.frontPkg != home) return
+        // The phone went Home because you swiped the bottom button up (#257): that's switching to Apps - stay there.
+        if (SystemClock.uptimeMillis() - swipeUpAt < 1500) { setInLit(false); return }
         if (StoryAccessibilityService.homeInFront(home) && !StoryAccessibilityService.recentsInFront()) showPanel(station3Only = false)
     }
     private val panelCheck = Runnable {
@@ -1916,6 +1918,8 @@ class OverlayService : Service(), StoryBridge.Host {
         if (pkg == packageName) return@post
         val recents = StoryAccessibilityService.RECENTS_CLASS.containsMatchIn(cls) || (recentsPkg != null && pkg == recentsPkg)
         val home = !SystemMode.on(this) && pkg == homePkg()          // One UI's Recents is the launcher itself, so this catches Recents too
+        // The phone's Home came up right after you swiped the bottom button up (#257): that's switching to Apps.
+        if (home && inLit() && SystemClock.uptimeMillis() - swipeUpAt < 1500) setInLit(false)
         // In Lockedintool the phone's bare home screen never shows - only its Recents makes the Pages step aside.
         if (home && !recents && inLit() && !StoryAccessibilityService.recentsInFront()) {
             // It may still be Recents drawing itself (One UI draws it in the home-screen app): look again a moment later.
@@ -1951,13 +1955,18 @@ class OverlayService : Service(), StoryBridge.Host {
     // time only'). It only steps aside when the PHONE took the swipe ('cancel'); the phone's own Home / Recents screens are
     // caught by recentsShown. The old fallback that asked the phone for Home / Recents itself (and the Only-system quick
     // swipe to the Dashboard) is gone - in Only system the phone's own Home brings the Dashboard (LockedintoolHome).
+    /** When the bottom button was last swiped up (any kind) - the phone's home screen showing right after it is that swipe. */
+    @Volatile private var swipeUpAt = 0L
     private fun phoneSwipe(kind: String) { ui.post {
-        if (kind != "cancel") return@post
-        if (keyguardLocked() || sysQuiet()) return@post
+        if (keyguardLocked() || sysQuiet() || SystemMode.on(this)) return@post
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive) return@post
-        if (SystemMode.on(this)) return@post
-        // In Lockedintool the phone's Home is Lockedintool itself - only its Recents (caught by recentsShown) steps aside.
-        if (inLit()) return@post
+        swipeUpAt = SystemClock.uptimeMillis()
+        if (kind != "cancel") return@post
+        // #257 (owner, 12 Nov 2026, Second system: 'the bottom button (system switch button) Swipe up - it doesn't work. That
+        // was supposed to switch and go to the phone's normal apps'; chose 'Swipe up = go to Apps'): swiping up on the bottom
+        // button inside Lockedintool switches you to Apps, exactly like tapping 'Apps' on the switch - the phone does its own
+        // Home / Recents and Lockedintool stays away until you switch back. (Replaces: in Lockedintool a swipe up kept you there.)
+        setInLit(false)
         stepAsideForPhoneNav()
     } }
     /** When the Pages last stepped aside for the phone's Home / Recents in Only system. On One UI the home-screen app

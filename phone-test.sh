@@ -125,7 +125,7 @@ shot 10-after-unlock-messages
 adb shell locksettings clear --old 1234 >/dev/null 2>&1
 
 step "PROBLEMS SEEN"
-adb logcat -d | grep -E "FATAL EXCEPTION|AndroidRuntime: |com.story.launcher.*(Exception|Error)" | head -40 | tee -a $R
+timeout 20 adb logcat -d | grep -E "FATAL EXCEPTION|AndroidRuntime: |com.story.launcher.*(Exception|Error)" | head -40 | tee -a $R
 log "  console errors in the screens:"
 js all "JSON.stringify(window.__litErrors||[])" | tee -a $R
 log ""; log "DONE"

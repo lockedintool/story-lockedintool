@@ -26,6 +26,8 @@ import android.widget.ImageView
 class LockDashActivity : Activity() {
     companion object {
         @Volatile var instance: LockDashActivity? = null
+        /** Opened because a Station 3 feature was tapped on the locked phone (#273): show the unlock options at once. */
+        const val EXTRA_OPTS = "opts"
         /** The lock screen's look - your Home Screen a little blurry and dimmed, the glass tape across the screen and
          *  DEVICE LOCKED. The same on the lock screen and on the Always On Display (owner: 'like how your Lockedintool
          *  lock screen is ... don't dim it'). */
@@ -175,7 +177,11 @@ class LockDashActivity : Activity() {
             gravity = Gravity.CENTER; setPadding(0, (4 * dp).toInt(), 0, 0); maxLines = 1 }, wrap())
         return box
     }
-    override fun onResume() { super.onResume(); inFront = true; overridePendingTransition(0, 0); window.decorView.post { stillLocked() }; watch.run() }
+    override fun onResume() { super.onResume(); inFront = true; overridePendingTransition(0, 0); window.decorView.post { stillLocked()
+        if (intent?.getBooleanExtra(EXTRA_OPTS, false) == true) { intent.removeExtra(EXTRA_OPTS); if (!isFinishing) showOptions() } }; watch.run() }
+    override fun onNewIntent(i: android.content.Intent?) { super.onNewIntent(i); if (i != null) setIntent(i) }
+    /** A Station 3 feature was tapped on the locked phone (#273): Lockedintool's own unlock options, never the phone's lock screen. */
+    fun optionsFromS3() { runOnUiThread { if (!isFinishing) showOptions() } }
     override fun onPause() { super.onPause(); inFront = false; overridePendingTransition(0, 0); window.decorView.removeCallbacks(watch) }
     // The phone unlocking by its fingerprint sensor while this covers the lock screen (owner, 5 Nov 2026: 'I pressed my
     // fingerprint scanner - phone just stayed there unlocked'): some phones send no unlock signal then, so while this

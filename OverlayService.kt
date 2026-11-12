@@ -111,6 +111,11 @@ class OverlayService : Service(), StoryBridge.Host {
         val now = System.currentTimeMillis()
         if (now - aodStartedAt < 800) return               // the same screen-off, reported twice
         aodStartedAt = now
+        s3UnlockWant = null   // a Station 3 feature tapped while locked is forgotten once the screen goes off
+        // Privacy, the second guard (#273 - owner: 'double fix incase so that nothing ever happens'): whatever of Station 3
+        // was open (Messages, Profile, Updates, Create, Call history, the dial pad) closes when the phone locks - never
+        // left showing on the lock screen. A call keeps its screen.
+        ui.post { if (!callActive) { profilePane?.takeIf { it.shown }?.let { hideOne(it) }; dialPane?.takeIf { it.shown }?.let { hideOne(it) }; updateBubble() } }
         lockDashPrepare()   // before the Always On Display, so it sits underneath it
         val aod = AodActivity.instance
         if (aod != null && !aod.isFinishing) {
@@ -936,6 +941,8 @@ class OverlayService : Service(), StoryBridge.Host {
     }
 
     private fun setShown(p: Pane, shown: Boolean) {
+        // Never shown on a locked phone without its unlock (#273), except a call's screen.
+        if (shown && (p === profilePane || p === dialPane) && !callActive && keyguardLocked()) return
         if (p === pagesPane && shown) { parkedDash = false; if (homeUp) homeShotSoon() }
         if (shown && p === pagesPane && pagesInHome() && LockedintoolHome.current?.visibleNow != true) homeDetach()
         p.shown = shown
@@ -2327,6 +2334,16 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile private var s3UnlockWant: String? = null
     private fun s3UnlockAsk(which: String) {
         s3UnlockWant = which
+        // Lockedintool is your lock screen (Only system, or Lockedintool security): the unlock goes through ITS lock
+        // screen's unlock options, never the phone's own lock screen (#273 - owner, 12 Nov 2026: 'When I tap them my
+        // phones lockscreen shows not lockedintools'). Unlocked there = you land in what you tapped.
+        if (lockScreenOurs() && getSystemService(android.app.KeyguardManager::class.java)?.isDeviceSecure == true) {
+            AodActivity.instance?.let { a -> runCatching { a.finish(); a.overridePendingTransition(0, 0) } }   // the options show on the lock screen, not under the Always On Display
+            val d = LockDashActivity.instance
+            if (d != null && !d.isFinishing) { lockDashFront(); d.optionsFromS3(); return }
+            if (startBg(Intent(this, LockDashActivity::class.java).putExtra(LockDashActivity.EXTRA_OPTS, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 23)) return
+        }
         if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
             .putExtra(IdentityActivity.EXTRA_FOR, "s3").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 21)) s3UnlockWant = null
     }
@@ -2787,6 +2804,8 @@ class OverlayService : Service(), StoryBridge.Host {
     /** Unlocked on Lockedintool's lock screen: you land on your Home Screen - Lockedintool's Home on Only system, the
      *  Pages on your Home Screen on Second system (the app you were in stays in Recents). */
     fun lockDashOpenHome(act: android.app.Activity) {
+        // Unlocked because you tapped one of Station 3's features (#273): you land in what you tapped, not your Home Screen.
+        if (s3UnlockWant != null) { s3UnlockDone("ok"); return }
         if (SystemMode.on(this)) { runCatching { act.startActivity(Intent(act, LockedintoolHome::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }; return }
         val p = pagesPane ?: return
         ui.post { hideLiveWidgets(); warmUp(); showPagesOn(p, "window.storyShow&&window.storyShow(null,false)") { updateBubble(); addBar() } }

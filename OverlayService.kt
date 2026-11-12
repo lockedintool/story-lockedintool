@@ -204,9 +204,16 @@ class OverlayService : Service(), StoryBridge.Host {
         }
         return pt
     }
+    /** The dial pad's full (unshrunk) width, measured while the phone is upright - its gap to the screen's right edge is
+     *  what lines it up with Station 3. */
+    @Volatile private var dialFullW = 0
     private fun dialX(padW: Int): Int {
         val sz = screenNow(); val w = sz.x; val upright = minOf(w, sz.y)
-        return (w - (upright + padW) / 2).coerceAtLeast(0)
+        if (w <= sz.y) { dialFullW = maxOf(dialFullW, padW); return ((w - padW) / 2).coerceAtLeast(0) }   // upright: in the middle, as always
+        // Sideways (#266 - owner, 12 Nov 2026: 'Why is it not lining with station 3'): the right edge lines up with Station 3
+        // exactly as upright - the same gap to the screen's edge, worked out from the FULL width (the shrunk width made the gap bigger).
+        val gap = if (dialFullW > 0) ((upright - dialFullW) / 2).coerceAtLeast(0) else (8 * dp).toInt()
+        return (w - padW - gap).coerceAtLeast(0)
     }
     /** Puts a dial pad where it belongs for the screen as it is NOW (upright / sideways) and tells it its height room. */
     private fun placeDial(p: Pane) {

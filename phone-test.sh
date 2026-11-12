@@ -142,6 +142,8 @@ shot 08-lockscreen-station3
 js s3 "window.StoryNative.toggleMessages&&window.StoryNative.toggleMessages(),'ok'" >/dev/null; sleep 2.5
 log "  tapping Messages while locked must ask for the phone's unlock (#267) - nothing of Messages may show yet"
 shot 09-lockscreen-messages-asks-unlock
+log "  in front now: $(adb shell dumpsys window | grep -m1 -o 'mCurrentFocus=[^ ]* [^ ]* [^}]*')"
+log "  unlock asked: $(timeout 15 adb logcat -d | grep -E 'IdentityActivity|requestDismissKeyguard|KeyguardDismiss' | tail -3)"
 log "  profile window shown before unlock: $(js profile "JSON.stringify({messagesVisible:!!(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden&&document.visibilityState==='visible')})")"
 sleep 1.5; adb shell input text 1234; adb shell input keyevent 66; sleep 4
 log "  after the PIN: $(js profile "JSON.stringify({page:(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden)?'messages':'other', vis:document.visibilityState, gate:!!document.querySelector('#story-profile .lit-auth')})")"

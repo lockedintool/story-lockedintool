@@ -1675,7 +1675,7 @@ class OverlayService : Service(), StoryBridge.Host {
             }
             // Station 3 is hidden now: back to the corner, and on the Pages it has Rows and Page Styles again.
             if (s3Pane?.shown != true) applyS3Geom(false)
-            tellS3(onPages = pagesUp, onDash = false)
+            tellS3(onPages = pagesUp && !keyguardLocked(), onDash = false)   // #272: never Rows / Page Styles on the lock screen
         }
         val where = QuickAccess.where(this)
         // The Station 3 button over apps / on the Pages: owner's on/off toggle (s3Apps) + where it shows. The Dashboard band

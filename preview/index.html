@@ -3017,6 +3017,9 @@
   /* Attached to Station 3 (owner, 4 Nov 2026: 'attach the dial pad with station 3 so it's not separated'): it sits right
      on Station 3's bar, so its bottom edge is straight. (The lock screen's dial pad keeps its own look.) */
   html.dial-wide body.s3-only.s3-dial:not(.s3-lock) .station3-dialpad-float{ border-radius:20px 20px 0 0 !important; }
+  /* #255 (owner, 12 Nov 2026, the phone sideways: 'The dial pad like is cutting'): the dial pad shrinks to the height the
+     screen has (storyDialFit, --dial-z), anchored where it sits - upright it stays exactly as it was. */
+  body.s3-dial .station3-dialpad-float{ transform:scale(var(--dial-z,1)); transform-origin:left bottom; }
   html.dial-wide body.s3-only.s3-dial:not(.s3-lock) .station3-dialpad-float .station3-dial-side-l{ border-radius:20px 0 0 0; }
   html.dial-wide body.s3-only.s3-dial:not(.s3-lock) .station3-dialpad-float .station3-dial-side-r{ border-radius:0 20px 0 0; }
   .station3-dial-side-in{ display:flex; align-items:center; gap:8px; writing-mode:vertical-rl; transform:rotate(180deg); font-size:12px; font-weight:700; letter-spacing:.3px; white-space:nowrap; }
@@ -10947,6 +10950,16 @@ window.storyStation3Only = function(){
   renderDevice();
   if(window.applyS3DashColors) window.applyS3DashColors();
 };
+// #255: the room the dial pad has (the app says it: from its window up to the status bar). Upright it fits as always;
+// sideways it shrinks to fit (--dial-z), so nothing is cut. Measured unscaled (offsetHeight ignores the transform).
+window.storyDialFit = function(){
+  if(!document.body || !document.body.classList.contains('s3-dial')) return;
+  const f = document.querySelector('.station3-dialpad-float'); if(!f) return;
+  const h = f.offsetHeight; if(!(h > 0)) return;
+  const room = Number(window.__storyDialRoom) || ((screen.height || innerHeight) - 72);
+  const z = Math.min(1, Math.max(0.4, room / h));
+  document.body.style.setProperty('--dial-z', z >= 0.999 ? '1' : z.toFixed(3));
+};
 // The dial pad on its own (Android overlay, its own still window above Station 3).
 window.storyDialOnly = function(){
   document.body.classList.add('s3-only', 's3-dial');
@@ -10956,6 +10969,7 @@ window.storyDialOnly = function(){
   if(state.current==='dashboard') state.current = state.lastPage || 'wallet';
   state.station3Open = true; state.station3DialpadOpen = true;
   renderDevice();
+  window.storyDialFit();
 };
 // Over other apps the dial pad button / X just tell the app to show or hide the dial pad window.
 document.addEventListener('click', (e)=>{

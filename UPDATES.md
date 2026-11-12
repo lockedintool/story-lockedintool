@@ -260,4 +260,4 @@ commits, pushed as a new update) - nothing else changes.
 | 252 | 2026-11-11 | As an app (System off), Station 3's button follows Settings > Quick access on the Pages inside the app (Pages only = on your Pages); it still never shows over other apps | 5b673f8 |
 | 253 | 2026-11-11 | Updates: a bell beside the search bar opens your Activity - posts and statuses from people you follow, follow requests (Accept / Decline right there), new followers, accepted requests, likes, comments and shares on your posts; a red dot shows when there's something new. The ⋮ beside it sets who can see your status | 50b6c62 |
 | 254 | 2026-11-12 | As an app (System off), tapping Station 3's button on your Pages opens Station 3 again - every tap on it was being refused | fe00c0a |
-| 255 | 2026-11-12 | With the phone sideways, the dial pad (and the lock screen's) shrinks to fit the screen's height instead of being cut off; upright it's exactly as before | (pending) |
+| 255 | 2026-11-12 | With the phone sideways, the dial pad (and the lock screen's) shrinks to fit the screen's height instead of being cut off; upright it's exactly as before | d5272ab |

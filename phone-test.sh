@@ -53,8 +53,13 @@ log "  service: $(adb shell dumpsys activity services $P | grep -c OverlayServic
 forward
 targets
 # Sign in the test account inside the built-in screens (offline - it never reaches a server), skip the tour.
-js all "(()=>{ localStorage.setItem('story-msg-account', JSON.stringify({id:'phonetest',token:'t',pw:true,username:'phonetest',name:'Phone Test'})); localStorage.setItem('story-tour','done'); localStorage.setItem('story-profile', JSON.stringify({name:'Phone Test',username:'phonetest'})); location.reload(); return 'ok'; })()" | tee -a $R
-sleep 6
+# Only the Pages and Profile's window need the account; one at a time (the test phone has no graphics chip - reloading
+# every window at once took it offline).
+SIGNIN="(()=>{ localStorage.setItem('story-msg-account', JSON.stringify({id:'phonetest',token:'t',pw:true,username:'phonetest',name:'Phone Test'})); localStorage.setItem('story-tour','done'); localStorage.setItem('story-profile', JSON.stringify({name:'Phone Test',username:'phonetest'})); return 'ok'; })()"
+js pages "$SIGNIN" | tee -a $R
+js pages "location.reload(),'reloading'" >/dev/null; sleep 12
+js profile "location.reload(),'reloading'" >/dev/null; sleep 12
+log "  test phone still there: $(adb get-state 2>&1)"
 shot 00-home
 
 step "PAGES OPEN FROM THE BOTTOM SWITCH (Second system) - filmed"

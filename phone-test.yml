@@ -1,0 +1,127 @@
+name: Lockedintool phone test
+# A real Android phone (emulator) runs Lockedintool through real situations - Station 3, the Pages, the dial pad
+# upright and sideways, the lock screen (owner, 12 Nov 2026: 'Yes build the phone test'). The app is a TEST-ONLY build:
+# made here, used here, thrown away (never uploaded, never on any phone, not signed with Lockedintool's key); it skips the
+# owner-only lock (Access) on this emulator only, and the emulator has no internet, so no real account or server is touched.
+# The report + screenshots go to the branch phone-test-report.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: phone-test, cancel-in-progress: true }
+jobs:
+  phone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Arrange the flat files into an Android project
+        run: |
+          B=build_src
+          M=$B/app/src/main
+          mkdir -p $M/java/com/story/launcher $M/res/values $M/res/xml $M/res/drawable $M/res/drawable-nodpi $M/res/layout $M/assets
+          cp AndroidManifest.xml $M/
+          cp *.kt $M/java/com/story/launcher/
+          cp accessibility_config.xml file_paths.xml widget_dashboard.xml widget_money.xml widget_wallet.xml widget_focus.xml widget_notes.xml widget_community.xml $M/res/xml/
+          cp widget_page.xml $M/res/layout/
+          cp strings.xml themes.xml $M/res/values/
+          cp ic_launcher.png ic_app_fg.png $M/res/drawable-nodpi/
+          cp ic_app.xml $M/res/drawable/
+          cp device_locked.png $M/res/drawable-nodpi/
+          cp index.html $M/assets/index.html
+          cat > $B/settings.gradle.kts <<'X'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "StoryOverlay"
+          include(":app")
+          X
+          cat > $B/build.gradle.kts <<'X'
+          plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+          }
+          X
+          cat > $B/gradle.properties <<'X'
+          org.gradle.jvmargs=-Xmx2g
+          android.useAndroidX=true
+          android.suppressUnsupportedCompileSdk=36
+          X
+          cat > $B/app/build.gradle.kts <<'X'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.story.launcher"
+              compileSdk = 34
+              defaultConfig {
+                  applicationId = "com.story.launcher"
+                  minSdk = 26
+                  targetSdk = 37
+                  versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt() + 100
+                  versionName = "1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+              }
+              compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+              kotlinOptions { jvmTarget = "17" }
+          }
+          dependencies {
+              implementation("androidx.core:core-ktx:1.13.1")
+              implementation("androidx.appcompat:appcompat:1.7.0")
+              implementation("androidx.biometric:biometric:1.1.0")
+              implementation("androidx.webkit:webkit:1.11.0")
+              implementation("androidx.work:work-runtime-ktx:2.9.1")
+              implementation("androidx.camera:camera-core:1.3.4")
+              implementation("androidx.camera:camera-camera2:1.3.4")
+              implementation("androidx.camera:camera-lifecycle:1.3.4")
+              implementation("androidx.camera:camera-video:1.3.4")
+              implementation("androidx.camera:camera-view:1.3.4")
+              implementation("com.google.mlkit:text-recognition:16.0.1")
+          }
+          X
+      - name: Make it the test-only build (this emulator only)
+        run: |
+          J=build_src/app/src/main/java/com/story/launcher
+          # the owner-only lock and the signature check pass on the test phone only
+          perl -0pi -e 's/fun allowed\(c: Context\) = [^\n]*/fun allowed(c: Context) = true/' $J/Access.kt
+          perl -0pi -e 's/(fun ok\(ctx: Context\): Boolean \{)/$1 if (true) return true;/' $J/Genuine.kt
+          # the test can look inside Lockedintool's own screens (WebView DevTools)
+          perl -0pi -e 's/(override fun onCreate\(\) \{\n        super.onCreate\(\))/$1\n        android.webkit.WebView.setWebContentsDebuggingEnabled(true)/' $J/OverlayService.kt
+          # no self-updates on the test phone
+          perl -0pi -e 's/(fun check\(ctx: Context, force: Boolean = false, now: Boolean = false\) \{)/$1 if (true) return;/' $J/Updater.kt
+          grep -c "allowed(c: Context) = true" $J/Access.kt
+          grep -c "setWebContentsDebuggingEnabled(true)" $J/OverlayService.kt
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: 8.9 }
+      - name: Build the test-only app
+        working-directory: build_src
+        run: gradle assembleDebug --no-daemon
+      - run: cp build_src/app/build/outputs/apk/debug/app-debug.apk app-test.apk
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Let the emulator use the machine's speed (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run Lockedintool on the test phone
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash phone-test.sh
+      - name: Save the report (branch phone-test-report)
+        if: always()
+        run: |
+          [ -d phone-report ] || exit 0
+          cd phone-report
+          git init -q -b phone-test-report
+          git config user.name "Lockedintool phone test"; git config user.email "actions@users.noreply.github.com"
+          echo "run ${GITHUB_RUN_NUMBER} - commit ${GITHUB_SHA::7} - $(date -u +%Y-%m-%dT%H:%MZ)" > run.txt
+          git add -A && git commit -qm "Phone test ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" phone-test-report

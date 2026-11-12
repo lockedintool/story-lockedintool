@@ -12120,7 +12120,8 @@ function crWatchCamera(){
   crWatch = setTimeout(()=>{ const el = document.getElementById('story-profile'); if(el && !el.querySelector('.pf-create').hidden && !crCameraReady){ showToast('The camera didn’t open — close Create and open it again'); crStatus((el.querySelector('.cr-status').textContent || 'Camera') + ' (stuck)'); } }, 6000);
 }
 function crShutterDown(){
-  if(crHas){ crHoldT = 0; return; }  // looking at what you made: delete it (bin, top left) or post it (✓)
+  if(crHas){ crHoldT = 0; return; }
+  if(!window.StoryNative || !window.StoryNative.createShutter){ crHoldT = 0; showToast('The camera works in the Lockedintool app'); return; }   // never an error where there's no phone camera  // looking at what you made: delete it (bin, top left) or post it (✓)
   if(crMode === 'video'){ window.StoryNative.createVideo(!crRecording); if(crRecording){ crRecording = false; crRender(); } return; }
   crHeld = false; clearTimeout(crHoldT);
   crHoldT = setTimeout(()=>{ crHeld = true; window.StoryNative.createVideo(true); }, 350);

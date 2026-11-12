@@ -89,6 +89,9 @@ jobs:
           # the screens built into this test app (never the published ones from the web)
           perl -0pi -e 's/(private fun remoteBase\(\): String =\n)[^\n]*/$1        "https:\/\/appassets.androidplatform.net\/assets\/index.html"/' $J/OverlayService.kt
           grep -A1 "private fun remoteBase" $J/OverlayService.kt
+          # the test can open the Pages like a home screen widget does (test build only)
+          perl -0pi -e 's/(android:name="\.OverlayService"\n\s*android:exported=)"false"/$1"true"/' build_src/app/src/main/AndroidManifest.xml
+          grep -A1 'android:name=".OverlayService"' build_src/app/src/main/AndroidManifest.xml
           # no self-updates on the test phone
           perl -0pi -e 's/(fun check\(ctx: Context, force: Boolean = false, now: Boolean = false\) \{)/$1 if (true) return;/' $J/Updater.kt
           grep -c "allowed(c: Context) = true" $J/Access.kt

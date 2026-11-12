@@ -79,6 +79,22 @@ rec_stop open-pages
 log "  pages: $(js pages "JSON.stringify({cur:(window.state||{}).current, vis:document.visibilityState, gate:!!document.querySelector('.lit-auth')})")"
 shot 02-pages
 
+step "PAGES OPEN (the way a home screen widget opens them) - filmed (#269: no black, no old page)"
+adb shell input keyevent KEYCODE_HOME; sleep 2
+rec_start open-pages-widget
+adb shell am start-foreground-service -n $P/.OverlayService -a com.story.launcher.OPEN_PAGE --es page dashboard >/dev/null 2>&1
+sleep 3
+rec_stop open-pages-widget
+log "  pages: $(js pages "JSON.stringify({vis:document.visibilityState, dash:!!document.querySelector('.story-screen'), gate:!!document.querySelector('.lit-auth')})")"
+shot 02b-pages-open
+log "  then Money, closed, and opened again on the Dashboard - filmed (the old page must never flash):"
+js pages "window.storyShow&&window.storyShow('money',false),'ok'" >/dev/null; sleep 2
+adb shell input keyevent KEYCODE_HOME; sleep 3
+rec_start reopen-pages
+adb shell am start-foreground-service -n $P/.OverlayService -a com.story.launcher.OPEN_PAGE --es page dashboard >/dev/null 2>&1
+sleep 3
+rec_stop reopen-pages
+
 step "PAGES STAY UPRIGHT WHEN THE PHONE TURNS (#264)"
 rot 1
 log "  screen with the Pages up: $(cur_rot) - expected upright"

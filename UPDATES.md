@@ -262,4 +262,4 @@ commits, pushed as a new update) - nothing else changes.
 | 254 | 2026-11-12 | As an app (System off), tapping Station 3's button on your Pages opens Station 3 again - every tap on it was being refused | fe00c0a |
 | 255 | 2026-11-12 | With the phone sideways, the dial pad (and the lock screen's) shrinks to fit the screen's height instead of being cut off; upright it's exactly as before | d5272ab |
 | 256 | 2026-11-12 | With the phone sideways, Station 3's dial pad sits on the right, right above Station 3 (as it does upright) instead of on the left | 1436323 |
-| 257 | 2026-11-12 | Second system: swiping up on the bottom button inside Lockedintool now takes you to the phone's normal apps (like tapping 'Apps' on the switch) instead of landing back in Lockedintool | (pending) |
+| 257 | 2026-11-12 | Second system: swiping up on the bottom button inside Lockedintool now takes you to the phone's normal apps (like tapping 'Apps' on the switch) instead of landing back in Lockedintool | cf01365 |

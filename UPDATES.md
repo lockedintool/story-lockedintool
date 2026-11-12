@@ -273,3 +273,4 @@ commits, pushed as a new update) - nothing else changes.
 | 265 | 2026-11-12 | Sideways dial pad really shrinks to fit now - its size check was still reading the upright screen, so the call button was hidden behind Station 3 | 565c5f1 |
 | 266 | 2026-11-12 | Sideways, the dial pad's right edge lines up with Station 3 (it sat too far in from the edge once it shrank) | 4e87888 |
 | 266b | 2026-11-12 | The phone test: Lockedintool runs on an Android test phone through real situations (Station 3, the Pages, the dial pad upright / sideways, the lock screen) with screenshots - nothing changes in the app itself | 5811d9e |
+| 267 | 2026-11-12 | Privacy on the lock screen: Station 3's button still opens its bar while the phone is locked, but Messages, Profile, Updates, Create, Call history and the dial pad ask for the phone's unlock first (any security setting) and open right after it | (pending) |

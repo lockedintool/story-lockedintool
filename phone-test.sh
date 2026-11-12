@@ -98,8 +98,12 @@ shot 07-lockscreen
 tap $((WW-20)) $((HH-20)); sleep 1
 shot 08-lockscreen-station3
 js s3 "window.StoryNative.toggleMessages&&window.StoryNative.toggleMessages(),'ok'" >/dev/null; sleep 2.5
-shot 09-lockscreen-messages
-log "  profile window: $(js profile "JSON.stringify({page:(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden)?'messages':'other', gate:!!document.querySelector('#story-profile .lit-auth')})")"
+log "  tapping Messages while locked must ask for the phone's unlock (#267) - nothing of Messages may show yet"
+shot 09-lockscreen-messages-asks-unlock
+log "  profile window shown before unlock: $(js profile "JSON.stringify({messagesVisible:!!(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden&&document.visibilityState==='visible')})")"
+adb shell input text 1234; adb shell input keyevent 66; sleep 3
+log "  after the PIN: $(js profile "JSON.stringify({page:(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden)?'messages':'other', vis:document.visibilityState, gate:!!document.querySelector('#story-profile .lit-auth')})")"
+shot 10-after-unlock-messages
 adb shell locksettings clear --old 1234 >/dev/null 2>&1
 
 step "PROBLEMS SEEN"

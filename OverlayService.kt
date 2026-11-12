@@ -2285,7 +2285,31 @@ class OverlayService : Service(), StoryBridge.Host {
     override fun toggleDialpad() { ui.post {
         val d = dialPane ?: return@post
         // Owner: the dial pad shows ON TOP of whatever is open (Call history, Messages, Profile...) - it never closes it.
-        if (d.shown) hideOne(d) else if (s3Pane?.shown == true || (s3Held && dashGeom)) { placeDial(d); setShown(d, true) }   // the screen may have turned since
+        if (d.shown) { hideOne(d); return@post }
+        if (keyguardLocked() && s3Pane?.shown == true) { s3UnlockAsk("dial"); return@post }   // #267: the phone's unlock first
+        if (s3Pane?.shown == true || (s3Held && dashGeom)) { placeDial(d); setShown(d, true) }   // the screen may have turned since
+    } }
+
+    /** Station 3 on the LOCK SCREEN (#267 - owner, 12 Nov 2026: 'Let's respect other people privacy. Set it to any
+     *  security. Need to unlock the phone. Like when its locked tap the station 3 button extends. But to go to any of the
+     *  features that are in station 3, when a tap to any of them happens will ask for the phone to be unlocked. Then after
+     *  its unlocked you will be in that tapped area'): the button still opens the bar while locked, but every feature in it
+     *  (Messages, Profile, Updates, Create, Call history, the dial pad) asks for the PHONE'S own unlock first - whatever
+     *  the security setting - and opens straight after it. Incoming calls still show and can be answered. */
+    @Volatile private var s3UnlockWant: String? = null
+    private fun s3UnlockAsk(which: String) {
+        s3UnlockWant = which
+        runCatching { startActivity(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
+            .putExtra(IdentityActivity.EXTRA_FOR, "s3").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }
+            .onFailure { s3UnlockWant = null }
+    }
+    fun s3UnlockDone(result: String) { ui.post {
+        val w = s3UnlockWant; s3UnlockWant = null
+        if (w == null || result != "ok" || keyguardLocked()) return@post   // not unlocked: nothing opens
+        if (Security.lit(this) && !secOpen) { secOpen = true; secTell() }   // the phone's own unlock counts for Lockedintool security too
+        s3Pane?.let { if (!it.shown && !(s3Held && dashGeom)) setShown(it, true) }   // Station 3 stays open where you tapped
+        updateBubble()
+        if (w == "dial") toggleDialpad() else toggleS3Page(w)
     } }
 
     // ---- System theme (Settings): Black or White. Only black and white swap -- on the Pages, Station 3
@@ -2506,6 +2530,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  phone's call log (for when each STORY call ended and how long it lasted) and contacts (names). */
     override fun toggleCalls() {
         toggleS3Page("calls")
+        if (keyguardLocked()) return   // asked again once the phone is unlocked (#267)
         val perms = arrayOf(android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.READ_CONTACTS)
         val prefs = getSharedPreferences("story", MODE_PRIVATE)
         if (!prefs.getBoolean("calls_asked", false) && perms.any { checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }) {
@@ -2531,6 +2556,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun toggleS3Page(which: String) { ui.post {
         val p = profilePane ?: return@post
         if (p.shown && s3Page == which) { hideOne(p); return@post }
+        if (keyguardLocked()) { s3UnlockAsk(which); return@post }   // #267: on the lock screen every feature asks for the phone's unlock first
         if (p.shown) { s3Page = which; p.web.evaluateJavascript("window.storyS3Page&&window.storyS3Page('$which')", null); syncCreate(); return@post }
         if (s3Pane?.shown != true && !(s3Held && dashGeom)) return@post   // Station 3 open, or the Dashboard's own bar
         // On the built-in copy (another address - no account there): load the real screens first, then open (#251).

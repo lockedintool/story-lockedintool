@@ -266,3 +266,4 @@ commits, pushed as a new update) - nothing else changes.
 | 258 | 2026-11-12 | Swipe up mixed with staying in Lockedintool: a swipe up that goes Home takes you to your apps; a swipe up that opens Recent apps keeps you in Lockedintool, so closing Recents or Close all brings you back | 16e2f4d |
 | 259 | 2026-11-12 | As an app: apps you open from inside Lockedintool (Dashboard > Apps, app pages, Alarm / Camera / Gallery) show Station 3 over them, following Quick access; it goes away when you leave that app | c8c5be9 |
 | 260 | 2026-11-12 | The outline that keeps words readable on a background picture is thin and clean now - no smudgy glow | 4623f63 |
+| 261 | 2026-11-12 | New Lockedintool icon: the phone fits it into its own icon shape, the logo is bigger and the tape runs right out to the edges (web icons too) | (pending) |

@@ -20,7 +20,8 @@ jobs:
           cp accessibility_config.xml file_paths.xml widget_dashboard.xml widget_money.xml widget_wallet.xml widget_focus.xml widget_notes.xml widget_community.xml $M/res/xml/
           cp widget_page.xml $M/res/layout/
           cp strings.xml themes.xml $M/res/values/
-          cp ic_launcher.png $M/res/drawable-nodpi/
+          cp ic_launcher.png ic_app_fg.png $M/res/drawable-nodpi/
+          cp ic_app.xml $M/res/drawable/
           cp device_locked.png $M/res/drawable-nodpi/
           cp index.html $M/assets/index.html
           cat > $B/settings.gradle.kts <<'X'

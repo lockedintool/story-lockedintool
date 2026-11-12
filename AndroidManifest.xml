@@ -51,7 +51,7 @@
 
     <application
         android:allowBackup="false"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/ic_app"
         android:label="Lockedintool"
         android:theme="@style/Theme.Story">
 

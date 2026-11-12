@@ -128,7 +128,24 @@ jobs:
           emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
           script: bash phone-test.sh
       - name: Run it again if the test phone crashed (the emulator, not Lockedintool)
+        id: run2
+        continue-on-error: true
         if: steps.run1.outcome == 'failure'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          heap-size: 576M
+          cores: 4
+          disk-size: 6000M
+          disable-animations: true
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
+          script: bash phone-test.sh
+      - name: Third try if it crashed again
+        if: steps.run1.outcome == 'failure' && steps.run2.outcome == 'failure'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

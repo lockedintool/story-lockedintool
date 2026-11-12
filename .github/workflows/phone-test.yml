@@ -120,7 +120,7 @@ jobs:
           cores: 4
           disk-size: 6000M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
           script: bash phone-test.sh
       - name: Save the report (branch phone-test-report)
         if: always()

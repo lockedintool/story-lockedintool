@@ -185,12 +185,20 @@ class OverlayService : Service(), StoryBridge.Host {
         val room = ((realHeightPx() - statusBarHeightPx() - p.lp.y) / dp).toInt() - 6
         p.web.evaluateJavascript("window.__storyDialRoom=$room;window.storyDialFit&&window.storyDialFit()", null)
     }
+    /** Where Station 3's dial pad sits across: upright, in the middle of the screen (as always); sideways, right above
+     *  Station 3 - the same distance from the right edge as upright (#256 - owner, 12 Nov 2026, circling the space above
+     *  Station 3 with the phone sideways: 'The dial pad is supposed to show like that, because thats how it is when its not
+     *  on landscape'). Upright both are the same number. */
+    private fun dialX(padW: Int): Int {
+        val m = resources.displayMetrics; val upright = minOf(m.widthPixels, m.heightPixels)
+        return (m.widthPixels - (upright + padW) / 2).coerceAtLeast(0)
+    }
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         // The phone turned: the dial pads fit the new height and stay centred (their windows were placed for the old one).
         ui.post { listOfNotNull(dialPane, lockDialPane).forEach { p ->
             val w = p.lp.width - ((if (p === lockDialPane) 2 else 58) * dp).toInt()
-            if (w > 0) { p.lp.x = (resources.displayMetrics.widthPixels - w) / 2; runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }
+            if (w > 0) { p.lp.x = if (p === lockDialPane) (resources.displayMetrics.widthPixels - w) / 2 else dialX(w); runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }
             tellDialRoom(p)
         }; syncDialStrip() }
     }
@@ -816,7 +824,7 @@ class OverlayService : Service(), StoryBridge.Host {
                 // Middle of the screen, sitting right ON Station 3's 40dp bar - attached, no gap (owner, 4 Nov 2026:
                 // 'attach the dial pad with station 3 so that when I'm on it it's not like separated').
                 gravity = Gravity.BOTTOM or Gravity.START
-                x = (resources.displayMetrics.widthPixels - (280 * dp).toInt()) / 2; y = (40 * dp).toInt()
+                x = dialX((280 * dp).toInt()); y = (40 * dp).toInt()
             }
         else if (small)
             WindowManager.LayoutParams(s3W, s3H, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flagsFor(true, false), PixelFormat.TRANSLUCENT).apply {
@@ -3441,7 +3449,7 @@ class OverlayService : Service(), StoryBridge.Host {
             val full = p.web.layoutParams
             p.openW = ((w + 58) * dp).toInt().coerceAtMost(full.width)
             p.openH = ((h + 2) * dp).toInt().coerceAtMost(full.height)
-            val x = (resources.displayMetrics.widthPixels - (w * dp).toInt()) / 2
+            val x = dialX((w * dp).toInt())
             if (p.lp.width != p.openW || p.lp.height != p.openH || p.lp.x != x) {
                 p.lp.width = p.openW; p.lp.height = p.openH; p.lp.x = x
                 runCatching { p.wm.updateViewLayout(p.frame, p.lp) }

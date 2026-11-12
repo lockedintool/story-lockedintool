@@ -189,18 +189,26 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Station 3 - the same distance from the right edge as upright (#256 - owner, 12 Nov 2026, circling the space above
      *  Station 3 with the phone sideways: 'The dial pad is supposed to show like that, because thats how it is when its not
      *  on landscape'). Upright both are the same number. */
+    // The screen's real width right now (a service's displayMetrics can keep the old orientation's numbers after the phone turns).
+    private fun realWidthPx(): Int =
+        if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.width() else resources.displayMetrics.widthPixels
     private fun dialX(padW: Int): Int {
-        val m = resources.displayMetrics; val upright = minOf(m.widthPixels, m.heightPixels)
-        return (m.widthPixels - (upright + padW) / 2).coerceAtLeast(0)
+        val w = realWidthPx(); val upright = minOf(w, realHeightPx())
+        return (w - (upright + padW) / 2).coerceAtLeast(0)
+    }
+    /** Puts a dial pad where it belongs for the screen as it is NOW (upright / sideways) and tells it its height room. */
+    private fun placeDial(p: Pane) {
+        val w = p.lp.width - ((if (p === lockDialPane) 2 else 58) * dp).toInt()
+        if (w > 0) {
+            val x = if (p === lockDialPane) (realWidthPx() - w) / 2 else dialX(w)
+            if (x != p.lp.x) { p.lp.x = x; runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }
+        }
+        tellDialRoom(p)
     }
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        // The phone turned: the dial pads fit the new height and stay centred (their windows were placed for the old one).
-        ui.post { listOfNotNull(dialPane, lockDialPane).forEach { p ->
-            val w = p.lp.width - ((if (p === lockDialPane) 2 else 58) * dp).toInt()
-            if (w > 0) { p.lp.x = if (p === lockDialPane) (resources.displayMetrics.widthPixels - w) / 2 else dialX(w); runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }
-            tellDialRoom(p)
-        }; syncDialStrip() }
+        // The phone turned: the dial pads fit the new height and go to their place (their windows were placed for the old one).
+        ui.post { listOfNotNull(dialPane, lockDialPane).forEach { placeDial(it) }; syncDialStrip() }
     }
 
     override fun onCreate() {
@@ -1764,7 +1772,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val v = dialStrip ?: return; val lp = dialStripLp ?: return
         val d = dialPane; val barW = barBgLp?.width ?: 0
         val left = d?.lp?.x ?: 0
-        val w = resources.displayMetrics.widthPixels - barW - left + (20 * dp).toInt()
+        val w = realWidthPx() - barW - left + (20 * dp).toInt()
         val on = d != null && d.shown && !d.loading && !dashGeom && s3Pane?.shown == true && barW > 0 && w > (20 * dp).toInt()
         v.visibility = if (on) View.VISIBLE else View.INVISIBLE
         v.setBackgroundColor(th(Color.BLACK))
@@ -2254,7 +2262,7 @@ class OverlayService : Service(), StoryBridge.Host {
     override fun toggleDialpad() { ui.post {
         val d = dialPane ?: return@post
         // Owner: the dial pad shows ON TOP of whatever is open (Call history, Messages, Profile...) - it never closes it.
-        if (d.shown) hideOne(d) else if (s3Pane?.shown == true || (s3Held && dashGeom)) setShown(d, true)
+        if (d.shown) hideOne(d) else if (s3Pane?.shown == true || (s3Held && dashGeom)) { placeDial(d); setShown(d, true) }   // the screen may have turned since
     } }
 
     // ---- System theme (Settings): Black or White. Only black and white swap -- on the Pages, Station 3
@@ -2399,7 +2407,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val full = p.web.layoutParams
         p.openW = ((w + 2) * dp).toInt().coerceAtMost(full.width)
         p.openH = ((h + 2) * dp).toInt().coerceAtMost(full.height)
-        val x = (resources.displayMetrics.widthPixels - (w * dp).toInt()) / 2
+        val x = (realWidthPx() - (w * dp).toInt()) / 2
         if (p.lp.width != p.openW || p.lp.height != p.openH || p.lp.x != x) {
             p.lp.width = p.openW; p.lp.height = p.openH; p.lp.x = x
             runCatching { p.wm.updateViewLayout(p.frame, p.lp) }
@@ -3478,7 +3486,7 @@ class OverlayService : Service(), StoryBridge.Host {
             val full = p.web.layoutParams
             p.openW = ((w + 58) * dp).toInt().coerceAtMost(full.width)
             p.openH = ((h + 2) * dp).toInt().coerceAtMost(full.height)
-            val x = dialX((w * dp).toInt())
+            val x = dialX((w * dp).toInt())   // (realWidthPx inside)
             if (p.lp.width != p.openW || p.lp.height != p.openH || p.lp.x != x) {
                 p.lp.width = p.openW; p.lp.height = p.openH; p.lp.x = x
                 runCatching { p.wm.updateViewLayout(p.frame, p.lp) }

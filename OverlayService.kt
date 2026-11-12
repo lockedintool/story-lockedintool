@@ -747,6 +747,7 @@ class OverlayService : Service(), StoryBridge.Host {
         }
         wv.webViewClient = object : WebViewClient() {
             override fun onPageStarted(v: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                loadErr = false
                 if (small) paneRef?.let { it.loading = true; it.frame.alpha = 0f; syncBarBg() }
                 if (!small && !dial && !profile) tvView?.place(org.json.JSONObject().put("show", false))  // the page tells it again once loaded
                 // The Dashboard's bar stays the page's own while the Pages reload (owner's video, 4 Nov 2026: after unlocking,
@@ -779,7 +780,12 @@ class OverlayService : Service(), StoryBridge.Host {
             // copy runs from another address, where the account isn't stored, so a short error while new screens go out
             // left that window on 'Welcome'.
             var retried = false
+            // This load failed (offline...): its error page also 'finishes', and must NOT count as the real screens loading -
+            // that reset the retry every time, so a phone with no internet stayed on 'Webpage not available' forever
+            // (#268 - found by the phone test, 12 Nov 2026) instead of switching to the copy built into the app.
+            var loadErr = false
             fun fallBack(v: WebView, u: String) {
+                loadErr = true
                 if (!retried) { retried = true; ui.postDelayed({ v.loadUrl(u) }, 1500); return }
                 paneRef?.ver = "local"; v.loadUrl(LOCAL + query)
             }
@@ -790,7 +796,7 @@ class OverlayService : Service(), StoryBridge.Host {
                 if (r.isForMainFrame && r.url.toString().startsWith(REMOTE)) fallBack(v, r.url.toString())
             }
             override fun onPageFinished(v: WebView, url: String) {
-                if (url.startsWith(REMOTE)) retried = false
+                if (url.startsWith(REMOTE) && !loadErr) retried = false
                 if (profile && !gap && url.startsWith(REMOTE)) s3PageWanted?.let { w -> s3PageWanted = null; ui.postDelayed({ secGate(profilePane) { openS3Page(w) } }, 250) }
                 if (profile) {
                     v.evaluateJavascript(profileGeometryJs(), null)

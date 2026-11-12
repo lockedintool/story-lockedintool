@@ -13,7 +13,8 @@ js(){ node cdp.mjs "$1" "$2" 2>/dev/null; }
 tap(){ adb shell input tap $1 $2; sleep 1.2; }
 size(){ adb shell wm size | tail -1 | grep -o '[0-9]*x[0-9]*'; }
 rot(){ adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation $1; sleep 2.5; }
-cur_rot(){ adb shell dumpsys input | grep -m1 -o 'SurfaceOrientation: [0-9]' | grep -o '[0-9]'; }
+cur_rot(){ local d; d=$(adb shell dumpsys window displays | grep -m1 -o 'cur=[0-9]*x[0-9]*' | grep -o '[0-9]*x[0-9]*'); [ "${d%x*}" -gt "${d#*x}" ] 2>/dev/null && echo "sideways ($d)" || echo "upright ($d)"; }
+targets(){ curl -s http://127.0.0.1:9222/json | grep -o '"url": *"[^"]*"' | tee -a $R; }
 forward(){ local pid; pid=$(adb shell pidof $P | tr -d '\r' | awk '{print $1}'); adb forward --remove-all >/dev/null 2>&1; adb forward tcp:9222 localabstract:webview_devtools_remote_$pid >/dev/null && log "  devtools on pid $pid"; }
 step(){ log ""; log "== $*"; }
 
@@ -41,16 +42,22 @@ adb shell input keyevent KEYCODE_HOME; sleep 4
 W=$(size); WW=${W%x*}; HH=${W#*x}; log "  screen ${WW}x${HH}"
 log "  service: $(adb shell dumpsys activity services $P | grep -c OverlayService) (1+ = running)"
 forward
+targets
 # Sign in the test account inside the built-in screens (offline - it never reaches a server), skip the tour.
 js all "(()=>{ localStorage.setItem('story-msg-account', JSON.stringify({id:'phonetest',token:'t',pw:true,username:'phonetest',name:'Phone Test'})); localStorage.setItem('story-tour','done'); localStorage.setItem('story-profile', JSON.stringify({name:'Phone Test',username:'phonetest'})); location.reload(); return 'ok'; })()" | tee -a $R
 sleep 6
 shot 00-home
 
 step "PAGES OPEN FROM THE BOTTOM SWITCH (Second system)"
-tap $((WW/2)) $((HH-12))
-log "  switch: $(adb shell uiautomator dump /sdcard/u.xml >/dev/null 2>&1; adb shell cat /sdcard/u.xml | grep -o 'text="Lockedintool"' | head -1)"
+B=""
+for dy in 10 24 40 60; do
+  tap $((WW/2)) $((HH-dy))
+  adb shell uiautomator dump /sdcard/u.xml >/dev/null 2>&1
+  B=$(adb shell cat /sdcard/u.xml | grep -o '<node[^>]*text="Lockedintool"[^>]*package="'$P'"[^>]*bounds="[^"]*"' | grep -o 'bounds="[^"]*"' | head -1 | grep -o '[0-9]\+' | tr '\n' ' ')
+  [ -n "$B" ] && { log "  the Apps | Lockedintool switch opened (tap $dy px from the bottom)"; break; }
+done
+[ -z "$B" ] && log "  FAIL: the bottom switch did not open"
 shot 01-switch
-B=$(adb shell cat /sdcard/u.xml | grep -o 'text="Lockedintool"[^>]*bounds="[^"]*"' | grep -o 'bounds="[^"]*"' | grep -o '[0-9]\+' | tr '\n' ' ')
 set -- $B; [ $# -ge 4 ] && tap $(( ($1+$3)/2 )) $(( ($2+$4)/2 ))
 sleep 2
 log "  pages: $(js pages "JSON.stringify({cur:(window.state||{}).current, vis:document.visibilityState, gate:!!document.querySelector('.lit-auth')})")"
@@ -58,7 +65,7 @@ shot 02-pages
 
 step "PAGES STAY UPRIGHT WHEN THE PHONE TURNS (#264)"
 rot 1
-log "  rotation with the Pages up: $(cur_rot) (0 = upright - expected 0)"
+log "  screen with the Pages up: $(cur_rot) - expected upright"
 shot 03-pages-sideways
 rot 0
 
@@ -78,7 +85,7 @@ js s3 "window.StoryNative.toggleDialpad(),'ok'" >/dev/null; sleep 1
 tap $((WW-20)) $((HH-20))                                  # close Station 3
 adb shell am start -a android.settings.SETTINGS >/dev/null; sleep 3   # another app in front, Pages step aside
 rot 1
-log "  rotation over Settings: $(cur_rot) (expected 1)"
+log "  screen over Settings: $(cur_rot) - expected sideways"
 W2=$(size); SW=$(adb shell dumpsys window displays | grep -m1 -o 'cur=[0-9]*x[0-9]*' | grep -o '[0-9]*x[0-9]*'); log "  display now $SW"
 SWW=${SW%x*}; SHH=${SW#*x}
 tap $((SWW-20)) $((SHH-20)); sleep 1

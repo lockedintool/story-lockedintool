@@ -124,13 +124,15 @@ js s3 "window.StoryNative.toggleMessages&&window.StoryNative.toggleMessages(),'o
 log "  tapping Messages while locked must ask for the phone's unlock (#267) - nothing of Messages may show yet"
 shot 09-lockscreen-messages-asks-unlock
 log "  profile window shown before unlock: $(js profile "JSON.stringify({messagesVisible:!!(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden&&document.visibilityState==='visible')})")"
-adb shell input text 1234; adb shell input keyevent 66; sleep 3
+sleep 1.5; adb shell input text 1234; adb shell input keyevent 66; sleep 4
 log "  after the PIN: $(js profile "JSON.stringify({page:(document.querySelector('.pf-msgs')&&!document.querySelector('.pf-msgs').hidden)?'messages':'other', vis:document.visibilityState, gate:!!document.querySelector('#story-profile .lit-auth')})")"
 shot 10-after-unlock-messages
 adb shell locksettings clear --old 1234 >/dev/null 2>&1
 
 step "PROBLEMS SEEN"
 timeout 20 adb logcat -d | grep -E "FATAL EXCEPTION|AndroidRuntime: |com.story.launcher.*(Exception|Error)" | head -40 | tee -a $R
+log "  Android blocking Lockedintool's screens from the background:"
+timeout 20 adb logcat -d | grep -iE "Background activity (launch|start) blocked|Abort background activity|BAL_BLOCK" | grep -i story | head -10 | tee -a $R
 log "  console errors in the screens:"
 js all "JSON.stringify(window.__litErrors||[])" | tee -a $R
 log ""; log "DONE"

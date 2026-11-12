@@ -2327,10 +2327,18 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile private var s3UnlockWant: String? = null
     private fun s3UnlockAsk(which: String) {
         s3UnlockWant = which
-        runCatching { startActivity(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
-            .putExtra(IdentityActivity.EXTRA_FOR, "s3").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }
-            .onFailure { s3UnlockWant = null }
+        if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
+            .putExtra(IdentityActivity.EXTRA_FOR, "s3").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 21)) s3UnlockWant = null
     }
+    /** Opens one of Lockedintool's own screens from the background the way Android explicitly allows (#271 - the phone
+     *  test, 12 Nov 2026: on the lock screen the unlock prompt never appeared; a plain start from the background is
+     *  quietly blocked there, as #190 found for Lockedintool's lock screen). Returns false if it couldn't be sent. */
+    private fun startBg(i: Intent, code: Int): Boolean = runCatching {
+        val pi = android.app.PendingIntent.getActivity(this, code, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        if (Build.VERSION.SDK_INT >= 34) pi.send(android.app.ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle())
+        else pi.send()
+        true
+    }.getOrElse { runCatching { startActivity(i); true }.getOrDefault(false) }
     fun s3UnlockDone(result: String) { ui.post {
         val w = s3UnlockWant; s3UnlockWant = null
         if (w == null || result != "ok" || keyguardLocked()) return@post   // not unlocked: nothing opens
@@ -2956,9 +2964,8 @@ class OverlayService : Service(), StoryBridge.Host {
         walletOpening = true; syncLockDial()
         if (!keyguardLocked()) { walletDone("ok"); return }
         // The phone's own unlock first (its PIN page / fingerprint) - for both security settings.
-        runCatching { startActivity(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Open the Wallet page")
-            .putExtra(IdentityActivity.EXTRA_FOR, "wallet").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }
-            .onFailure { walletDone("fail") }
+        if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Open the Wallet page")
+            .putExtra(IdentityActivity.EXTRA_FOR, "wallet").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 22)) walletDone("fail")   // #271: allowed from the background
     }
     fun walletDone(result: String) { ui.post {
         walletOpening = false

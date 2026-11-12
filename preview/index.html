@@ -174,67 +174,7 @@
     padding:24px 12px 50px;
     overflow-x:hidden;
   }
-  .stage-head{
-    text-align:center;
-    max-width:520px;
-  }
-  .stage-head h1{
-    font-family:var(--font-display);
-    font-weight:700;
-    letter-spacing:0.5px;
-    font-size:22px;
-    margin:0 0 6px;
-  }
-  .stage-head p{
-    font-size:13px;
-    color:var(--muted);
-    line-height:1.5;
-    margin:0;
-  }
-  .switcher{
-    display:flex;
-    gap:6px;
-    background:var(--card);
-    padding:5px;
-    border-radius:12px;
-    border:1px solid var(--line);
-  }
-  .switcher button{
-    border:none;
-    background:transparent;
-    color:var(--muted);
-    font-family:var(--font-body);
-    font-size:13px;
-    font-weight:600;
-    padding:8px 16px;
-    border-radius:8px;
-    cursor:pointer;
-    transition:background .18s ease, color .18s ease;
-  }
-  .switcher button.active{
-    background:var(--gold);
-    color:#1a1200;
-  }
 
-  /* ===== DEV-MODE EMERGENCY RESET =====
-     Lives outside #device-wrap entirely, in the static page markup, never touched by
-     renderDevice() -- so no state, no bug in a screen, and no in-progress edit to this file
-     can ever hide or cover it. It only does one thing: reload the page back to a clean
-     Dashboard. Visible only while DEV_MODE is true in the script below; set that to false
-     once STORY is finished and this goes away on its own.
-     Positioned top-center (not top-left) specifically so it sits in the empty gap of the
-     real phone's own OS status bar -- between the clock on the left and the
-     wifi/signal/battery icons on the right -- instead of on top of any in-app button like
-     the "‹ Dashboard" back button, which lives at the top-left of the app content below it. */
-  .dev-emergency-btn{
-    position:fixed; top:env(safe-area-inset-top, 0px); left:50%; transform:translateX(-50%);
-    margin-top:6px; z-index:999999;
-    background:#3a0d0d; color:#ffb4b4; border:1px solid rgba(255,120,120,0.45);
-    font-family:Arial,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.3px;
-    padding:7px 11px; border-radius:20px; cursor:pointer;
-    box-shadow:0 4px 14px rgba(0,0,0,0.45);
-  }
-  .dev-emergency-btn:active{ background:#541212; }
 
   /* ===== STORY'S OWN STATUS BAR (only exists while truly fullscreen -- see the big comment
      on the #story-immersive-bar element itself in the body for the full explanation) =====
@@ -2159,7 +2099,7 @@
      exactly like attachSwipe()'s page-swipe. */
   /* Android launcher/overlay build: the phone's own gesture line is the ONLY bottom line, so STORY's built-in one and its Apps | Pages sheet are removed. */
   /* Android build: the phone's own status bar and notification shade are the only ones. */
-  html.native body .phone-status, html.native body #story-immersive-bar, html.native .phone-status, html.native #story-immersive-bar, html.native #dev-emergency-btn, html.native #notif-pull{ display:none !important; }
+  html.native body .phone-status, html.native body #story-immersive-bar, html.native .phone-status, html.native #story-immersive-bar, html.native #notif-pull{ display:none !important; }
   html.native .home-indicator, html.native .home-picker-sheet, html.native .home-picker-backdrop{ display:none !important; }
   html.s3-early, html.s3-early body{ background:transparent !important; }
   .home-indicator{
@@ -3332,9 +3272,6 @@
   .toggle-switch.on .toggle-knob{ left:18px; }
   .note{ font-size:10.5px; color:var(--muted); line-height:1.4; margin-top:8px; }
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .below-fold-note{
-    max-width:520px; text-align:center; font-size:12px; color:var(--muted); line-height:1.6; margin-top:6px;
-  }
   .laptop-grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:26px; }
   @media (max-width:720px){ .laptop-grid{ grid-template-columns:1fr; } }
 
@@ -3353,7 +3290,6 @@
   }
   /* Owner: the old "live prototype" heading, its text, the Phone / Laptop switcher and the note under the phone are
      NEVER shown - not in the app, not on a phone's browser, not on a computer, not even while a window loads. */
-  .stage-head, .switcher, .below-fold-note, #dev-emergency-btn{ display:none !important; }
   body.real-device .device-wrap{ width:100%; height:100dvh; max-width:none; }
   body.real-device .phone-frame{
     width:100%; height:100dvh; max-width:none; aspect-ratio:auto;
@@ -4333,7 +4269,6 @@
 <script>/* Full screen from the very first moment on a phone / in the app - never the computer mock-up, even while loading. */
 if(window.StoryNative || /Android|iPhone|iPad|iPod|Mobi|Windows Phone/i.test(navigator.userAgent || '')) document.body.classList.add('real-device');</script>
 
-<button id="dev-emergency-btn" class="dev-emergency-btn" title="Reset Lockedintool to a clean Dashboard">⎋ Reset Lockedintool</button>
 
 <!-- ===== STORY'S OWN STATUS BAR =====
      A real phone's clock/wifi/signal/battery row belongs to the OS, not to any one app, so
@@ -4359,38 +4294,12 @@ if(window.StoryNative || /Android|iPhone|iPad|iPod|Mobi|Windows Phone/i.test(nav
 </div>
 
 <div class="stage">
-  <div class="stage-head">
-    <h1>Lockedintool</h1>
-  </div>
-
-  <div class="switcher">
-    <button id="btn-phone" class="active">Phone</button>
-    <button id="btn-laptop">Laptop / PC</button>
-  </div>
-
   <div class="device-wrap" id="device-wrap"></div>
   <div id="device-dimmer" data-keep-color style="position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:99999;transition:opacity 0.15s;"></div>
 
 </div>
 
 <script>
-// While STORY is still being built, this stays true and the red "Reset STORY" button (top
-// left, defined in the static HTML above so nothing this script does can ever remove it)
-// stays on screen. It's a plain webpage bail-out, not a device-level unlock -- tapping it
-// (or just closing the tab / hitting your phone's own back or home button, which always
-// works no matter what this app is doing) reloads back to a clean Dashboard. Flip this to
-// false once STORY is finished and ready to go out, and the button disappears on its own.
-const DEV_MODE = false;   // owner: the prototype's Reset button is never shown
-if(!DEV_MODE){
-  const emergencyBtn = document.getElementById('dev-emergency-btn');
-  if(emergencyBtn) emergencyBtn.style.display = 'none';
-} else {
-  document.getElementById('dev-emergency-btn').addEventListener('click', ()=>{
-    if(confirm('Reset Lockedintool back to a clean Dashboard?\n\nThis just reloads the page -- nothing about your phone itself is ever touched.')){
-      location.reload();
-    }
-  });
-}
 
 const PAGES = ['money','wallet','trading'];
 
@@ -22481,26 +22390,7 @@ function attachSwipe(){
   });
 }
 
-document.getElementById('btn-phone').addEventListener('click', ()=>{
-  state.device='phone';
-  document.getElementById('btn-phone').classList.add('active');
-  document.getElementById('btn-laptop').classList.remove('active');
-  renderDevice();
-});
-document.getElementById('btn-laptop').addEventListener('click', ()=>{
-  state.device='laptop';
-  document.getElementById('btn-laptop').classList.add('active');
-  document.getElementById('btn-phone').classList.remove('active');
-  renderDevice();
-});
 
-function detectDevice(){
-  const ua = navigator.userAgent || '';
-  const isMobileUA = /Android|iPhone|iPad|iPod|Mobi|Windows Phone/i.test(ua);
-  const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  const isNarrow = window.innerWidth < 820;
-  return (isMobileUA || (isCoarsePointer && isNarrow)) ? 'phone' : 'laptop';
-}
 
 // Real-device fullscreen mode: true only when this is an actual phone/tablet browser (UA
 // sniffing, not just a narrow or touch-capable window -- a touchscreen laptop or a resized
@@ -22515,14 +22405,8 @@ function isRealDeviceEnv(){
 const REAL_DEVICE = isRealDeviceEnv();
 if(REAL_DEVICE) document.body.classList.add('real-device');
 
-state.device = REAL_DEVICE ? 'phone' : detectDevice();
-if(state.device === 'laptop'){
-  document.getElementById('btn-laptop').classList.add('active');
-  document.getElementById('btn-phone').classList.remove('active');
-} else {
-  document.getElementById('btn-phone').classList.add('active');
-  document.getElementById('btn-laptop').classList.remove('active');
-}
+// Lockedintool is a phone app only (owner, 12 Nov 2026) - the old Phone / Laptop prototype switcher is gone.
+state.device = 'phone';
 
 // ===== STORY'S OWN STATUS BAR (immersive/fullscreen) =====
 // Only attempted on a real phone -- on the desktop mockup there's no real OS bar to cover

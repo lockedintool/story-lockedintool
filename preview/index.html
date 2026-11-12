@@ -286,10 +286,10 @@
      actively scrolling and fades out a moment later. This one has layout width and a visible
      track at all times, so "there's more below" is something you can see at a glance, not
      something you discover by dragging. */
-  .phone-content::-webkit-scrollbar, .laptop-content::-webkit-scrollbar{ width:4px; }
-  .phone-content::-webkit-scrollbar-track, .laptop-content::-webkit-scrollbar-track{ background:rgba(255,255,255,0.06); border-radius:3px; }
-  .phone-content::-webkit-scrollbar-thumb, .laptop-content::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.32); border-radius:3px; }
-  .phone-content, .laptop-content{ scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.32) rgba(255,255,255,0.06); }
+  .phone-content::-webkit-scrollbar{ width:4px; }
+  .phone-content::-webkit-scrollbar-track{ background:rgba(255,255,255,0.06); border-radius:3px; }
+  .phone-content::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.32); border-radius:3px; }
+  .phone-content{ scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.32) rgba(255,255,255,0.06); }
   /* The "scroll for more" hint -- a small pointing-down chevron that sits above the home
      pill (phone) or near the bottom of the window (laptop). It only shows once there's
      actually more content below the fold (toggled by updateScrollHint(), called after every
@@ -302,7 +302,6 @@
     background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.8);
     opacity:0; pointer-events:none; transition:opacity 0.2s ease;
   }
-  .laptop-screen .scroll-hint{ bottom:12px; }
   .scroll-hint.visible{ opacity:1; animation:scroll-hint-bounce 1.5s ease-in-out infinite; }
   @keyframes scroll-hint-bounce{ 0%,100%{ transform:translateX(-50%) translateY(0); } 50%{ transform:translateX(-50%) translateY(4px); } }
   /* Mobile/touch browsers ignore ::-webkit-scrollbar styling on a touch-scrolled element and
@@ -326,73 +325,6 @@
     background:rgba(255,255,255,0.38);
   }
 
-  /* ===== LAPTOP FRAME ===== */
-  .laptop-frame{
-    width:min(920px, 92vw);
-    /* Same fixed-shape rule as the phone frame above -- every page fills the same
-       laptop window instead of resizing the window to match its own content. */
-    aspect-ratio: 920 / 620;
-    display:flex;
-    flex-direction:column;
-    background:#0e0e10;
-    border-radius:14px 14px 0 0;
-    box-shadow:0 30px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.06);
-    overflow:hidden;
-    position:relative; /* containing block for .laptop-float-dock below, same as .phone-frame */
-    /* Establishes the 3D viewing space .laptop-screen's live tilt rotation (below) renders
-       into -- see the matching comment on .phone-frame/.phone-screen above. */
-    perspective:1600px;
-  }
-  .laptop-bar{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:11px 16px;
-    background:#000;
-    border-bottom:1px solid var(--line);
-    flex-shrink:0;
-  }
-  .laptop-dot{ width:10px; height:10px; border-radius:50%; }
-  .laptop-url{
-    margin-left:14px;
-    background:#000;
-    border:1px solid var(--line);
-    border-radius:7px;
-    padding:5px 14px;
-    font-size:11.5px;
-    color:var(--muted);
-    font-family:var(--font-mono);
-  }
-  .laptop-screen{
-    background:
-      radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,0.05), rgba(255,255,255,0) 60%),
-      radial-gradient(140% 100% at 50% 100%, rgba(0,0,0,0.35), rgba(0,0,0,0) 65%),
-      var(--bg-app);
-    /* Same live tilt rotation as .phone-screen -- see its comment above. Only the url bar
-       above stays flat, same as the phone's notch, so it reads as a fixed bezel around a
-       screen that's actually tilting, not the whole mock rocking as one rigid unit. */
-    transform:rotateX(calc(var(--tilt-x) * -1deg)) rotateY(calc(var(--tilt-y) * 1deg));
-    display:flex;
-    flex-direction:column;
-    flex:1;
-    min-height:0;
-    position:relative;
-  }
-  .laptop-content{
-    flex:1;
-    min-height:0; /* lets this flex item actually scroll instead of stretching the fixed-size frame */
-    padding:30px 40px;
-    overflow-y:auto;
-    overflow-x:hidden;
-    position:relative; /* containing block for the brief outgoing-page clone goToPageIndex() slides past during a page swipe */
-  }
-  .laptop-stand{
-    width:min(920px, 92vw);
-    height:16px;
-    background:linear-gradient(180deg,#1c1c1e,#000);
-    border-radius:0 0 10px 10px;
-    margin-top:-1px;
-  }
 
   /* ===== DOCK (shared launcher nav) ===== */
   .dock{
@@ -418,32 +350,6 @@
   .dock-item .ico{ font-size:18px; line-height:1; }
   .dock-item.active{ color:var(--gold); }
 
-  .laptop-nav{
-    width:190px;
-    border-right:1px solid var(--line);
-    padding:24px 14px;
-    flex-shrink:0;
-  }
-  .laptop-brand{
-    font-family:var(--font-display);
-    font-weight:700;
-    font-size:17px;
-    letter-spacing:0.5px;
-    margin:0 0 26px 6px;
-  }
-  .laptop-brand span{ color:var(--gold); }
-  .laptop-nav-item{
-    display:flex; align-items:center; gap:10px;
-    padding:10px 10px;
-    border-radius:9px;
-    color:var(--muted);
-    font-size:13.5px;
-    font-weight:600;
-    cursor:pointer;
-    margin-bottom:2px;
-  }
-  .laptop-nav-item .ico{ font-size:15px; width:18px; text-align:center; }
-  .laptop-nav-item.active{ background:var(--gold-dim); color:var(--gold); }
 
   /* ===== SHARED SCREEN CONTENT STYLES ===== */
   .eyebrow{ font-size:10px; color:var(--muted); font-weight:600; margin:8px 0 2px; }
@@ -2071,11 +1977,6 @@
     padding:10px 12px 14px; background:transparent; pointer-events:none;
   }
   .phone-float-dock > *{ pointer-events:auto; }
-  .laptop-float-dock{
-    position:absolute; left:0; right:0; bottom:0; z-index:20;
-    padding:12px 40px 18px; background:transparent; pointer-events:none;
-  }
-  .laptop-float-dock > *{ pointer-events:auto; }
   /* A black, still-transparent panel sitting under the whole Money Transfer dock (label +
      buttons together), so it reads as one floating tray separating itself from the Wallet
      content scrolling underneath, instead of the buttons looking like they're just loose on
@@ -3272,8 +3173,6 @@
   .toggle-switch.on .toggle-knob{ left:18px; }
   .note{ font-size:10.5px; color:var(--muted); line-height:1.4; margin-top:8px; }
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .laptop-grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:26px; }
-  @media (max-width:720px){ .laptop-grid{ grid-template-columns:1fr; } }
 
   /* ===== REAL-DEVICE FULLSCREEN MODE =====
      Applied (via the `real-device` class added to <body> by isRealDeviceEnv() near the
@@ -5869,12 +5768,7 @@ function topBar(label, withDots, extraRight, backTarget, titleExtra, hideBack, a
 function pageArrows(){
   // Row 1's own swipe-between-pages navigation is replaced by whatever Page Style is
   // running -- the arrow buttons are that same navigation for laptop/PC, so they go away too.
-  if(state.pageStyleOn && state.pageStyleViewOpen) return '';
-  if(state.device !== 'laptop') return '';
-  const idx = PAGES.indexOf(state.current);
-  const left = idx>0 ? `<button class="page-arrow left" data-swipe-dir="-1">‹</button>` : '';
-  const right = idx<PAGES.length-1 ? `<button class="page-arrow right" data-swipe-dir="1">›</button>` : '';
-  return left+right;
+  return '';   // the laptop view's page arrows are gone (phones only - owner, 12 Nov 2026)
 }
 
 /* ---------- SCREEN TEMPLATES ---------- */
@@ -6712,16 +6606,6 @@ function moneyScreen(){
         </div>`;
 
       if(!pageSecOn('money', 'analytics')) return '';
-      if(state.device === 'laptop'){
-        return `
-          <div class="section-title">ANALYTICS</div>
-          <div class="row-card">${overviewChart}</div>
-          <div class="section-title">EXPENSES</div>
-          <div class="row-card">${expensesChart}</div>
-          <div class="section-title">SAVINGS</div>
-          <div class="row-card">${savingsChart}</div>
-        `;
-      }
       return `
         <div class="section-title"><button class="close-filter-btn small" id="analytics-view-btn" style="margin-right:7px;">${state.analyticsView==='overview'?'Overview':'Details'} ⌄</button>ANALYTICS</div>
         <div class="row-card">
@@ -16348,7 +16232,7 @@ function station3RegionHTML(){
 function positionStation3(){
   const region = document.querySelector('.station3-region');
   if(!region) return;
-  const screenEl = region.closest('.phone-screen, .laptop-screen');
+  const screenEl = region.closest('.phone-screen');
   if(!screenEl) return;
   const rect = screenEl.getBoundingClientRect();
   // Over other apps (Android overlay) the app pulls the window 10px past the screen edges, so with
@@ -16844,36 +16728,6 @@ function buildPhone(){
   `;
 }
 
-function buildLaptop(){
-  const pageStyleActive = state.pageStyleOn && state.pageStyleViewOpen;
-  const fullScreenTakeoverActive = pageStyleActive || state.rowsViewOpen;
-  const showFloatBar = ['wallet','wallet-overview'].includes(state.current) && !fullScreenTakeoverActive && !state.addCardOpen && !state.cardSheetId;
-  return `
-    <div>
-      <div class="laptop-frame">
-        <div class="laptop-bar">
-          <div class="laptop-dot" style="background:#ef5b5b;"></div>
-          <div class="laptop-dot" style="background:#e8b23d;"></div>
-          <div class="laptop-dot" style="background:#3ecf6a;"></div>
-          <div class="laptop-url">lockedintool.app</div>
-        </div>
-        <div class="laptop-screen">
-          <div class="laptop-content" id="content-area" style="${fullScreenTakeoverActive ? 'overflow:hidden;' : ''}"></div>
-          ${fullScreenTakeoverActive ? '' : `<div class="custom-scrollbar-track" id="scrollbar-track"><div class="custom-scrollbar-thumb" id="scrollbar-thumb"></div></div>`}
-          ${fullScreenTakeoverActive ? '' : station3RegionHTML()}
-          ${fullScreenTakeoverActive ? '' : `<div class="scroll-hint" id="scroll-hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`}
-        </div>
-        ${showFloatBar ? `<div class="laptop-float-dock wallet-float-dock">${walletFloatBar()}</div>` : ''}
-        ${state.current==='notes-canvas' && !state.readMode && !fullScreenTakeoverActive ? `<div class="laptop-float-dock notes-float-dock">${notesFloatToolbarHTML()}</div>` : ''}
-        ${state.current==='scratch-draw' && !fullScreenTakeoverActive ? `<div class="laptop-float-dock notes-float-dock">${scratchFloatToolbarHTML()}</div>` : ''}
-        ${state.shareSheet ? shareSheetTemplate() : ''}
-        ${state.toastMessage ? toastTemplate() : ''}
-        <div id="system-dimmer" data-keep-color style="position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;border-radius:inherit;z-index:60;"></div>
-      </div>
-      <div class="laptop-stand"></div>
-    </div>
-  `;
-}
 
 // Wires up drag-to-rotate for the flat Circle and 3D Circle live page-style arrangements.
 // Runs after every render (called from renderDevice(), right after attachHandlers()) since
@@ -17278,7 +17132,7 @@ function renderDevice(){
   const sameScreenAsBefore = lastScreenKey !== null && newScreenKey === lastScreenKey;
   lastScreenKey = newScreenKey;
   const wrap = document.getElementById('device-wrap');
-  wrap.innerHTML = state.device==='phone' ? buildPhone() : buildLaptop();
+  wrap.innerHTML = buildPhone();
   document.getElementById('content-area').innerHTML = renderScreenContent() + (state.contentBlock ? contentBlockOverlay(state.contentBlock) : '');
   // Your colours go on BEFORE the page is measured (owner, 5 Nov 2026: 'I just went inside the dashboard, the colors
   // disappeared and they appeared again - you know this is wrong'): measuring first fixed the plain colours for a moment,
@@ -17410,7 +17264,7 @@ function updateScrollbarThumb(){
   const track = document.getElementById('scrollbar-track');
   const thumb = document.getElementById('scrollbar-thumb');
   if(!el || !track || !thumb) return;
-  const screenEl = el.closest('.phone-screen, .laptop-screen');
+  const screenEl = el.closest('.phone-screen');
   if(!screenEl) return;
   const scrollable = el.scrollHeight - el.clientHeight > 2 && !el.classList.contains('fs-lock');
   track.classList.toggle('visible', scrollable);
@@ -20254,7 +20108,7 @@ function attachHandlers(){
 // nudges each popover back onscreen after every render instead of letting it clip.
 function clampFloatPopovers(){
   document.querySelectorAll('.float-popover').forEach(pop=>{
-    const screen = pop.closest('.phone-screen, .laptop-screen, .notes-popover-sheet') || document.getElementById('content-area');
+    const screen = pop.closest('.phone-screen, .notes-popover-sheet') || document.getElementById('content-area');
     if(!screen) return;
     pop.style.transform = 'translateX(-50%)';
     pop.style.removeProperty('--popover-arrow-shift');
@@ -21816,7 +21670,7 @@ function fitPageToScreen(area, el, pageKey){
   if(!el || NO_FIT_SCREENS.has(page)) return;
   if(el.id === 'page-swipe-track') return;
   const topBarEl = el.querySelector(':scope > .page-top');
-  const frame = area.closest('.phone-screen, .laptop-screen') || document;
+  const frame = area.closest('.phone-screen') || document;
   const dock = frame.querySelector('.wallet-float-dock');
   // Room kept free at the bottom for the phone's bottom switch (#237) - the Dashboard keeps its own (its Station 3 bar sits on it).
   const room = (NATIVE && !el.classList.contains('s3-dash')) ? litBottomPx() : 0;
@@ -22620,7 +22474,7 @@ document.addEventListener('pointercancel', endSwipe, true);
     if(IN_STATION3_WINDOW) return;
     if(state.current !== 'dashboard') return;
     if(e.target.closest && e.target.closest('.swipe-confirm')) return;
-    const scr = document.querySelector('.phone-screen, .laptop-screen');
+    const scr = document.querySelector('.phone-screen');
     const top = 0;
     if(e.clientY - top > EDGE) return;           // started below the edge: not a notification pull
     n = { x:e.clientX, y:e.clientY, lx:e.clientX, ly:e.clientY, id:e.pointerId };
@@ -22727,25 +22581,6 @@ function disableTilt(){
   tiltBaseline = null;
   tiltTargetX = 0; tiltTargetY = 0; tiltKick();
 }
-// Laptop/desktop mock has no gyroscope, so cursor position over the frame stands in for tilt
-// -- always on, no toggle needed, purely cosmetic for the preview.
-document.addEventListener('pointermove', (e)=>{
-  if(state.device !== 'laptop') return;
-  const frame = document.querySelector('.laptop-frame');
-  if(!frame) return;
-  const rect = frame.getBoundingClientRect();
-  const margin = 60;
-  if(e.clientX < rect.left-margin || e.clientX > rect.right+margin || e.clientY < rect.top-margin || e.clientY > rect.bottom+margin){
-    if(tiltTargetX || tiltTargetY){ tiltTargetX = 0; tiltTargetY = 0; tiltKick(); }
-    return;
-  }
-  const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
-  const nx = Math.max(-1, Math.min(1, (e.clientX - cx) / (rect.width/2)));
-  const ny = Math.max(-1, Math.min(1, (e.clientY - cy) / (rect.height/2)));
-  tiltTargetX = ny * -8;
-  tiltTargetY = nx * 8;
-  tiltKick();
-});
 
 // ===== HOME GESTURE -- swipe up from the bottom pill to OPEN a picker that stays open =====
 // Same capture-phase + stopPropagation() pattern as the swipe-confirm sliders above, and for

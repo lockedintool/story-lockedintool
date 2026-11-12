@@ -16,7 +16,7 @@ rot(){ adb shell settings put system accelerometer_rotation 0; adb shell setting
 cur_rot(){ local d; d=$(adb shell dumpsys window displays | grep -m1 -o 'cur=[0-9]*x[0-9]*' | grep -o '[0-9]*x[0-9]*'); [ "${d%x*}" -gt "${d#*x}" ] 2>/dev/null && echo "sideways ($d)" || echo "upright ($d)"; }
 targets(){ curl -s http://127.0.0.1:9222/json | grep -o '"url": *"[^"]*"' | tee -a $R; }
 forward(){ local pid; pid=$(adb shell pidof $P | tr -d '\r' | awk '{print $1}'); adb forward --remove-all >/dev/null 2>&1; adb forward tcp:9222 localabstract:webview_devtools_remote_$pid >/dev/null && log "  devtools on pid $pid"; }
-step(){ log ""; log "== $*"; }
+step(){ [ "$(adb get-state 2>/dev/null)" = "device" ] || { log ""; log "TEST PHONE LOST (emulator crashed) - stopping this attempt"; exit 3; }; log ""; log "== $*"; }
 # Films the screen while something happens and reports black frames (#269 - the owner's video: black / the old page
 # flashing before the Pages showed). rec_start NAME ... rec_stop NAME
 rec_start(){ adb shell "screenrecord --time-limit 10 --bit-rate 4000000 /sdcard/$1.mp4" >/dev/null 2>&1 & RECPID=$!; sleep 1; }

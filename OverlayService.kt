@@ -178,6 +178,23 @@ class OverlayService : Service(), StoryBridge.Host {
 
     override fun onBind(i: Intent?): IBinder? = null
 
+    /** How tall the dial pad may be: from where its window sits up to the status bar (#255 - owner, 12 Nov 2026, the phone
+     *  turned sideways: 'The dial pad like is cutting ... its great that it like shows on the side'). Upright it fits as it
+     *  always did; sideways the page shrinks it to this room (storyDialFit) - same look, same place, nothing cut. */
+    private fun tellDialRoom(p: Pane) {
+        val room = ((realHeightPx() - statusBarHeightPx() - p.lp.y) / dp).toInt() - 6
+        p.web.evaluateJavascript("window.__storyDialRoom=$room;window.storyDialFit&&window.storyDialFit()", null)
+    }
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // The phone turned: the dial pads fit the new height and stay centred (their windows were placed for the old one).
+        ui.post { listOfNotNull(dialPane, lockDialPane).forEach { p ->
+            val w = p.lp.width - ((if (p === lockDialPane) 2 else 58) * dp).toInt()
+            if (w > 0) { p.lp.x = (resources.displayMetrics.widthPixels - w) / 2; runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }
+            tellDialRoom(p)
+        }; syncDialStrip() }
+    }
+
     override fun onCreate() {
         super.onCreate()
         ProblemLog.catchCrashes(this); ProblemLog.flush(this)   // a crash is written down, and sent the next time
@@ -746,6 +763,7 @@ class OverlayService : Service(), StoryBridge.Host {
                     ui.postDelayed({ paneRef?.let { it.loading = false; if (it.shown) it.frame.alpha = 1f } }, 200)
                 } else if (dial) {
                     v.evaluateJavascript("document.documentElement.classList.add('dial-wide');window.storyDialOnly&&window.storyDialOnly()", null); v.evaluateJavascript(DIAL_JS, null)
+                    paneRef?.let { tellDialRoom(it) }
                     ui.postDelayed({ paneRef?.let { it.loading = false; if (it.shown) it.frame.alpha = 1f }; syncBarBg() }, 200)
                 } else if (small) {
                     v.evaluateJavascript(exactGeometryJs(), null)
@@ -1477,7 +1495,7 @@ class OverlayService : Service(), StoryBridge.Host {
             (v.background as? GradientDrawable)?.setColor(barBgColor())
             runCatching { (barBgWm ?: wm).updateViewLayout(v, lp) }
         } }
-        dialPane?.let { p -> p.lp.y = y + (40 * dp).toInt(); runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }   // attached to the bar (owner)
+        dialPane?.let { p -> p.lp.y = y + (40 * dp).toInt(); runCatching { p.wm.updateViewLayout(p.frame, p.lp) }; tellDialRoom(p) }   // attached to the bar (owner)
         syncDialStrip()
         fitProfileGap()
         syncBarTouch()

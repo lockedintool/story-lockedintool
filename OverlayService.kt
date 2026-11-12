@@ -182,7 +182,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  turned sideways: 'The dial pad like is cutting ... its great that it like shows on the side'). Upright it fits as it
      *  always did; sideways the page shrinks it to this room (storyDialFit) - same look, same place, nothing cut. */
     private fun tellDialRoom(p: Pane) {
-        val room = ((realHeightPx() - statusBarHeightPx() - p.lp.y) / dp).toInt() - 6
+        val room = ((screenNow().y - statusBarHeightPx() - p.lp.y) / dp).toInt() - 6
         p.web.evaluateJavascript("window.__storyDialRoom=$room;window.storyDialFit&&window.storyDialFit()", null)
     }
     /** Where Station 3's dial pad sits across: upright, in the middle of the screen (as always); sideways, right above
@@ -190,10 +190,22 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Station 3 with the phone sideways: 'The dial pad is supposed to show like that, because thats how it is when its not
      *  on landscape'). Upright both are the same number. */
     // The screen's real width right now (a service's displayMetrics can keep the old orientation's numbers after the phone turns).
-    private fun realWidthPx(): Int =
-        if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.width() else resources.displayMetrics.widthPixels
+    private fun realWidthPx(): Int = screenNow().x
+    /** The screen's size as it is RIGHT NOW (upright or sideways), read from the display one of our windows is on - a
+     *  service's own WindowManager / displayMetrics can still say 'upright' after the phone turned (#265). */
+    @Suppress("DEPRECATION")
+    private fun screenNow(): android.graphics.Point {
+        val d = listOfNotNull(dialPane?.frame, bubble, s3Pane?.frame).firstNotNullOfOrNull { it.display }
+        val pt = android.graphics.Point()
+        if (d != null) { runCatching { d.getRealSize(pt) } }
+        if (pt.x <= 0 || pt.y <= 0) {
+            if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.let { pt.set(it.width(), it.height()) }
+            else pt.set(resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels)
+        }
+        return pt
+    }
     private fun dialX(padW: Int): Int {
-        val w = realWidthPx(); val upright = minOf(w, realHeightPx())
+        val sz = screenNow(); val w = sz.x; val upright = minOf(w, sz.y)
         return (w - (upright + padW) / 2).coerceAtLeast(0)
     }
     /** Puts a dial pad where it belongs for the screen as it is NOW (upright / sideways) and tells it its height room. */
@@ -806,7 +818,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // The dial pad page also lays out at a fixed size (pinned bottom-left); its window just cuts it to the dial pad.
         // As wide as the screen: room for the dial pad's Search contact / View all contacts buttons on both sides
         // (owner, 4 Nov 2026); the window itself is cut to what shows (setDialSize), the dial pad never moves.
-        val dialW = maxOf(((280 + 70) * dp).toInt(), resources.displayMetrics.widthPixels); val dialH = minOf((560 * dp).toInt(), realHeightPx())
+        val dialW = maxOf(((280 + 70) * dp).toInt(), resources.displayMetrics.widthPixels); val dialH = (560 * dp).toInt()   // the dial pad's page is always laid out at full size (it may be built while the phone is sideways); the window shows what fits
         frame.addView(wv, when {
             profile -> FrameLayout.LayoutParams(-1, -1)
             dial -> FrameLayout.LayoutParams(dialW, dialH, Gravity.BOTTOM or Gravity.START)
@@ -823,12 +835,12 @@ class OverlayService : Service(), StoryBridge.Host {
                 WindowManager.LayoutParams(-1, realHeightPx() - profileBandPx(), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flagsFor(true, false), PixelFormat.TRANSLUCENT).apply { gravity = Gravity.TOP or Gravity.START }
         else if (dial && lock)
             // Lock screen dial pad: always open, flush to the very bottom, centred (the lock screen has no bottom bar).
-            WindowManager.LayoutParams(dialW, dialH, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flagsFor(true, false), PixelFormat.TRANSLUCENT).apply {
+            WindowManager.LayoutParams(dialW, minOf(dialH, realHeightPx()), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flagsFor(true, false), PixelFormat.TRANSLUCENT).apply {
                 gravity = Gravity.BOTTOM or Gravity.START
                 x = (resources.displayMetrics.widthPixels - (280 * dp).toInt()) / 2; y = 0
             }
         else if (dial)
-            WindowManager.LayoutParams(dialW, dialH, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flagsFor(true, false), PixelFormat.TRANSLUCENT).apply {
+            WindowManager.LayoutParams(dialW, minOf(dialH, realHeightPx()), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flagsFor(true, false), PixelFormat.TRANSLUCENT).apply {
                 // Middle of the screen, sitting right ON Station 3's 40dp bar - attached, no gap (owner, 4 Nov 2026:
                 // 'attach the dial pad with station 3 so that when I'm on it it's not like separated').
                 gravity = Gravity.BOTTOM or Gravity.START

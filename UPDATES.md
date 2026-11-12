@@ -269,3 +269,4 @@ commits, pushed as a new update) - nothing else changes.
 | 261 | 2026-11-12 | New Lockedintool icon: the phone fits it into its own icon shape, the logo is bigger and the tape runs right out to the edges (web icons too) | e1979e8 |
 | 262 | 2026-11-12 | Sideways dial pad, for real: its place and size come from the screen's real size at that moment and are worked out again every time it opens | 4762b9c |
 | 263 | 2026-11-12 | Whole-app check fix: Create's shutter never throws an error where there's no phone camera | 62acca2 |
+| 264 | 2026-11-12 | The Pages (Dashboard, Money, Wallet...) stay upright when the phone is sideways - tilt the phone back to use them; other apps and Station 3's windows still turn | (pending) |

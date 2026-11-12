@@ -917,6 +917,10 @@ class OverlayService : Service(), StoryBridge.Host {
         // Android 12+ throws away touches that pass through another app's fully opaque window,
         // even an untouchable one. A hidden pane is fully see-through, so apps underneath get every touch.
         p.lp.alpha = if (shown) 1f else 0f
+        // The Pages never turn sideways (#264 - owner, 12 Nov 2026: 'It should stay not tilted. The user will have to tilt
+        // the phone back to use it normally'): while they show, the screen stays upright; hidden, they ask for nothing, so
+        // other apps turn as they like. (Station 3's own windows - the dial pad, Messages... - still turn with the phone.)
+        if (p === pagesPane) p.lp.screenOrientation = if (shown) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         if (p.small && shown) { p.lp.width = p.openW; p.lp.height = p.openH }
         p.frame.alpha = if (shown && !((p.small && p.loading) || (p === pagesPane && pagesInHome() && ((p.loading && p.web.progress < 100) || homeWaking)))) 1f else 0f
         runCatching { p.wm.updateViewLayout(p.frame, p.lp) }

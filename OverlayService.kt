@@ -994,7 +994,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // The app: the Pages open in its own window. Station 3's button on the Pages INSIDE the app opens Station 3 like
         // anywhere else (#254 - owner, 12 Nov 2026: 'The apps and pages station 3 doesn't work. When I tap it nothing is
         // showing' - this line used to refuse every tap in app mode).
-        if (AppMode.appOnly(this) && !(station3Only && pagesPane?.shown == true)) { if (!station3Only) LockedintoolApp.open(this, null); return }
+        if (AppMode.appOnly(this) && !(station3Only && (pagesPane?.shown == true || litAppPkg != null))) { if (!station3Only) LockedintoolApp.open(this, null); return }
         warmUp()
         if (station3Only) {
             // Station 3 opens exactly the same over the Pages as over any app -- the Pages stay put.
@@ -1296,7 +1296,20 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     private fun removeAppEdge() { appEdge?.let { runCatching { layerWm.removeView(it) } }; appEdge = null }
     /** The app on screen changed (accessibility): leaving the app page's app takes the strip away. */
+    /** As an app: the app you opened from inside Lockedintool (Dashboard > Apps, an app page, ALARM / CAMERA / GALLERY).
+     *  Station 3 is part of Lockedintool, so it shows over THAT app like it does as a system (#259 - owner, 12 Nov 2026:
+     *  'when lockedintool is an app ... I go to the dashboard > apps and im inside an app I can't see the station 3 ... even
+     *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
+    @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
+        litAppPkg?.let { a -> if (pkg != a && pkg != "com.android.systemui" && pkg != packageName) {   // Lockedintool's own screens (unlock, call setup) keep it
+            litAppPkg = null
+            if (AppMode.appOnly(this) && pagesPane?.shown != true) {
+                listOfNotNull(dialPane, s3Pane).filter { it.shown }.forEach { hideOne(it) }
+                profilePane?.takeIf { it.shown && !callActive }?.let { hideOne(it) }
+            }
+        } }
+        if (AppMode.appOnly(this)) updateBubble()
         openingPkg?.let { w -> if (w.isNotEmpty() && pkg == w) { ui.removeCallbacks(openingHide); openingHide.run() } }   // the app just opened is in front
         if (appPagePkg != null && pkg != appPagePkg && pkg != packageName) { appPagePkg = null; removeAppEdge() }; systemEnforce(pkg)
         // Only system: another app came to the front while the Pages live in Lockedintool's Home - they close (kept drawn
@@ -1613,7 +1626,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // Only use widgets: no Station 3. As an app (#252 - owner, 11 Nov 2026: 'I set the station 3 for pages and apps to only
         // pages and its not there'): Station 3 follows your setting on the Pages INSIDE the app, never over other apps.
         if (WidgetMode.on(this)) on = false
-        else if (AppMode.appOnly(this) && !pagesUp) on = false
+        else if (AppMode.appOnly(this) && !pagesUp && !(litAppPkg != null && StoryAccessibilityService.frontPkg.let { it == litAppPkg || it == packageName })) on = false
         if (dash) on = false                  // the Dashboard's Station 3 has no button
         if (panelOver) on = false             // the phone's own panel is pulled down over everything
         if (lockOptsUp) on = false            // Lockedintool's lock screen is showing its unlock options
@@ -2228,6 +2241,7 @@ class OverlayService : Service(), StoryBridge.Host {
         if (pagesPane?.shown != true) { openingPkg = null; updateBubble(); return@post }
         openingWhat = what
         openingPkg = pkg ?: ""
+        if (AppMode.appOnly(this) && !pkg.isNullOrEmpty()) litAppPkg = pkg
         ui.postDelayed(openingHide, if (pkg.isNullOrEmpty() || StoryAccessibilityService.instance == null) 400L else 1500L)
     } }
 

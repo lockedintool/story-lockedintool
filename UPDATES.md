@@ -264,3 +264,4 @@ commits, pushed as a new update) - nothing else changes.
 | 256 | 2026-11-12 | With the phone sideways, Station 3's dial pad sits on the right, right above Station 3 (as it does upright) instead of on the left | 1436323 |
 | 257 | 2026-11-12 | Second system: swiping up on the bottom button inside Lockedintool now takes you to the phone's normal apps (like tapping 'Apps' on the switch) instead of landing back in Lockedintool | cf01365 |
 | 258 | 2026-11-12 | Swipe up mixed with staying in Lockedintool: a swipe up that goes Home takes you to your apps; a swipe up that opens Recent apps keeps you in Lockedintool, so closing Recents or Close all brings you back | 16e2f4d |
+| 259 | 2026-11-12 | As an app: apps you open from inside Lockedintool (Dashboard > Apps, app pages, Alarm / Camera / Gallery) show Station 3 over them, following Quick access; it goes away when you leave that app | (pending) |

@@ -658,6 +658,13 @@ export class Hub {
         .filter(c => !this.blocked(me.id, c.uid)).map(c => ({ id: c.id, text: c.text, at: c.at, mine: c.uid === me.id, canDelete: c.uid === me.id || p.uid === me.id, user: { id: c.uid, name: c.name || '', username: c.username || '', photo: this.mediaUrl(c.photo) } }));
       return json(Object.assign(this.postView(p, me), { list }));
     }
+    // #288 (owner: 'holding the highlight should rename'): your highlight's new name, for everyone who sees it.
+    if (op === 'hlrename') {
+      const hl = String(b.hl || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40), name = String(b.name || '').trim().slice(0, 40);
+      if (!hl || !name) return json({ error: 'name' }, 400);
+      this.sql.exec("UPDATE uposts SET hlname = ? WHERE uid = ? AND hl = ? AND kind = 'highlight'", name, me.id, hl);
+      return json({ ok: true });
+    }
     if (op === 'delete') {
       const p = this.one('SELECT * FROM uposts WHERE id = ? AND uid = ?', String(b.id || ''), me.id);
       if (!p) return json({ error: 'notfound' }, 404);

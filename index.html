@@ -11636,7 +11636,8 @@ window.storyProfileOnly = function(){
     }
     else if(k === 'cr-hl-cancel'){ el.querySelector('.cr-sheet').hidden = true; }
     else if(k === 'hl-open'){
-      const h = profileHighlights().find(x=>x.id === b.getAttribute('data-id')); if(!h || !h.items.length) return;
+      const h = profileHighlights().find(x=>x.id === b.getAttribute('data-id')); if(!h) return;
+      if(!h.items.length){ showToast('This highlight is empty - add to it from Create'); return; }
       const d = profileData(), me = { id:(msgAccount() || {}).id, name:d.name || '', username:d.username || '', photo: profilePhoto() };
       const items = h.items.slice().reverse().map(x=>({ id:x.id, type: x.kind === 'video' ? 'video' : 'photo', url: PF_PHOTO_BASE + 'post/' + x.id, poster: x.kind === 'video' ? PF_PHOTO_BASE + 'postthumb/' + x.id : '', at: x.at }));
       upView(me, items, 0, false); if(UP.view){ UP.view.local = true; UP.view.hl = h.id; } upShowItem();
@@ -12116,11 +12117,11 @@ function crAddToHighlight(hid){
 function renderHighlights(){
   const el = document.getElementById('story-profile'); if(!el || PF_GAP_WINDOW) return;
   const row = el.querySelector('.pf-hls'); if(!row) return;
-  const hl = profileHighlights().filter(h=>h.items.length);
+  const hl = profileHighlights();   // #288: an empty highlight stays (an empty circle)
   row.hidden = !hl.length;
   row.innerHTML = hl.map(h=>{
     const c = h.items[0];
-    const cover = '<img alt="" loading="lazy" src="' + PF_PHOTO_BASE + (c.kind === 'video' ? 'postthumb/' : 'post/') + c.id + '">';
+    const cover = c ? '<img alt="" loading="lazy" src="' + PF_PHOTO_BASE + (c.kind === 'video' ? 'postthumb/' : 'post/') + c.id + '">' : '';
     return '<button class="pf-hl" data-pf="hl-open" data-id="' + escText(h.id) + '"><span class="pf-hl-c">' + cover + '</span><span class="pf-hl-n">' + escText(h.name) + '</span></button>';
   }).join('');
 }
@@ -12132,7 +12133,7 @@ window.addEventListener('storage', e=>{ if(e.key === 'story-highlights') renderH
   document.addEventListener('pointerdown', e=>{
     const b = e.target.closest && e.target.closest('#story-profile .pf-hls [data-pf="hl-open"]'); if(!b) return;
     held = false; sx = e.clientX; sy = e.clientY; clearTimeout(t);
-    t = setTimeout(()=>{ t = 0; held = true; try{ navigator.vibrate && navigator.vibrate(12); }catch(_){} hlDeleteWhole(b.getAttribute('data-id')); }, 480);
+    t = setTimeout(()=>{ t = 0; held = true; try{ navigator.vibrate && navigator.vibrate(12); }catch(_){} hlHoldSheet(b.getAttribute('data-id')); }, 480);
   }, true);
   document.addEventListener('pointermove', e=>{ if(t && Math.hypot(e.clientX - sx, e.clientY - sy) > 10){ clearTimeout(t); t = 0; } }, true);
   ['pointerup', 'pointercancel'].forEach(n=>document.addEventListener(n, ()=>{ clearTimeout(t); t = 0; }, true));
@@ -12599,9 +12600,24 @@ function hlDeleteItem(hid, localId){
   if(it.sid) msgApi('/v1/uposts/delete', { id: it.sid }).catch(()=>{}); else hlServerDelete(hid, idx, false);
   hlUnqueue([localId]);
   h.items.splice(idx, 1);
-  const gone = !h.items.length; if(gone) hl.splice(hl.indexOf(h), 1);
-  saveHighlights(hl);
-  return gone;
+  saveHighlights(hl);   // #288 (owner: the highlight can stay empty) - deleting the last one never deletes the highlight
+  return false;
+}
+// #288 (owner, 13 Nov 2026: 'holding the highlight should rename'): hold a highlight circle -> Rename / Delete highlight.
+function hlHoldSheet(hid){
+  const h = profileHighlights().find(x=>x.id === hid); if(!h) return;
+  litSheet({ items:[{ label:'Rename', fn: ()=>hlRename(hid) }, { label:'Delete highlight', danger:true, fn: ()=>hlDeleteWhole(hid) }] });
+}
+function hlRename(hid){
+  const h = profileHighlights().find(x=>x.id === hid); if(!h) return;
+  litSheet({ title:'Rename highlight', input:{ value: h.name, placeholder:'Highlight name' }, items:[{ label:'Save', keep:true, fn: (btn, field)=>{
+    const name = (field && field.value || '').trim().slice(0, 40); if(!name){ if(field) field.focus(); return; }
+    const hl = profileHighlights(), x = hl.find(y=>y.id === hid); if(x){ x.name = name; saveHighlights(hl); }
+    const q = upQueue(); q.forEach(j=>{ if(j.kind === 'highlight' && j.hl === hid) j.hlname = name; }); upQueueSave(q);
+    msgApi('/v1/uposts/hlrename', { hl: hid, name }).catch(()=>{});
+    document.querySelectorAll('.lit-sheet-bg').forEach(z=>z.remove());
+    showToast('Highlight renamed');
+  } }] });
 }
 function hlDeleteWhole(hid){
   const hl = profileHighlights(), h = hl.find(x=>x.id === hid); if(!h) return;
@@ -12710,12 +12726,12 @@ async function upDeleteShown(){
   const v = UP.view; if(!v) return;
   const it = v.items[v.i];
   if(v.local){ upPause();
-    litSheet({ title: it.type === 'video' ? 'Delete this video?' : 'Delete this picture?', text: v.items.length === 1 ? 'It’s the only one in this highlight, so the highlight is deleted too.' : '',
+    litSheet({ title: it.type === 'video' ? 'Delete this video?' : 'Delete this picture?',
       onClose: ()=>{ if(UP.view === v) upShowItem(); },
       items:[{ label:'Delete', danger:true, fn: ()=>{
-        const gone = hlDeleteItem(v.hl, it.id);
+        hlDeleteItem(v.hl, it.id);
         v.items.splice(v.i, 1);
-        showToast(gone ? 'Highlight deleted' : 'Deleted');
+        showToast('Deleted');
         if(!v.items.length) upCloseView(); else { v.i = Math.min(v.i, v.items.length - 1); upShowItem(); }
       } }] });
     return; }

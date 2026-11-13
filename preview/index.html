@@ -12702,17 +12702,19 @@ async function upBytes(url, max){
   const r = await fetch(url); if(!r.ok) throw new Error('file');
   const blob = await r.blob();
   if(!max) return { bytes: new Uint8Array(await blob.arrayBuffer()), mime: 'video/mp4' };
+  // #284 (owner: 'we need the highest possible quality'): a picture goes up exactly as the camera made it, untouched.
+  if(max === 'full') return { bytes: new Uint8Array(await blob.arrayBuffer()), mime: blob.type && blob.type.startsWith('image/') ? blob.type : 'image/jpeg' };
   // Pictures are made smaller first (max side `max` px, JPEG) so they upload fast and look sharp.
   const bmp = await createImageBitmap(blob);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  const out = await new Promise(res=>c.toBlob(res, 'image/jpeg', 0.86));
+  const out = await new Promise(res=>c.toBlob(res, 'image/jpeg', 0.95));
   return { bytes: new Uint8Array(await out.arrayBuffer()), mime: 'image/jpeg' };
 }
 async function upPutMedia(f){
   const a = msgAccount(); if(!a) throw new Error('signin');
-  if(f.bytes.length > 40 * 1048576) throw Object.assign(new Error('big'), { code:'big' });
+  if(f.bytes.length > 300 * 1048576) throw Object.assign(new Error('big'), { code:'big' });
   const id = Array.from(crypto.getRandomValues(new Uint8Array(18)), b=>'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 62]).join('');
   const CH = 1048576, n = Math.max(1, Math.ceil(f.bytes.length / CH));
   for(let i = 0; i < n; i++){
@@ -12748,21 +12750,21 @@ async function upFlush(){
           await msgApi('/v1/uposts/create', { kind:'post', title: job.title, text: job.text, items: job.done });
           showToast('Your post is up'); feedLoad(true);
         }catch(e){
-          if(e.code === 'big' || e.message === 'file'){ showToast(e.code === 'big' ? 'A video is too big to share (40 MB max)' : 'A picture or video is gone from the phone'); }
+          if(e.code === 'big' || e.message === 'file'){ showToast(e.code === 'big' ? 'A video is too big to share (300 MB max)' : 'A picture or video is gone from the phone'); }
           else break;
         }
         q = upQueue(); q.shift(); upQueueSave(q); continue;
       }
       try{
-        const media = await upPutMedia(await upBytes(PF_PHOTO_BASE + 'post/' + job.localId, job.type === 'video' ? 0 : 1440));
+        const media = await upPutMedia(await upBytes(PF_PHOTO_BASE + 'post/' + job.localId, job.type === 'video' ? 0 : 'full'));
         let thumb = '';
         if(job.type === 'video'){ try{ thumb = await upPutMedia(await upBytes(PF_PHOTO_BASE + 'postthumb/' + job.localId, 720)); }catch(e){} }
         let music = null;
-        if(job.music){ try{ const r = await fetch(PF_PHOTO_BASE + 'chatfile/' + job.music.file); if(r.ok) music = { media: await upPutMedia({ bytes: new Uint8Array(await r.arrayBuffer()), mime: job.music.mime }), name: job.music.name }; }catch(e){ if(e.code === 'big') showToast('That song is too big to share (40 MB max)'); } }
+        if(job.music){ try{ const r = await fetch(PF_PHOTO_BASE + 'chatfile/' + job.music.file); if(r.ok) music = { media: await upPutMedia({ bytes: new Uint8Array(await r.arrayBuffer()), mime: job.music.mime }), name: job.music.name }; }catch(e){ if(e.code === 'big') showToast('That song is too big to share (300 MB max)'); } }
         await msgApi('/v1/uposts/create', { kind: job.kind, type: job.type, media, thumb, music, hl: job.hl, hlname: job.hlname });
         if(job.kind === 'status') showToast('Your status is up');
       }catch(e){
-        if(e.code === 'big' || e.message === 'file'){ showToast(e.code === 'big' ? 'That video is too big to share (40 MB max)' : 'That file is gone'); }
+        if(e.code === 'big' || e.message === 'file'){ showToast(e.code === 'big' ? 'That video is too big to share (300 MB max)' : 'That file is gone'); }
         else break;   // no connection: try again later
       }
       q = upQueue(); q.shift(); upQueueSave(q);

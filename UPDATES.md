@@ -300,4 +300,4 @@ commits, pushed as a new update) - nothing else changes.
 | 291 | 2026-11-13 | No more flashes: the chart slides with the page (a copy of it sits in its box while the live chart is away) and wakes without dark frames; a page with the same background picture as the one before never shows its plain colour first; and opening the app no longer flashes black or the logo | 79a2310 |
 | 292 | 2026-11-13 | The DEVICE LOCKED sign disappears the instant the phone unlocks (it used to look only once a second) | f2a5717 |
 | 293 | 2026-11-13 | The lock screen behind DEVICE LOCKED is blurred and a little darker, so the sign reads on any wallpaper | 980f2cf |
-| 294 | 2026-11-13 | The DEVICE LOCKED sign is removed everywhere (your phone's own lock screen shows as it is) and the Always On Display lock screen switch is gone from Settings | (this update) |
+| 294 | 2026-11-13 | The DEVICE LOCKED sign is removed everywhere (your phone's own lock screen shows as it is) and the Always On Display lock screen switch is gone from Settings | 5c3a5a4 |

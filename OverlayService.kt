@@ -69,6 +69,7 @@ class OverlayService : Service(), StoryBridge.Host {
         override fun onReceive(c: Context, i: Intent) {
             userPresentAt = System.currentTimeMillis()
             ui.post { secWaitUnlocked(); endLockWallet() }
+            ui.postDelayed({ spacesAfterUnlock() }, 250)   // #302: Business - choose your focus after every unlock
             widgetLiveEvent(false)  // unlocked onto the home screen: live widgets come back
             if (SystemMode.on(c)) { ui.removeCallbacks(systemCheckRun); ui.postDelayed(systemCheckRun, 500) }  // Lockedintool as your system: unlocked onto another app / the home screen
             AodActivity.instance?.finish()  // unlocked (e.g. fingerprint) while the Always On Display was up
@@ -2222,7 +2223,9 @@ class OverlayService : Service(), StoryBridge.Host {
             // Back on the app: like any app, it goes to the background (the screens keep their own back buttons).
             if (code == android.view.KeyEvent.KEYCODE_BACK && e.action == android.view.KeyEvent.ACTION_UP && AppMode.appOnly(this) && pagesInHome()) {
                 LockedintoolApp.current?.moveTaskToBack(true); true } else false }
-        val js = "window.storyShow&&window.storyShow(" + (if (page != null) org.json.JSONObject.quote(page) else "null") + ",false)"
+        var js = "window.storyShow&&window.storyShow(" + (if (page != null) org.json.JSONObject.quote(page) else "null") + ",false)"
+        if (appLeft && page == null && spacesWanted()) js += ";window.litSpacesOpen&&window.litSpacesOpen()"   // #302
+        appLeft = false
         secGate(p) { showPagesOn(p, js) { updateBubble() } }
     }
     /** The app went out of sight: everything of Lockedintool goes with it (never left over another app). */
@@ -2232,6 +2235,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // inside the app's window (#241 - owner: 'I cant close the app').
         if (!attached && !AppMode.appOnly(this)) return
         if (pickerHid.isNotEmpty() || createActive) return   // Lockedintool's own picker / camera opened over it
+        appLeft = true
         listOfNotNull(dialPane, s3Pane).filter { it.shown }.forEach { hideOne(it) }
         profilePane?.takeIf { it.shown && !callActive }?.let { hideOne(it) }
         pagesPane?.takeIf { it.shown }?.let { hideOne(it) }
@@ -2952,6 +2956,21 @@ class OverlayService : Service(), StoryBridge.Host {
         pagesPane?.takeIf { it.shown }?.let { hideOne(it) }
         endLockWallet(); updateBubble(); syncLockDial()
     }
+    // ---- Business accounts (#302 - owner, 13 Nov 2026: 'When the phone is unlocked no matter what happens it will always
+    //      start there'; 'Tap the company profile or users to direct your focus'; 'System modes only'): with companies on a
+    //      Business account, every unlock opens the Pages on the company chooser (Second system and Only system; as an app it
+    //      shows when the app opens). Lockedintool security's unlock counts the phone's own unlock as always. ----
+    override fun spacesOn(on: Boolean) { ui.post { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", on).apply() } }
+    private fun spacesWanted() = getSharedPreferences("story", MODE_PRIVATE).getBoolean("spaces_on", false)
+    private fun spacesAfterUnlock() {
+        if (!spacesWanted() || sysQuiet() || callActive || createActive || keyguardLocked()) return
+        if (pickerHid.isNotEmpty() || openingPkg != null) return
+        val p = pagesPane ?: return
+        hideLiveWidgets()
+        secGate(p) { showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar() } }
+    }
+    /** As an app: the chooser shows each time the app is opened (after it was left). */
+    private var appLeft = true
     /** Unlocked, the screen off, or the Pages closed: the Wallet page is an ordinary page again (under the lock screen). */
     private fun endLockWallet() {
         if (!lockWallet) return

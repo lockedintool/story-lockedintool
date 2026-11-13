@@ -2,6 +2,40 @@
 <html lang="en" dir="ltr">
 <head>
 <script>
+/* BUSINESS ACCOUNTS - COMPANY SPACES (owner, 13 Nov 2026: 'Like when I go to lockedintool anything and everything on the
+   phone will be about and for lockedintool. Same as for the other ones ... Personal will have anything and everything
+   except for the companies'; chose 'One account, company spaces'): while a company is in focus ('story-space'), the
+   things that make up YOUR Lockedintool - the Pages (rows, app pages, order, removed pages, row homes, Focus page), the
+   settings kept with them, colours, background pictures, cards, trading accounts, memberships, the quote, Wallet / Money
+   choices and the company's photo album - are kept separately for that company: the same storage key + '@<company>'.
+   Personal uses the plain keys (everything as it was). Messages, profile, privacy, theme and the account stay ONE. */
+(function(){ try{
+  var S = Storage.prototype, g = S.getItem, st = S.setItem, rm = S.removeItem;
+  var KEYS = {'story-app-pages':1,'story-row-order':1,'story-hidden-pages':1,'story-row-home':1,'story-focus':1,'story-settings':1,
+    'story-color-systems':1,'story-bg-set':1,'story-cards':1,'story-card-active':1,'story-trade-accounts':1,'story-trade-active':1,
+    'story-trade-last':1,'story-page-sections':1,'story-wallet-hide':1,'story-wallet-nw':1,'story-money-all':1,'story-networth':1,
+    'story-money-range':1,'story-spend-limit':1,'story-memberships':1,'story-quote':1,'story-tf-favs':1,'story-tap-pays':1,
+    'story-pay-favs':1,'story-album':1};
+  var sp = null;
+  function cur(){ if(sp === null){ try{ sp = g.call(window.localStorage, 'story-space') || ''; }catch(e){ sp = ''; } } return sp; }
+  function map(store, k){ var c; return (k && KEYS[k] && store === window.localStorage && (c = cur()) && c !== 'personal') ? k + '@' + c : k; }
+  S.getItem = function(k){ return g.call(this, map(this, k)); };
+  S.setItem = function(k, v){ if(k === 'story-space') sp = null; return st.call(this, map(this, k), v); };
+  S.removeItem = function(k){ if(k === 'story-space') sp = null; return rm.call(this, map(this, k)); };
+  window.litSpace = function(){ return cur() || 'personal'; };
+  window.litSpaceSfx = function(){ var c = cur(); return c && c !== 'personal' ? '@' + c : ''; };
+  window.litLsRaw = function(k){ try{ return g.call(window.localStorage, k); }catch(e){ return null; } };
+  // Another window changed something: listeners see the plain key when it's this space's, and nothing they know when
+  // it's another space's (a company's cards never land on Personal's screen).
+  window.addEventListener('storage', function(e){
+    if(e.key === 'story-space'){ sp = null; return; }
+    var k = e.key || '', i = k.lastIndexOf('@'), c = cur();
+    if(i > 0 && KEYS[k.slice(0, i)]){ try{ Object.defineProperty(e, 'key', { value: (c && c !== 'personal' && k.slice(i + 1) === c) ? k.slice(0, i) : '~other-space' }); }catch(err){} }
+    else if(KEYS[k] && c && c !== 'personal'){ try{ Object.defineProperty(e, 'key', { value: '~other-space' }); }catch(err){} }
+  }, true);
+}catch(e){} })();
+</script>
+<script>
 /* Problem reports (owner: something always running that keeps Lockedintool working and keeps fixing it): every window
    tells the app when something goes wrong - an error, a promise that failed - and the app sends it to Lockedintool's
    server, scrubbed of anything personal (ProblemLog.kt). Each problem once an hour per window. Lost connections are normal
@@ -1337,6 +1371,35 @@
   .cardrv-v{ flex:1; min-width:0; font-size:18px; white-space:nowrap; font-weight:700; letter-spacing:0.04em; color:#ffffff; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
   .cardrv-copy{ flex:0 0 auto; padding:7px 12px; border-radius:10px; border:1px solid #2a2a2a; background:#000000; color:#ffffff; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; }
   .cardrv-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  /* Business accounts - the company chooser and companies (#302) */
+  #lit-spaces{ position:fixed; inset:0; z-index:100000; background:#000000; color:#ffffff; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #lit-spaces .sp-bg{ position:absolute; inset:0; background-size:cover; background-position:center; }
+  #lit-spaces .sp-name{ position:absolute; left:16px; right:16px; top:15%; text-align:center; font-size:26px; font-weight:900; text-shadow:0 0 0.75px #000, 0 0 1.5px #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #lit-spaces .sp-track{ position:absolute; left:0; right:0; top:calc(15% + 52px); height:min(44vh, 76vw); }
+  #lit-spaces .sp-card{ position:absolute; left:0; top:0; height:100%; padding:0; border:0; background:none; color:inherit; font:inherit; display:flex; flex-direction:column; transform-origin:center; }
+  #lit-spaces .sp-card-l{ display:none; }
+  #lit-spaces .sp-side .sp-card-l{ display:block; position:absolute; top:-26px; left:0; right:0; text-align:center; font-size:14px; font-weight:800; color:#bdbdbd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #lit-spaces .sp-card-in{ flex:1; border-radius:22px; overflow:hidden; background:#0d0d0d; border:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; }
+  #lit-spaces .sp-side .sp-card-in{ opacity:0.55; }
+  #lit-spaces .sp-card-in img{ width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+  #lit-spaces .sp-card-in b{ font-size:72px; font-weight:900; }
+  #lit-spaces .sp-dots{ position:absolute; left:0; right:0; top:calc(15% + 70px + min(44vh, 76vw)); display:flex; justify-content:center; gap:16px; }
+  #lit-spaces .sp-dot{ display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#8a8a8a; padding:4px; }
+  #lit-spaces .sp-dot i{ width:8px; height:8px; border-radius:50%; background:#555555; display:block; }
+  #lit-spaces .sp-dot.on{ color:#ffffff; } #lit-spaces .sp-dot.on i{ background:#ffffff; }
+  #lit-spaces .sp-bottom{ position:absolute; left:16px; right:16px; bottom:calc(var(--lit-bottom, 48px) + 56px); display:flex; gap:12px; }
+  #lit-spaces .sp-personal{ flex:1; padding:15px 10px; border-radius:16px; border:1px solid #ffffff; background:#000000; color:#ffffff; font:inherit; font-size:15px; font-weight:900; }
+  #lit-spaces .sp-gear{ flex:0 0 54px; border-radius:16px; border:1px solid #ffffff; background:#000000; color:#ffffff; display:flex; align-items:center; justify-content:center; }
+  #lit-spaces .sp-hint{ position:absolute; left:0; right:0; bottom:calc(var(--lit-bottom, 48px) + 22px); text-align:center; font-size:11px; color:#9a9a9a; text-shadow:0 0 0.75px #000; }
+  .sp-row-logo{ width:40px; height:40px; border-radius:10px; overflow:hidden; background:#0d0d0d; border:1px solid #2a2a2a; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; margin-right:10px; }
+  .sp-row-logo img{ width:100%; height:100%; object-fit:cover; } .sp-row-logo b{ font-size:18px; }
+  .sp-row-acts{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .sp-logo-pick{ width:84px; height:84px; margin-top:8px; border-radius:18px; border:1px dashed #555555; background:#000000; color:#888888; font-size:30px; overflow:hidden; padding:0; }
+  .sp-logo-pick img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .sp-album{ display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; }
+  .sp-photo{ aspect-ratio:1; padding:0; border:0; background:#111111; border-radius:6px; overflow:hidden; }
+  .sp-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .sub-accts{ margin-top:-2px; }
   /* Only system's note, stuck on the option (owner, 3 Nov 2026) */
   .sub-opts{ align-items:stretch; }
   .sub-opt{ flex-wrap:wrap; align-content:center; }
@@ -4557,7 +4620,7 @@ async function litBgLoadAll(){
   litBgTell(false);
   try{
     const db = await litBgDb();
-    await Promise.all(keys.map(k=>new Promise(res=>{ const q = db.transaction('pics').objectStore('pics').get(k);
+    await Promise.all(keys.map(k=>new Promise(res=>{ const q = db.transaction('pics').objectStore('pics').get(k + litSpaceSfx());
       q.onsuccess = ()=>{ if(q.result){ if(LIT_BG[k] && !Object.keys(LIT_BG).some(o=>o !== k && LIT_BG[o] === LIT_BG[k])) URL.revokeObjectURL(LIT_BG[k]); LIT_BG[k] = URL.createObjectURL(q.result); litBgBlobs[k] = q.result; } res(); }; q.onerror = ()=>res(); })));
     // #291 (owner's video, 13 Nov 2026: 'how the background fill flash' - the Dashboard to Money showed Money's plain colour
     // first): the same picture chosen for several places (the Dashboard and the Pages...) is ONE picture in memory, so a
@@ -4618,7 +4681,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 async function litBgPut(target, blob){
   const db = await litBgDb();
-  await new Promise((res, rej)=>{ const t = db.transaction('pics', 'readwrite'); if(blob) t.objectStore('pics').put(blob, target); else t.objectStore('pics').delete(target); t.oncomplete = res; t.onerror = ()=>rej(t.error); });
+  await new Promise((res, rej)=>{ const t = db.transaction('pics', 'readwrite'); if(blob) t.objectStore('pics').put(blob, target + litSpaceSfx()); else t.objectStore('pics').delete(target + litSpaceSfx()); t.oncomplete = res; t.onerror = ()=>rej(t.error); });
   const set = litBgSet(); if(blob) set[target] = Date.now(); else delete set[target];
   try{ localStorage.setItem('story-bg-set', JSON.stringify(set)); }catch(e){}
   if(LIT_BG[target]){ if(!Object.keys(LIT_BG).some(o=>o !== target && LIT_BG[o] === LIT_BG[target])) URL.revokeObjectURL(LIT_BG[target]); delete LIT_BG[target]; delete litBgBlobs[target]; }
@@ -9620,12 +9683,14 @@ function subscriptionScreen(){
     : soon ? 'Free: the Dashboard is yours. Basic & Premium are coming soon.'
     : locked ? 'Free: the Dashboard. Choose a plan for the Pages.' : 'Choose a plan to use LOCKED IN TOOL.';
   if(state.sub.optView) return subOptionScreen(locked);
+  if(state.sub.acctView) return subAcctScreen(locked);
   const mode = subMode();
   return `
     <div class="page-shell sub-page">
     ${topBar('Subscription', false, '', 'settings', '', false)}
     <div class="sub-head">LOCKED IN TOOL</div>
     <div class="sub-opts">${SUB_OPTIONS.map(o=>`<button class="sub-opt${mode === o.key ? ' on' : ''}" data-action="sub-opt" data-v="${o.key}"><span class="sub-opt-mark">${mode === o.key ? '✓' : ''}</span>${o.name}${o.note ? `<span class="sub-opt-note">${o.note}</span>` : ''}<span class="sub-opt-tip"><b>${o.name}</b>${o.short}</span></button>`).join('')}</div>
+    ${subAcctRowHTML()}
     <div class="sub-status">${escText(status)}</div>
     ${active && !s.officialPlan ? `<button class="sub-end-btn" data-action="sub-endask">Cancel plan</button>` : ''}
     ${w ? `<div class="row-card pay-wait">
@@ -9797,12 +9862,13 @@ function subBuy(plan){
   const s = subState() || {};
   if(!plansOnSale()){ showToast('Basic and Premium are coming soon'); return; }   // FREE-ONLY launch (owner): paid plans not for sale yet
   if(!subMode()){ showToast('Choose Second system or Only system first'); return; }   // owner: no plan without an option
+  if(!acctType()){ showToast('Choose Personal or Business first'); return; }   // #302: the account type, the same way
   if(!s.connected){ showToast('Subscriptions open once LOCKED IN TOOL’s payments are set up'); return; }
   if(!msgAccount()){ showToast('Your Lockedintool account is being set up - try again in a moment'); return; }
   const p = SUB_PLANS.find(x=>x.key === plan), pr = (s.plans || {})[plan] || {};
   state.sub.busy = true; state.sub.msg = '';
   const mode = subMode();
-  msgApi('/v1/sub/buy', { plan, mode }).then(r=>{
+  msgApi('/v1/sub/buy', { plan, mode, acct: acctType() }).then(r=>{
     state.sub.busy = false;
     state.sub.waiting = { id:r.id, url:r.url, plan, mode, name:p.name, usd:pr.usd, zar:pr.zar, provider:s.provider || '', status:'pending', started:Date.now(), uid:(msgAccount() || {}).id };
     subWaitSave();
@@ -14442,6 +14508,7 @@ window.storyProfileGeom = function(){
 function storyOpenPhone(which){
   // ALARM (owner): the phone's own alarms (its Clock app).
   if(which === 'alarm'){ if(NATIVE && window.StoryNative.openAlarms) window.StoryNative.openAlarms(); else showToast('Opens your phone\u2019s alarms in the app'); return; }
+  if(which === 'gallery' && bizOn() && litSpace() !== 'personal' && !/[?&]s3=/.test(location.search)){ state.current = 'space-album'; renderDevice(); return; }   // a company's own album (#302)
   if(NATIVE && window.StoryNative[which === 'camera' ? 'openCamera' : 'openGallery']) window.StoryNative[which === 'camera' ? 'openCamera' : 'openGallery']();
   else showToast(which === 'camera' ? 'Opens your phone\u2019s camera in the app' : 'Opens your phone\u2019s gallery in the app');
 }
@@ -14471,7 +14538,7 @@ function appsScreen(){
     ${topBar('Apps', false)}
     <div class="apps-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="apps-search-input" type="text" placeholder="Search apps" autocomplete="off" value="${escText(state.appsQuery || '').replace(/"/g,'&quot;')}"><button class="apps-search-x" data-apps-clear aria-label="Clear"${state.appsQuery ? '' : ' style="visibility:hidden"'}>×</button></div>
     ${sections.map(sec=>{
-      const items = state.installedApps.filter(a=>a.section===sec).sort((x, y)=>(y.own ? 1 : 0) - (x.own ? 1 : 0));
+      const items = state.installedApps.filter(a=>a.section===sec && appInSpace(a)).sort((x, y)=>(y.own ? 1 : 0) - (x.own ? 1 : 0));
       if(!items.length) return '';
       const az = sec !== 'STORY';   // the letter bar jumps through the phone's apps (Lockedintool's own space stays first)
       return `
@@ -14489,6 +14556,7 @@ function appsScreen(){
         }).join('')}
       `;
     }).join('')}
+    ${appsSpaceExtra()}
     <div class="note apps-none" style="margin-top:18px;text-align:center;display:none;">No apps found</div>
     <div class="note" style="margin-top:12px;text-align:center;">Hold an app for more options</div>
     </div>
@@ -14496,6 +14564,8 @@ function appsScreen(){
     <div class="az-bubble" style="display:none;"></div>
     ${state.appMenuId ? appMenuTemplate() : ''}
     ${state.appRowPick ? appRowPickTemplate() : ''}
+    ${state.spAppsOpen ? spAppsTemplate() : ''}
+    ${state.spMoveApp ? spMoveTemplate() : ''}
   `;
 }
 // Apps search + letter bar (#236 - owner, 6 Nov 2026: 'Can you add a app search bar. And a letter scroll bar With a lil fun
@@ -14571,12 +14641,324 @@ function appMenuTemplate(){
         <div class="confirm-btn-row">
           ${a.pkg && NATIVE && window.StoryNative.popupSupported && window.StoryNative.popupSupported() ? `<button class="btn-wide" style="margin-top:0;" data-action="app-popup">Open in pop-up view</button>` : ''}
           ${a.section !== 'STORY' && !wgOn() ? `<button class="btn-wide" style="margin-top:0;" data-action="app-turn-into-page">${a.pkg && appPagesStored().some(x=>x.pkg === a.pkg) ? 'Remove page' : 'Create into a page'}</button>` : ''}
+          ${bizOn() && a.pkg && a.section === 'PHONE APPS' ? `<button class="btn-wide" style="margin-top:0;" data-sp-act="app-move">Move to…</button>` : ''}
           <button class="btn-wide" style="margin-top:0;color:var(--red);" data-action="app-delete">Delete App</button>
         </div>
       </div>
     </div>
   `;
 }
+// ===== BUSINESS ACCOUNTS - COMPANY SPACES (#302 - owner, 13 Nov 2026, with a drawing: 'this feature is for business
+// accounts ONLY'; 'when I go to lockedintool anything and everything on the phone will be about and for lockedintool ...
+// Personal will have anything and everything except for the companies'; 'When the phone is unlocked no matter what happens
+// it will always start there'; 'Tap the company profile or users to direct your focus'; answers: 'Inside Lockedintool',
+// 'One account, company spaces', the account type chosen on the plan set-up 'the same way as ... the systems', 'System
+// modes only'; the chooser's background = each company's own Lockedintool background, black when none; a settings icon
+// instead of Add company; approved the preview: 'Yes that's what I want, build it'). The storage switch is the first
+// script in the page (story-space); this is the account type, the companies, the chooser, their settings, each company's
+// apps and photo album. Android lets no app take over other apps' data or logins, so the phone's own Gallery and other
+// apps' accounts stay as they are - a company's space lives inside Lockedintool.
+const SUB_ACCTS = [
+  { key:'personal', name:'Personal', short:'Your phone, your apps - everything in one place.',
+    text:'One Lockedintool for everything on your phone: your Pages, apps, cards, notes and pictures all in one place.',
+    list:['Everything in one place', 'Your Pages, apps, cards and notes', 'Works with Second system or Only system'] },
+  { key:'business', name:'Business', short:'A space for each of your companies - plus Personal.',
+    text:'Add your companies and each one gets its own Lockedintool: its own Pages, apps, cards, notes, photo album, colours and background. After every unlock you choose which company to focus on, or your Personal account. Everything that isn’t one of your companies stays in Personal.',
+    list:['A space for each company', 'Choose your focus after every unlock', 'Each company: its own Pages, apps, photos and notes', 'Personal keeps everything else'] }
+];
+function acctType(){ const v = litLsRaw('story-acct-type'); return v === 'business' || v === 'personal' ? v : ''; }
+function bizOn(){ return acctType() === 'business'; }
+function spaceList(){ try{ const l = JSON.parse(litLsRaw('story-companies') || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+function spaceSave(l){ try{ localStorage.setItem('story-companies', JSON.stringify(l)); }catch(e){ showToast('Couldn’t save - the phone is out of room'); } spaceTell(); }
+function spaceOf(id){ return spaceList().find(c=>c.id === id) || null; }
+function spaceName(id){ if(!id || id === 'personal') return 'Personal'; const c = spaceOf(id); return c ? c.name : 'Personal'; }
+// The app knows whether to show the chooser after an unlock.
+function spaceTell(){ try{ if(NATIVE && window.StoryNative.spacesOn) window.StoryNative.spacesOn(bizOn() && spaceList().length > 0); }catch(e){} }
+// Focus on a company (or Personal): the Pages start again in that space, on its Home Screen.
+function spaceGo(id){
+  spacesClose();
+  const want = id && id !== 'personal' && spaceOf(id) ? id : '';
+  if((litSpace() === 'personal' ? '' : litSpace()) === want){ if(window.storyShow) window.storyShow(null); return; }
+  try{ saveSettings && saveSettings(); }catch(e){}
+  localStorage.setItem('story-space', want);
+  try{ sessionStorage.setItem('lit-space-home', '1'); }catch(e){}
+  location.reload();
+}
+// A company's own picture: its Dashboard's background, else its Pages' (all pages); none = black.
+const SP_BG = {};
+async function spaceBg(id){
+  if(id in SP_BG) return SP_BG[id];
+  SP_BG[id] = null;
+  try{
+    let set = {}; try{ set = JSON.parse(litLsRaw('story-bg-set@' + id) || '{}') || {}; }catch(e){}
+    const k = set.dashboard ? 'dashboard' : set.all ? 'all' : null; if(!k) return null;
+    const db = await litBgDb();
+    const blob = await new Promise(res=>{ const q = db.transaction('pics').objectStore('pics').get(k + '@' + id); q.onsuccess = ()=>res(q.result || null); q.onerror = ()=>res(null); });
+    if(blob){ SP_BG[id] = URL.createObjectURL(blob); const im = new Image(); im.src = SP_BG[id]; }
+  }catch(e){}
+  return SP_BG[id];
+}
+// ---- The chooser (after every unlock on Second / Only system; when the app opens as an app) ----
+let spIdx = 0;
+window.litSpacesOpen = function(){
+  if(/[?&](s3|widget)=/.test(location.search) || !bizOn() || !spaceList().length) return 'none';
+  spacesShow(); return 'ok';
+};
+function spacesClose(){ document.querySelectorAll('#lit-spaces').forEach(x=>x.remove()); }
+function spacesShow(){
+  const list = spaceList(); if(!list.length) return;
+  spacesClose();
+  const now = list.findIndex(c=>c.id === litSpace());
+  spIdx = now >= 0 ? now : Math.min(spIdx, list.length - 1);
+  const el = document.createElement('div'); el.id = 'lit-spaces'; el.setAttribute('data-keep-color', '');
+  el.innerHTML = '<div class="sp-bg"></div><div class="sp-name"></div><div class="sp-track"></div>' +
+    '<div class="sp-dots">' + list.map((c, i)=>'<span class="sp-dot" data-i="' + i + '"><i></i>' + (i + 1) + '</span>').join('') + '</div>' +
+    '<div class="sp-bottom"><button class="sp-personal" data-sp="personal">View Personal account</button>' +
+    '<button class="sp-gear" data-sp="settings" aria-label="Company settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>' +
+    '<div class="sp-hint">Swipe to your company · tap it to focus</div>';
+  const track = el.querySelector('.sp-track');
+  track.innerHTML = list.map((c, i)=>'<button class="sp-card" data-sp-card="' + i + '"><span class="sp-card-l">' + escText(c.name) + '</span><span class="sp-card-in">' + (c.logo ? '<img alt="" src="' + c.logo + '">' : '<b>' + escText((c.name || '?').charAt(0).toUpperCase()) + '</b>') + '</span></button>').join('');
+  document.body.appendChild(el);
+  let dx = 0, x0 = null, moved = false;
+  const place = ()=>{
+    const W = el.clientWidth, cw = Math.round(W * 0.66), gap = Math.round(W * 0.05);
+    track.querySelectorAll('.sp-card').forEach((b, i)=>{
+      const off = i - spIdx, x = (W - cw) / 2 + off * (cw + gap) + dx;
+      b.style.width = cw + 'px'; b.style.transform = 'translateX(' + x + 'px) scale(' + (off ? 0.82 : 1) + ')';
+      b.classList.toggle('sp-side', !!off); b.style.visibility = Math.abs(off) > 2 ? 'hidden' : '';
+    });
+  };
+  const paint = ()=>{
+    const c = list[spIdx];
+    el.querySelector('.sp-name').textContent = c.name;
+    el.querySelectorAll('.sp-dot').forEach((d, i)=>d.classList.toggle('on', i === spIdx));
+    const bg = el.querySelector('.sp-bg'); bg.style.backgroundImage = '';
+    const want = spIdx;
+    spaceBg(c.id).then(u=>{ if(want === spIdx && u) bg.style.backgroundImage = 'linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url("' + u + '")'; });
+    dx = 0; place();
+  };
+  // Swipe (the cards follow the finger; no animation), tap the middle one to focus.
+  track.addEventListener('pointerdown', e=>{ x0 = e.clientX; dx = 0; moved = false; });
+  el.addEventListener('pointermove', e=>{ if(x0 === null) return; dx = e.clientX - x0; if(Math.abs(dx) > 8) moved = true; place(); });
+  const up = ()=>{ if(x0 === null) return; x0 = null;
+    if(moved){ const W = el.clientWidth; if(dx < -W * 0.12 && spIdx < list.length - 1) spIdx++; else if(dx > W * 0.12 && spIdx > 0) spIdx--; paint(); } };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  track.addEventListener('click', e=>{
+    if(moved){ moved = false; return; }
+    const b = e.target.closest('.sp-card'); if(!b) return;
+    const i = +b.getAttribute('data-sp-card');
+    if(i === spIdx) spaceGo(list[i].id); else { spIdx = i; paint(); }
+  });
+  el.addEventListener('click', e=>{
+    const b = e.target.closest('[data-sp]'); if(!b) return;
+    const a = b.getAttribute('data-sp');
+    if(a === 'personal') spaceGo('personal');
+    else if(a === 'settings'){ spacesClose(); state.current = 'spaces-settings'; renderDevice(); }
+    const d = e.target.closest('.sp-dot'); if(d){ spIdx = +d.getAttribute('data-i'); paint(); }
+  });
+  el.querySelectorAll('.sp-dot').forEach(d=>d.addEventListener('click', ()=>{ spIdx = +d.getAttribute('data-i'); paint(); }));
+  paint();
+}
+// ---- Company settings (the gear) ----
+let spEdit = null;   // { id, name } while adding / renaming
+function spacesSettingsScreen(){
+  const list = spaceList();
+  return `
+    <div class="page-shell">
+    ${topBar('Companies', false)}
+    <div class="note" style="margin:2px 0 12px;">Each company has its own Lockedintool: its own Pages, apps, cards, notes, photo album, colours and background. You choose which one to focus on after every unlock. Everything else stays in Personal.</div>
+    <div class="section-title">YOUR COMPANIES</div>
+    ${list.length ? list.map((c, i)=>`
+      <div class="row-card sp-row">
+        <div class="row">
+          <div class="row-left"><span class="sp-row-logo">${c.logo ? `<img alt="" src="${c.logo}">` : `<b>${escText((c.name || '?').charAt(0).toUpperCase())}</b>`}</span><div><div class="row-name">${escText(c.name)}</div>${litSpace() === c.id ? '<div class="row-sub">In focus now</div>' : ''}</div></div>
+        </div>
+        <div class="sp-row-acts">
+          <button class="edit-remove edit-add" data-sp-act="focus" data-id="${c.id}">Focus</button>
+          <button class="edit-remove edit-add" data-sp-act="rename" data-id="${c.id}">Rename</button>
+          <button class="edit-remove edit-add" data-sp-act="logo" data-id="${c.id}">Logo</button>
+          ${i > 0 ? `<button class="edit-remove edit-add" data-sp-act="up" data-id="${c.id}" aria-label="Move up">↑</button>` : ''}
+          ${i < list.length - 1 ? `<button class="edit-remove edit-add" data-sp-act="down" data-id="${c.id}" aria-label="Move down">↓</button>` : ''}
+          <button class="edit-remove" data-sp-act="remove" data-id="${c.id}">Remove</button>
+        </div>
+      </div>`).join('') : `<div class="note" style="margin:8px 0;">No companies yet - add your first one.</div>`}
+    <button class="btn-wide btn-primary" style="margin-top:14px;" data-sp-act="add">+ Add company</button>
+    ${list.length ? `<button class="btn-wide" style="margin-top:10px;" data-sp-act="chooser">Choose your focus</button>` : ''}
+    ${litSpace() !== 'personal' ? `<button class="btn-wide" style="margin-top:10px;" data-sp-act="personal">View Personal account</button>` : ''}
+    ${spEdit ? spEditTemplate() : ''}
+    ${state.spRemove ? spRemoveTemplate() : ''}
+    </div>`;
+}
+function spEditTemplate(){
+  return `
+    <div class="modal-overlay" data-sp-act="edit-close">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-head"><span class="modal-title">${spEdit.id ? 'Rename company' : 'Add a company'}</span><button class="modal-close" data-sp-act="edit-close">×</button></div>
+        <input id="sp-name-input" class="pay-input" type="text" maxlength="40" placeholder="Company name" value="${escText(spEdit.name || '').replace(/"/g, '&quot;')}" style="width:100%;box-sizing:border-box;">
+        ${spEdit.id ? '' : `<div class="note" style="margin-top:12px;">Logo picture</div>
+        <button class="sp-logo-pick" data-sp-act="edit-logo">${spEdit.logo ? `<img alt="" src="${spEdit.logo}">` : '+'}</button>`}
+        <button class="btn-wide btn-primary" style="margin-top:14px;" data-sp-act="edit-save">${spEdit.id ? 'Save' : 'Add company'}</button>
+      </div>
+    </div>`;
+}
+function spRemoveTemplate(){
+  const c = spaceOf(state.spRemove); if(!c) return '';
+  return `
+    <div class="modal-overlay" data-sp-act="remove-no">
+      <div class="confirm-sheet" onclick="event.stopPropagation()">
+        <div class="confirm-title">Remove ${escText(c.name)}?</div>
+        <div class="note" style="margin:6px 0 12px;">Its space leaves the company chooser. What it kept (Pages, cards, notes, album) stays on this phone, so adding a company with the same name later doesn’t bring it back. Nothing outside Lockedintool changes.</div>
+        <div class="confirm-btn-row"><button class="btn-wide" style="margin-top:0;" data-sp-act="remove-no">Cancel</button><button class="btn-wide" style="margin-top:0;color:var(--red);" data-sp-act="remove-yes">Remove</button></div>
+      </div>
+    </div>`;
+}
+// A logo: one picture from the phone, made square (the middle), 480px.
+function spPickLogo(done){
+  litPickMedia('photo', async files=>{
+    const f = files && files[0]; if(!f) return;
+    try{
+      const bytes = await f.get();
+      const url = URL.createObjectURL(new Blob([bytes], { type:'image/jpeg' }));
+      const im = new Image(); im.src = url; await im.decode();
+      const s = Math.min(im.naturalWidth, im.naturalHeight), c = document.createElement('canvas'); c.width = c.height = 480;
+      c.getContext('2d').drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, 480, 480);
+      URL.revokeObjectURL(url);
+      done(c.toDataURL('image/jpeg', 0.86));
+    }catch(e){ showToast('Couldn’t use that picture'); }
+  });
+}
+// ---- A company's apps: Personal shows every app that isn't one of your companies'; a company shows its own ----
+function appSpaceMap(){ try{ return JSON.parse(litLsRaw('story-app-space') || '{}') || {}; }catch(e){ return {}; } }
+function appSpaceSet(pkg, id){ const m = appSpaceMap(); if(id && id !== 'personal') m[pkg] = id; else delete m[pkg]; localStorage.setItem('story-app-space', JSON.stringify(m)); }
+function appInSpace(a){
+  if(!bizOn() || a.section !== 'PHONE APPS' || !a.pkg) return true;
+  const m = appSpaceMap(), sp = litSpace(), owner = m[a.pkg] && spaceOf(m[a.pkg]) ? m[a.pkg] : '';
+  return sp === 'personal' ? !owner : owner === sp;
+}
+function appsSpaceExtra(){
+  if(!bizOn()) return '';
+  const sp = litSpace();
+  return sp === 'personal' ? '' : `<button class="btn-wide" style="margin-top:12px;" data-sp-act="apps-add">+ Add apps to ${escText(spaceName(sp))}</button>`;
+}
+function spAppsTemplate(){
+  const sp = litSpace(), m = appSpaceMap();
+  const apps = state.installedApps.filter(a=>a.section === 'PHONE APPS' && a.pkg);
+  return `
+    <div class="modal-overlay" data-sp-act="apps-close">
+      <div class="modal-sheet page-edit-sheet" onclick="event.stopPropagation()" style="max-height:78%;overflow-y:auto;">
+        <div class="modal-head"><span class="modal-title">Apps for ${escText(spaceName(sp))}</span><button class="modal-close" data-sp-act="apps-close">×</button></div>
+        <div class="note" style="margin-bottom:8px;">Ticked apps show in ${escText(spaceName(sp))}'s Apps and leave Personal.</div>
+        ${apps.map(a=>{ const on = m[a.pkg] === sp, other = m[a.pkg] && m[a.pkg] !== sp && spaceOf(m[a.pkg]); return `
+          <div class="settings-option"><div class="row-left"><div class="row-icon">${appIconHTML(a)}</div><div><div class="row-name">${escText(a.name)}</div>${other ? `<div class="row-sub">In ${escText(spaceName(m[a.pkg]))}</div>` : ''}</div></div>
+          <button class="toggle-switch${on ? ' on' : ''}" data-sp-act="app-tick" data-pkg="${escText(a.pkg)}"><span class="toggle-knob"></span></button></div>`; }).join('')}
+      </div>
+    </div>`;
+}
+function spMoveTemplate(){
+  const a = state.installedApps.find(x=>x.id === state.spMoveApp); if(!a) return '';
+  const m = appSpaceMap(), at = m[a.pkg] && spaceOf(m[a.pkg]) ? m[a.pkg] : 'personal';
+  return `
+    <div class="modal-overlay" data-sp-act="move-close">
+      <div class="modal-sheet page-edit-sheet" onclick="event.stopPropagation()">
+        <div class="modal-head"><span class="modal-title">Move ${escText(a.name)} to</span><button class="modal-close" data-sp-act="move-close">×</button></div>
+        ${[{ id:'personal', name:'Personal' }].concat(spaceList()).map(c=>`<div class="settings-option"><div class="row-left"><div class="row-name">${escText(c.name)}</div></div><button class="edit-remove edit-add" data-sp-act="move-to" data-id="${c.id}"${c.id === at ? ' disabled' : ''}>${c.id === at ? 'Here now' : 'Move here'}</button></div>`).join('')}
+      </div>
+    </div>`;
+}
+// ---- A company's photo album (Gallery in a company): pictures you add, kept by Lockedintool for that company ----
+function albumIds(){ try{ const l = JSON.parse(localStorage.getItem('story-album') || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+function albumSave(l){ localStorage.setItem('story-album', JSON.stringify(l)); }
+function spaceAlbumScreen(){
+  const ids = albumIds();
+  return `
+    <div class="page-shell">
+    ${topBar(escText(spaceName(litSpace())) + ' photos', false)}
+    <div class="sp-album">${ids.length ? ids.map(id=>`<button class="sp-photo" data-sp-act="photo" data-id="${escText(String(id))}"><img alt="" loading="lazy" decoding="async" src="${PF_PHOTO_BASE}thumb/${escText(String(id))}"></button>`).join('') : `<div class="note" style="grid-column:1/-1;text-align:center;padding:24px 0;">No pictures in this album yet.</div>`}</div>
+    <button class="btn-wide btn-primary" style="margin-top:14px;" data-sp-act="album-add">+ Add pictures</button>
+    <button class="btn-wide" style="margin-top:10px;" data-sp-act="phone-gallery">Open the phone’s gallery</button>
+    ${state.spPhoto ? `<div class="modal-overlay" data-sp-act="photo-close"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <img alt="" src="${PF_PHOTO_BASE}media/${escText(String(state.spPhoto))}" style="width:100%;border-radius:12px;display:block;">
+      <div class="confirm-btn-row" style="margin-top:12px;"><button class="btn-wide" style="margin-top:0;" data-sp-act="photo-close">Close</button><button class="btn-wide" style="margin-top:0;color:var(--red);" data-sp-act="photo-remove">Remove from album</button></div>
+    </div></div>` : ''}
+    </div>`;
+}
+// ---- Every tap in these screens ----
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-sp-act]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-sp-act'), id = b.getAttribute('data-id');
+  const list = spaceList();
+  const keepName = ()=>{ const i = document.getElementById('sp-name-input'); if(i && spEdit) spEdit.name = i.value; };
+  switch(a){
+    case 'add': spEdit = { id:'', name:'', logo:'' }; break;
+    case 'rename': { const c = spaceOf(id); spEdit = c ? { id, name:c.name } : null; break; }
+    case 'edit-close': spEdit = null; break;
+    case 'edit-logo': keepName(); spPickLogo(u=>{ if(spEdit){ spEdit.logo = u; renderDevice(); } }); return;
+    case 'edit-save': {
+      keepName(); const name = (spEdit && spEdit.name || '').trim();
+      if(!name){ showToast('Type the company’s name'); return; }
+      if(spEdit.id){ spaceSave(list.map(c=>c.id === spEdit.id ? Object.assign({}, c, { name }) : c)); }
+      else { spaceSave(list.concat([{ id:'c' + Date.now().toString(36), name, logo: spEdit.logo || '' }])); showToast(name + ' added'); }
+      spEdit = null; break;
+    }
+    case 'logo': spPickLogo(u=>{ spaceSave(spaceList().map(c=>c.id === id ? Object.assign({}, c, { logo:u }) : c)); renderDevice(); }); return;
+    case 'up': case 'down': { const i = list.findIndex(c=>c.id === id), j = a === 'up' ? i - 1 : i + 1; if(i >= 0 && j >= 0 && j < list.length){ [list[i], list[j]] = [list[j], list[i]]; spaceSave(list); } break; }
+    case 'remove': state.spRemove = id; break;
+    case 'remove-no': state.spRemove = null; break;
+    case 'remove-yes': { const rid = state.spRemove; state.spRemove = null; spaceSave(list.filter(c=>c.id !== rid)); if(litSpace() === rid){ spaceGo('personal'); return; } break; }
+    case 'focus': spaceGo(id); return;
+    case 'chooser': spacesShow(); return;
+    case 'personal': spaceGo('personal'); return;
+    case 'apps-add': state.spAppsOpen = true; break;
+    case 'apps-close': state.spAppsOpen = false; break;
+    case 'app-tick': { const pkg = b.getAttribute('data-pkg'), sp = litSpace(); appSpaceSet(pkg, appSpaceMap()[pkg] === sp ? 'personal' : sp); break; }
+    case 'app-move': state.spMoveApp = state.appMenuId; state.appMenuId = null; break;
+    case 'move-close': state.spMoveApp = null; break;
+    case 'move-to': { const ap = state.installedApps.find(x=>x.id === state.spMoveApp); if(ap && ap.pkg){ appSpaceSet(ap.pkg, id); showToast(ap.name + ' moved to ' + spaceName(id)); } state.spMoveApp = null; break; }
+    case 'album-add': litPickMedia('photo', files=>{ const ids = albumIds(); (files || []).forEach(f=>{ const m = /thumb\/(\d+)/.exec(f.preview || ''); if(m && !ids.includes(m[1])) ids.unshift(m[1]); }); albumSave(ids); renderDevice(); }); return;
+    case 'phone-gallery': if(NATIVE && window.StoryNative.openGallery) window.StoryNative.openGallery(); return;
+    case 'photo': state.spPhoto = id; break;
+    case 'photo-close': state.spPhoto = null; break;
+    case 'photo-remove': albumSave(albumIds().filter(x=>String(x) !== String(state.spPhoto))); state.spPhoto = null; break;
+    case 'acct': state.sub.acctView = b.getAttribute('data-v'); break;
+    case 'acct-back': state.sub.acctView = null; break;
+    case 'acct-ok': { const k = state.sub.acctView; state.sub.acctView = null; localStorage.setItem('story-acct-type', k); spaceTell();
+      if(k === 'business'){ if(!spaceList().length){ showToast('Business - add your companies'); state.current = 'spaces-settings'; } else showToast('Business'); }
+      else if(litSpace() !== 'personal'){ spaceGo('personal'); return; }
+      break; }
+  }
+  renderDevice();
+}, true);
+// The account type, chosen on the Subscription page the same way as the systems (owner).
+function subAcctRowHTML(){
+  const t = acctType();
+  return `<div class="sub-opts sub-accts">${SUB_ACCTS.map(o=>`<button class="sub-opt${t === o.key ? ' on' : ''}" data-sp-act="acct" data-v="${o.key}"><span class="sub-opt-mark">${t === o.key ? '✓' : ''}</span>${o.name}<span class="sub-opt-tip"><b>${o.name}</b>${o.short}</span></button>`).join('')}</div>`;
+}
+function subAcctScreen(locked){
+  const o = SUB_ACCTS.find(x=>x.key === state.sub.acctView) || SUB_ACCTS[0];
+  return `
+    <div class="page-shell sub-page">
+    ${topBar('Subscription', false, '', 'settings', '', locked)}
+    <div class="sub-head">LOCKED IN TOOL</div>
+    <div class="sub-card sub-opt-card">
+      <div class="sub-top"><div class="sub-name">${o.name}</div></div>
+      <div class="sub-tag">${o.short}</div>
+      <div class="sub-text">${o.text}</div>
+      <ul class="sub-list">${o.list.map(x=>`<li>${x}</li>`).join('')}</ul>
+    </div>
+    <div class="sub-opt-acts">
+      <button class="sub-opt-x" data-sp-act="acct-back" aria-label="Back">✕</button>
+      <button class="sub-opt-ok" data-sp-act="acct-ok" aria-label="Choose ${o.name}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    </div>
+    </div>`;
+}
+// Started again in another space: land on its Home Screen.
+setTimeout(()=>{ try{
+  if(/[?&](s3|widget)=/.test(location.search)) return;
+  spaceTell();
+  if(litSpace() !== 'personal' && !spaceOf(litSpace())) localStorage.setItem('story-space', '');
+  if(sessionStorage.getItem('lit-space-home')){ sessionStorage.removeItem('lit-space-home'); if(window.storyShow) window.storyShow(null); }
+}catch(e){} }, 0);
 function communityGuidelinesScreen(){
   const acc = state.accountStatus;
   const statusLabel = acc.status==='active' ? 'Active — no violations' : acc.status==='warned' ? `Warning issued — remove the flagged content ${escText(acc.warningDeadline||'soon')} to avoid suspension` : 'Suspended for repeated or unresolved violations';
@@ -16262,6 +16644,8 @@ function renderScreenContent(){
     case 'notif-settings': return notifSettingsScreen();
     case 'community-guidelines': return communityGuidelinesScreen();
     case 'apps': return appsScreen();
+    case 'spaces-settings': return spacesSettingsScreen();
+    case 'space-album': return spaceAlbumScreen();
   }
 }
 
@@ -17282,7 +17666,7 @@ function persistNotesNow(){
   clearTimeout(notesSaveT); notesSaveT = null;
   if(!notesLoaded) return;
   const data = { v:1, notes: state.notes, drawings: state.drawings.filter(d=>(d.pages && d.pages.some(Boolean)) || d.name) };
-  notesDb().then(db=>{ db.transaction('kv', 'readwrite').objectStore('kv').put(data, 'notes'); }).catch(()=>{});
+  notesDb().then(db=>{ db.transaction('kv', 'readwrite').objectStore('kv').put(data, 'notes' + litSpaceSfx()); }).catch(()=>{});
 }
 function persistNotes(){ clearTimeout(notesSaveT); notesSaveT = setTimeout(persistNotesNow, 400); }
 // While typing / drawing in a note: keep the list (and the phone) up to date without waiting to leave the note.
@@ -17306,7 +17690,7 @@ function noteLiveSave(){
   }, 600);
 }
 notesDb().then(db=>new Promise(res=>{
-  const r = db.transaction('kv').objectStore('kv').get('notes'); r.onsuccess = ()=>res(r.result); r.onerror = ()=>res(null);
+  const r = db.transaction('kv').objectStore('kv').get('notes' + litSpaceSfx()); r.onsuccess = ()=>res(r.result); r.onerror = ()=>res(null);
 })).then(data=>{
   notesLoaded = true;
   if(data && Array.isArray(data.notes)){
@@ -21909,7 +22293,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['settings','information','legal-privacy','legal-terms','legal-safety']);   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 const FIT_MIN_SCALE = 0.5;
 const FIT_MAX_SCALE = 1.35;

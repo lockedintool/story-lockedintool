@@ -68,6 +68,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun createSwitchCamera()
         fun createMode(video: Boolean)
         fun lockedNav(screen: String)
+        fun spacesOn(on: Boolean)
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -862,6 +863,9 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     /** The Wallet page opened on the lock screen (#296): somewhere else was asked for - the phone's unlock first. */
     @JavascriptInterface
     fun lockedNav(screen: String) { if (pages) host.lockedNav(screen) }
+    /** Business accounts (#302): there are companies to choose from - the chooser shows after every unlock. */
+    @JavascriptInterface
+    fun spacesOn(on: Boolean) { if (pages) host.spacesOn(on) }
 
     /** Returns "<postId>:<photo|video>" ("" if nothing was made). */
     @JavascriptInterface

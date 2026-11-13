@@ -322,4 +322,4 @@ commits, pushed as a new update) - nothing else changes.
 | 313 | 2026-11-13 | A tap outside a pop-up no longer closes it anywhere in Lockedintool - only its own Cancel / ✕ does | cbc1f11 |
 | 314 | 2026-11-13 | App updates install only when you choose: a notification says one is available, and installing asks twice | 7a6c4ba |
 | 315 | 2026-11-13 | Business settings: each company's buttons always fit on one line | e342c16 |
-| 316 | 2026-11-13 | Settings (owner's phone): Personal / Business as two tiles right under Second system / Only system, switching needs the phone's fingerprint, face or PIN | (this) |
+| 316 | 2026-11-13 | Settings (owner's phone): Personal / Business as two tiles right under Second system / Only system, switching needs the phone's fingerprint, face or PIN | 9f7d658 |

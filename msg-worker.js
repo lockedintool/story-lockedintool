@@ -149,6 +149,7 @@ export class Hub {
     try { this.sql.exec(`ALTER TABLE users ADD COLUMN name_at INTEGER`); } catch (e) {}
     try { this.sql.exec(`ALTER TABLE users ADD COLUMN username_at INTEGER`); } catch (e) {}
     try { this.sql.exec(`ALTER TABLE users ADD COLUMN official INTEGER`); } catch (e) {}
+    try { this.sql.exec(`ALTER TABLE users ADD COLUMN planof TEXT`); } catch (e) {}   // #321: a business's other accounts share its plan
     // Deactivate account (owner, 4 Nov 2026): a break - nothing deleted, the plan paused, hidden until you log back in.
     try { this.sql.exec(`ALTER TABLE users ADD COLUMN deactivated INTEGER`); } catch (e) {}
     // Accounts (owner): sign up with a password, log in on any phone, log out. The password never comes here - only a
@@ -1422,12 +1423,18 @@ export class Hub {
   // Calls cost Lockedintool (owner: 'they won't be available on free plan'): Lockedintool calls (voice, video, group)
   // need Basic or Premium - only once subscriptions are switched on (SUB_ENFORCE + payments connected), never the
   // official accounts. Phone calls from the dial pad are the phone's own and aren't touched.
+  // #321 (owner, 13 Nov 2026: Personal, Story and Goat each their own account - 'same plan'): an account linked to a
+  // business's main account (users.planof) uses that account's plan.
+  planOwner(u) { if (!u || !u.planof) return u; return this.one('SELECT * FROM users WHERE id = ?', u.planof) || u; }
   callPlanOk(u) {
+    u = this.planOwner(u);
     if (this.env.SUB_ENFORCE !== '1' || !this.subReady() || !u || u.official) return true;
     const r = this.one('SELECT until FROM subs WHERE uid = ?', u.id);
     return !!(r && r.until > Date.now());
   }
   subView(me) {
+    const owner = this.planOwner(me);
+    if (owner && owner.id !== me.id) return Object.assign({}, this.subView(owner), { linked: true, linkedTo: owner.username || owner.name || '' });
     const r = this.one('SELECT * FROM subs WHERE uid = ?', me.id), now = Date.now();
     // Lockedintool's official account always has everything: Premium, under the option it chose (no payment, never ends).
     if (me.official) return { official: true, connected: !!this.subProvider(me), provider: this.subProvider(me), enforced: this.env.SUB_ENFORCE === '1', plan: 'premium', mode: (r && r.mode) || 'only', until: 0, active: true, officialPlan: true, plans: this.subPlans() };
@@ -1807,7 +1814,18 @@ export class Hub {
       this.sql.exec("INSERT INTO subs (uid, plan, until, updated, mode) VALUES (?, 'premium', 0, ?, ?) ON CONFLICT(uid) DO UPDATE SET mode = excluded.mode, updated = excluded.updated", me.id, Date.now(), mode);
       return json(this.subView(me));
     }
+    // #321: link this account to the business's main account on the same phone (proved by that account's sign-in key) -
+    // it then shares that account's plan. 'unlink' ends it.
+    if (op === 'link') {
+      let parent = await this.userByToken(String(b.parent || ''));
+      if (parent && parent.planof) parent = this.one('SELECT * FROM users WHERE id = ?', parent.planof) || parent;
+      if (!parent || parent.id === me.id) return json({ error: 'parent' }, 400);
+      this.sql.exec('UPDATE users SET planof = ? WHERE id = ?', parent.id, me.id);
+      return json(this.subView(Object.assign({}, me, { planof: parent.id })));
+    }
+    if (op === 'unlink') { this.sql.exec('UPDATE users SET planof = NULL WHERE id = ?', me.id); return json(this.subView(Object.assign({}, me, { planof: null }))); }
     if (op === 'info') { await this.lsRefresh(me); await this.subPending(me); return json(this.subView(me)); }
+    if (op === 'buy' && me.planof) return json({ error: 'linked' }, 409);   // #321: this account's plan comes from the business's main account
     if (op === 'buy') {
       const plans = this.subPlans(), plan = String(b.plan || '');
       if (!plans[plan]) return json({ error: 'plan' }, 400);

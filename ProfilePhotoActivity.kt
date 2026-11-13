@@ -73,7 +73,11 @@ class ProfilePhotoActivity : Activity() {
         /** STORY's own address for pictures on the phone (served straight from the phone by the STORY windows). */
         const val PHOTO_BASE = "https://appassets.androidplatform.net/story-photo/"
 
-        fun file(c: Context) = File(c.filesDir, "profile_photo.jpg")
+        /** #321: each Lockedintool account on the phone (a company's / Personal) has its own picture. */
+        fun file(c: Context): File {
+            val sfx = (c.getSharedPreferences("story", Context.MODE_PRIVATE).getString("acct_sfx", "") ?: "").replace(Regex("[^A-Za-z0-9_-]"), "_")
+            return File(c.filesDir, "profile_photo$sfx.jpg")
+        }
 
         /** Where the page loads the saved picture from ("" when there is none). */
         fun photoUrl(c: Context): String {

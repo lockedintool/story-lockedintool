@@ -303,3 +303,4 @@ commits, pushed as a new update) - nothing else changes.
 | 294 | 2026-11-13 | The DEVICE LOCKED sign is removed everywhere (your phone's own lock screen shows as it is) and the Always On Display lock screen switch is gone from Settings | 5c3a5a4 |
 | 295 | 2026-11-13 | The DEVICE LOCKED sign, the Always On Display lock screen and Lockedintool's old lock screen are deleted from the app completely (not just switched off) | b44273b |
 | 296 | 2026-11-13 | The lock screen's Wallet page button opens the Wallet page straight away, no unlock (fast access); going to anything other than the Wallet still asks for the phone's unlock | 6ad9fff |
+| 297 | 2026-11-13 | On the Always On Display, Station 3's bar shows all its icons again (they vanished into the grey burn-in pattern, only the + was left) | (this update) |

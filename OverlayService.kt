@@ -1933,18 +1933,30 @@ class OverlayService : Service(), StoryBridge.Host {
     /** Burn-in protection: switches OFF every other pixel of what a window draws (and swaps which half each
      *  minute). It cuts pixels out instead of painting black dots, so see-through parts of a window stay fully
      *  see-through (e.g. Station 3's window over the lock screen dial pad never shows a dark block). */
-    private fun checker(phase: Boolean): android.graphics.drawable.Drawable {
-        val bmp = android.graphics.Bitmap.createBitmap(2, 2, android.graphics.Bitmap.Config.ARGB_8888)
-        val cut = Color.BLACK; val keep = Color.TRANSPARENT
-        bmp.setPixel(0, 0, if (phase) cut else keep); bmp.setPixel(1, 1, if (phase) cut else keep)
-        bmp.setPixel(1, 0, if (phase) keep else cut); bmp.setPixel(0, 1, if (phase) keep else cut)
-        val paint = android.graphics.Paint().apply {
-            shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
-            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
-            isFilterBitmap = false; isAntiAlias = false
+    /** The burn-in pattern, lined up with the SCREEN's pixels (not each window's own corner) - #297 (owner, 13 Nov 2026, the
+     *  Always On Display showing Station 3's bar grey with only the + on it: 'See how station 3 is? This is wrong. And i told
+     *  you about this yesterday or 2days back' - 12 Nov: 'when I tap the station 3 when the phone is off it just shows a plus
+     *  only'). Each window's pattern started at its own corner, so on the bar the icons' window was one pixel off the bar's
+     *  window: every dot left of an icon fell exactly where the bar was cut, and the icons vanished into the grey. */
+    private fun checker(phase: Boolean, v: View): android.graphics.drawable.Drawable {
+        fun paintFor(ph: Boolean): android.graphics.Paint {
+            val bmp = android.graphics.Bitmap.createBitmap(2, 2, android.graphics.Bitmap.Config.ARGB_8888)
+            val cut = Color.BLACK; val keep = Color.TRANSPARENT
+            bmp.setPixel(0, 0, if (ph) cut else keep); bmp.setPixel(1, 1, if (ph) cut else keep)
+            bmp.setPixel(1, 0, if (ph) keep else cut); bmp.setPixel(0, 1, if (ph) keep else cut)
+            return android.graphics.Paint().apply {
+                shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+                xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
+                isFilterBitmap = false; isAntiAlias = false
+            }
         }
+        val even = paintFor(phase); val odd = paintFor(!phase)
+        val loc = IntArray(2)
         return object : android.graphics.drawable.Drawable() {
-            override fun draw(c: android.graphics.Canvas) { c.drawRect(bounds, paint) }
+            override fun draw(c: android.graphics.Canvas) {
+                v.getLocationOnScreen(loc)
+                c.drawRect(bounds, if (((loc[0] + loc[1]) and 1) == 0) even else odd)
+            }
             override fun setAlpha(a: Int) {}
             override fun setColorFilter(f: android.graphics.ColorFilter?) {}
             @Deprecated("Deprecated in Java")
@@ -1957,7 +1969,7 @@ class OverlayService : Service(), StoryBridge.Host {
         for (v in views) {
             // No layer switching (that made Station 3 / the dial pad redraw late): each is its own window, so the
             // cut-out only ever affects that window's own pixels anyway.
-            v.foreground = if (aodOn) checker(aodPhase) else null
+            v.foreground = if (aodOn) checker(aodPhase, v) else null
         }
     }
 

@@ -2068,6 +2068,7 @@ class OverlayService : Service(), StoryBridge.Host {
     /** When the bottom button was last swiped up (any kind) - the phone's home screen showing right after it is that swipe. */
     @Volatile private var swipeUpAt = 0L
     private fun phoneSwipe(kind: String) { ui.post {
+        if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
         if (keyguardLocked() || sysQuiet() || SystemMode.on(this)) return@post
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive) return@post
         swipeUpAt = SystemClock.uptimeMillis()
@@ -2493,6 +2494,11 @@ class OverlayService : Service(), StoryBridge.Host {
             s3Pane?.web?.evaluateJavascript("window.storyLockState&&window.storyLockState($locked)", null)
             if (locked && QuickAccess.mode(this) == "separate") dialPane?.takeIf { it.shown }?.let { hideOne(it) }
         }
+        if (lockWallet && pagesPane?.shown == true) {
+            if (!locked) endLockWallet()   // unlocked: the Wallet stays, as an ordinary page
+            else if (StoryAccessibilityService.unlockEntryShowing() == true || StoryAccessibilityService.shadeShowing() == true) { closeLockWallet(); return }
+            ui.removeCallbacks(lockWatch); ui.postDelayed(lockWatch, 400)
+        }
         val p = lockDialPane   // only built for people who put the dial pad on the lock screen (memory)
         val aodUp = aodShowing()
         // The phone's own PIN / password / pattern page is on screen right now: never on top of it.
@@ -2913,6 +2919,10 @@ class OverlayService : Service(), StoryBridge.Host {
         if (pagesInHome()) homeDetach()
         lockWallet = true
         pagesLayer(true)
+        p.web.setOnKeyListener { _, code, e ->
+            if (code == android.view.KeyEvent.KEYCODE_BACK && lockWallet) { if (e.action == android.view.KeyEvent.ACTION_UP) ui.post { closeLockWallet() }; true }
+            else if (code == android.view.KeyEvent.KEYCODE_BACK && e.action == android.view.KeyEvent.ACTION_UP && AppMode.appOnly(this) && pagesInHome()) { LockedintoolApp.current?.moveTaskToBack(true); true }
+            else false }
         hideLiveWidgets()
         showPagesOn(p, "window.__litLockWallet=true;window.storyShow&&window.storyShow('wallet',false)") { walletOpening = false; updateBubble(); syncLockDial() }
     }
@@ -2932,6 +2942,14 @@ class OverlayService : Service(), StoryBridge.Host {
             for (q in listOfNotNull(s3Pane, dialPane)) runCatching { q.wm.removeView(q.frame); q.wm.addView(q.frame, q.lp) }
             raiseBubble(); addBar()
         }
+    }
+    /** #298 (owner, 13 Nov 2026: 'it works but I couldn't go back to my lockscreen - I couldn't use my gestures to go back to
+     *  the lockscreen. Or if a user has buttons'): Back (gesture or button), a swipe up from the bottom, the phone's Home,
+     *  its PIN page or its pulled-down panel coming up - the Wallet closes and you're back on the lock screen. */
+    private fun closeLockWallet() {
+        if (!lockWallet) return
+        pagesPane?.takeIf { it.shown }?.let { hideOne(it) }
+        endLockWallet(); updateBubble(); syncLockDial()
     }
     /** Unlocked, the screen off, or the Pages closed: the Wallet page is an ordinary page again (under the lock screen). */
     private fun endLockWallet() {

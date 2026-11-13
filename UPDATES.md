@@ -321,3 +321,4 @@ commits, pushed as a new update) - nothing else changes.
 | 312 | 2026-11-13 | The company screen after an unlock: a picker left from before the phone locked no longer stops it, a page that was loading opens it itself, and the owner's phone says why if it can't open | cbc1f11 |
 | 313 | 2026-11-13 | A tap outside a pop-up no longer closes it anywhere in Lockedintool - only its own Cancel / ✕ does | cbc1f11 |
 | 314 | 2026-11-13 | App updates install only when you choose: a notification says one is available, and installing asks twice | 7a6c4ba |
+| 315 | 2026-11-13 | Business settings: each company's buttons always fit on one line | (this) |

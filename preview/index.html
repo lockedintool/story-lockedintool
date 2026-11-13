@@ -12127,6 +12127,20 @@ function renderHighlights(){
   }).join('');
 }
 window.addEventListener('storage', e=>{ if(e.key === 'story-highlights') renderHighlights(); });
+// #286 (owner, 13 Nov 2026: 'holding the whole highlight it should show delete highlight'): hold one of your highlight
+// circles on Profile -> Delete highlight. A hold never also opens it.
+(()=>{
+  let t = 0, sx = 0, sy = 0, held = false;
+  document.addEventListener('pointerdown', e=>{
+    const b = e.target.closest && e.target.closest('#story-profile .pf-hls [data-pf="hl-open"]'); if(!b) return;
+    held = false; sx = e.clientX; sy = e.clientY; clearTimeout(t);
+    t = setTimeout(()=>{ t = 0; held = true; try{ navigator.vibrate && navigator.vibrate(12); }catch(_){} hlDeleteWhole(b.getAttribute('data-id')); }, 480);
+  }, true);
+  document.addEventListener('pointermove', e=>{ if(t && Math.hypot(e.clientX - sx, e.clientY - sy) > 10){ clearTimeout(t); t = 0; } }, true);
+  ['pointerup', 'pointercancel'].forEach(n=>document.addEventListener(n, ()=>{ clearTimeout(t); t = 0; }, true));
+  document.addEventListener('click', e=>{ if(held && e.target.closest && e.target.closest('#story-profile .pf-hls')){ held = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  document.addEventListener('contextmenu', e=>{ if(e.target.closest && e.target.closest('#story-profile .pf-hls')) e.preventDefault(); }, true);
+})();
 // ---- Updates (owner; Station 3's Updates button, the same window as Profile / Messages): a search bar for anyone on
 //      Lockedintool, the statuses of the people you follow at the top (24 hours; who sees them = each person's privacy
 //      setting), and other profiles at the bottom with their About. Follow anyone instantly. Everything comes from

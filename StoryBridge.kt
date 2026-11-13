@@ -71,6 +71,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun spacesOn(on: Boolean)
         fun spacesPending(): Boolean
         fun spacesDone()
+        fun spacesTrace(): String
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -872,6 +873,8 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     fun spacesPending(): Boolean = pages && host.spacesPending()
     @JavascriptInterface
     fun spacesDone() { if (pages) host.spacesDone() }
+    @JavascriptInterface
+    fun spacesTrace(): String = if (pages) host.spacesTrace() else ""
 
     /** Returns "<postId>:<photo|video>" ("" if nothing was made). */
     @JavascriptInterface

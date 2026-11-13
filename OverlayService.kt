@@ -99,6 +99,7 @@ class OverlayService : Service(), StoryBridge.Host {
             ui.post { syncLockDial(); updateBubble() }; ui.postDelayed({ syncLockDial(); updateBubble() }, 400)   // on the lock screen the Dashboard band must step out (keyguardLocked)
             // #317: the screen came back on WITHOUT the lock screen (the phone locks a few seconds after the screen goes
             // off, so a quick off / on never unlocks) - the company chooser shows all the same.
+            spLog("screen on (lock screen up: $lockedAtScreenOn)")
             if (!lockedAtScreenOn) ui.postDelayed({ spacesAfterUnlock() }, 300) }
     }
     // Always On Display: the moment the screen goes off, switch it straight back on with Station 3
@@ -274,7 +275,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // #292 (owner, 13 Nov 2026: 'my phone was unlocked but it took time to move' - the DEVICE LOCKED sign stayed over
         // the app after unlocking): it used to look once a second; now the phone tells Lockedintool the moment it unlocks.
         if (Build.VERSION.SDK_INT >= 33) runCatching {
-            val l = android.app.KeyguardManager.KeyguardLockedStateListener { locked -> if (!locked) { syncLockDial(); ui.postDelayed({ spacesAfterUnlock() }, 250) } }
+            val l = android.app.KeyguardManager.KeyguardLockedStateListener { locked -> spLog(if (locked) "phone locked" else "phone says unlocked"); if (!locked) { syncLockDial(); ui.postDelayed({ spacesAfterUnlock() }, 250) } }
             getSystemService(android.app.KeyguardManager::class.java).addKeyguardLockedStateListener(mainExecutor, l); keyguardListener = l }
         val offFilter = android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenOff, offFilter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(screenOff, offFilter)
@@ -2984,7 +2985,20 @@ class OverlayService : Service(), StoryBridge.Host {
         if (Release.isOwner(this)) showToast("Company screen didn’t open: " + why)   // the owner's phone says why straight away
     }
     /** #318 TEMPORARY (owner's phone only): says where the company screen stopped after an unlock - remove once fixed. */
-    private fun spDiag(m: String) { if (Release.isOwner(this)) showToast("Company screen: " + m) }
+    private fun spDiag(m: String) {
+        if (!Release.isOwner(this)) return
+        showToast("Company screen: " + m)
+        spLog(m)
+    }
+    /** #319 TEMPORARY: the same steps written down (last 14), shown at the bottom of Business settings on the owner's phone. */
+    private fun spLog(m: String) {
+        if (!Release.isOwner(this)) return
+        val p = getSharedPreferences("story", MODE_PRIVATE)
+        val t = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+        val lines = (p.getString("spaces_trace", "") ?: "").split("\n").filter { it.isNotBlank() }.takeLast(13) + ("$t  $m")
+        p.edit().putString("spaces_trace", lines.joinToString("\n")).apply()
+    }
+    override fun spacesTrace(): String = getSharedPreferences("story", MODE_PRIVATE).getString("spaces_trace", "") ?: ""
     private fun spacesAfterUnlock() {
         // #317: the saved 'companies are on' flag may never have been written - ask the page itself.
         if (!spacesWanted()) {

@@ -14838,6 +14838,7 @@ function spacesSettingsScreen(){
     <button class="btn-wide btn-primary" style="margin-top:14px;" data-sp-act="add">+ Add company</button>
     ${list.length ? `<button class="btn-wide" style="margin-top:10px;" data-sp-act="chooser">Choose your focus</button>` : ''}
     ${litSpace() !== 'personal' ? `<button class="btn-wide" style="margin-top:10px;" data-sp-act="personal">View Personal account</button>` : ''}
+    ${spTraceHTML()}
     ${spEdit ? spEditTemplate() : ''}
     ${state.spRemove ? spRemoveTemplate() : ''}
     </div>`;
@@ -15029,6 +15030,12 @@ function acctBoxHTML(){
       </div>`; }).join('')}
       ${t === 'business' ? `<div class="sys-opt acct-biz" data-sp-act="open-biz"><div class="sys-opt-name">Business settings</div><div class="sys-opt-sub">${spaceList().length ? spaceList().map(c=>escText(c.name)).join(', ') : 'Add your companies'}</div><span class="chev-right">›</span></div>` : ''}
     </div>`;
+}
+// #319 TEMPORARY (owner's phone only): what happened after the last unlocks - remove once the chooser works.
+function spTraceHTML(){
+  let t = ''; try{ if(NATIVE && window.StoryNative.spacesTrace) t = window.StoryNative.spacesTrace() || ''; }catch(e){}
+  if(!t || !fullAccess()) return '';
+  return `<div class="set2-sub" style="margin-top:18px;">UNLOCK LOG (temporary - send a screenshot)</div><pre style="white-space:pre-wrap;font-size:11px;line-height:1.45;margin:6px 0 0;padding:10px;border:1px solid #2a2a2a;border-radius:12px;">${escText(t)}</pre>`;
 }
 function acctApply(k){
   localStorage.setItem('story-acct-type', k); spaceTell();

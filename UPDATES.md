@@ -325,4 +325,4 @@ commits, pushed as a new update) - nothing else changes.
 | 316 | 2026-11-13 | Settings (owner's phone): Personal / Business as two tiles right under Second system / Only system, switching needs the phone's fingerprint, face or PIN | 9f7d658 |
 | 317 | 2026-11-13 | The company screen also shows when the screen comes back on before the phone locked, and no longer depends on a saved flag | efc78c2 |
 | 318 | 2026-11-13 | (Owner's phone only, temporary) a short message after each unlock says where the company screen stops | f39a1a9 |
-| 319 | 2026-11-13 | (Owner's phone only, temporary) an unlock log at the bottom of Business settings | (this) |
+| 319 | 2026-11-13 | (Owner's phone only, temporary) an unlock log at the bottom of Business settings | 4ab38e1 |

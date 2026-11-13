@@ -293,3 +293,4 @@ commits, pushed as a new update) - nothing else changes.
 | 284 | 2026-11-13 | Create at the highest possible quality: 4K video where the phone can (else Full HD), pictures at full size in maximum-quality mode and posted exactly as taken, the live view at the camera's highest size; posted videos up to 300 MB | 829ec3e |
 | 285 | 2026-11-13 | Your highlights: the bin deletes the video / picture you're watching (the last one deletes the highlight), ⋮ > Delete highlight deletes it all - on your phone and on your profile; videos in a highlight play (they showed only a grey play sign) | 8ba1933 |
 | 286 | 2026-11-13 | Hold one of your highlights on Profile to delete it (Delete highlight, with Cancel) | 88f2d9a |
+| 287 | 2026-11-13 | Inside a highlight there's only the bin (deletes the video / picture you're watching); a whole highlight is deleted only by holding its circle on Profile | eae61d2 |

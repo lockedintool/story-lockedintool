@@ -4999,7 +4999,11 @@ function wheelScreenHTML(key, W, H, s){
     if(top) top.style.zoom = (1 / z).toFixed(4);
   }
   const dock = key === 'wallet' ? `<div class="phone-float-dock wallet-float-dock">${walletFloatBar()}</div>` : '';
-  return `<div class="wheel-screen" style="width:${W}px;height:${H}px;transform:scale(${s.toFixed(5)});">${tmp.innerHTML}${dock}</div>`;
+  // #289 (owner, 13 Nov 2026, a video: the 3D Circle - and then the whole app - going black in pieces): shrinking the
+  // face with transform:scale made the phone keep EVERY strip's whole page as its own full-size picture (about five per
+  // strip, ~70 pages at once) - more drawing memory than a phone has, so it dropped pieces and flashed black. zoom
+  // shrinks it with no extra pictures: each strip draws only its own slice.
+  return `<div class="wheel-screen" style="width:${W}px;height:${H}px;zoom:${s.toFixed(5)};">${tmp.innerHTML}${dock}</div>`;
 }
 function pswitchWheel3dHTML(navAttr){
   const areaEl = document.querySelector('#device-wrap #content-area');

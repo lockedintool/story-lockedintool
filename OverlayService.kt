@@ -2964,6 +2964,10 @@ class OverlayService : Service(), StoryBridge.Host {
         if (!lockWallet) return@post
         if (!keyguardLocked()) { endLockWallet(); evalPages("window.storyShow&&window.storyShow(" + org.json.JSONObject.quote(screen) + ",false)"); return@post }
         lockNavWant = screen
+        // #299 (owner, 13 Nov 2026: 'when I tapped to go to the dashboard or swipe my phone did tell me its locked - just
+        // vibrated'): the Wallet sat above the lock screen and covered the phone's own PIN page - it steps away first.
+        pagesPane?.takeIf { it.shown }?.let { hideOne(it) }
+        endLockWallet(); updateBubble()
         if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
             .putExtra(IdentityActivity.EXTRA_FOR, "walletnav").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 24)) lockNavWant = null
     } }

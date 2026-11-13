@@ -25,6 +25,8 @@
   window.litSpace = function(){ return cur() || 'personal'; };
   window.litSpaceSfx = function(){ var c = cur(); return c && c !== 'personal' ? '@' + c : ''; };
   window.litLsRaw = function(k){ try{ return g.call(window.localStorage, k); }catch(e){ return null; } };
+  window.litLsRawSet = function(k, v){ try{ if(v === null) rm.call(window.localStorage, k); else st.call(window.localStorage, k, v); }catch(e){} };
+  window.litSpaceKeys = function(){ return Object.keys(KEYS); };
   // Another window changed something: listeners see the plain key when it's this space's, and nothing they know when
   // it's another space's (a company's cards never land on Personal's screen).
   window.addEventListener('storage', function(e){
@@ -14675,11 +14677,11 @@ function spaceName(id){ if(!id || id === 'personal') return 'Personal'; const c 
 // The app knows whether to show the chooser after an unlock.
 function spaceTell(){ try{ if(NATIVE && window.StoryNative.spacesOn) window.StoryNative.spacesOn(bizOn() && spaceList().length > 0); }catch(e){} }
 // Focus on a company (or Personal): the Pages start again in that space, on its Home Screen.
-function spaceGo(id){
+function spaceGo(id, noSave){
   spacesClose();
   const want = id && id !== 'personal' && spaceOf(id) ? id : '';
   if((litSpace() === 'personal' ? '' : litSpace()) === want){ if(window.storyShow) window.storyShow(null); return; }
-  try{ saveSettings && saveSettings(); }catch(e){}
+  if(!noSave){ try{ saveSettings && saveSettings(); }catch(e){} }
   localStorage.setItem('story-space', want);
   try{ sessionStorage.setItem('lit-space-home', '1'); }catch(e){}
   location.reload();
@@ -14796,7 +14798,8 @@ function spEditTemplate(){
         <div class="modal-head"><span class="modal-title">${spEdit.id ? 'Rename company' : 'Add a company'}</span><button class="modal-close" data-sp-act="edit-close">×</button></div>
         <input id="sp-name-input" class="pay-input" type="text" maxlength="40" placeholder="Company name" value="${escText(spEdit.name || '').replace(/"/g, '&quot;')}" style="width:100%;box-sizing:border-box;">
         ${spEdit.id ? '' : `<div class="note" style="margin-top:12px;">Logo picture</div>
-        <button class="sp-logo-pick" data-sp-act="edit-logo">${spEdit.logo ? `<img alt="" src="${spEdit.logo}">` : '+'}</button>`}
+        <button class="sp-logo-pick" data-sp-act="edit-logo">${spEdit.logo ? `<img alt="" src="${spEdit.logo}">` : '+'}</button>
+        ${litSpace() === 'personal' ? `<div class="settings-option" style="margin-top:12px;"><div class="row-left"><div><div class="row-name">Make it everything I have now</div><div class="row-sub">Your Pages, apps set-up, cards, notes, colours and background move into this company; Personal starts fresh.</div></div></div><button class="toggle-switch${spEdit.adopt ? ' on' : ''}" data-sp-act="edit-adopt"><span class="toggle-knob"></span></button></div>` : ''}`}
         <button class="btn-wide btn-primary" style="margin-top:14px;" data-sp-act="edit-save">${spEdit.id ? 'Save' : 'Add company'}</button>
       </div>
     </div>`;
@@ -14811,6 +14814,19 @@ function spRemoveTemplate(){
         <div class="confirm-btn-row"><button class="btn-wide" style="margin-top:0;" data-sp-act="remove-no">Cancel</button><button class="btn-wide" style="margin-top:0;color:var(--red);" data-sp-act="remove-yes">Remove</button></div>
       </div>
     </div>`;
+}
+// 'Make it everything I have now' (owner, 13 Nov 2026: 'I already have the lockedintool account, it's the one I'm using.
+// Just need to make a personal one'): what Personal has now moves into the new company - every space key, the notes and
+// the background pictures - and Personal starts fresh.
+async function spaceAdopt(id){
+  try{ saveSettings && saveSettings(); }catch(e){}
+  const sfx = '@' + id;
+  let bgSet = {}; try{ bgSet = JSON.parse(litLsRaw('story-bg-set') || '{}') || {}; }catch(e){}
+  litSpaceKeys().forEach(k=>{ const v = litLsRaw(k); if(v !== null){ litLsRawSet(k + sfx, v); litLsRawSet(k, null); } });
+  const move = (dbp, store, from, to)=>dbp.then(db=>new Promise(res=>{ const t = db.transaction(store, 'readwrite'), o = t.objectStore(store), q = o.get(from);
+    q.onsuccess = ()=>{ if(q.result !== undefined){ o.put(q.result, to); o.delete(from); } }; t.oncomplete = res; t.onerror = ()=>res(); })).catch(()=>{});
+  await move(notesDb(), 'kv', 'notes', 'notes' + sfx);
+  for(const k of Object.keys(bgSet)) await move(litBgDb(), 'pics', k, k + sfx);
 }
 // A logo: one picture from the phone, made square (the middle), 480px.
 function spPickLogo(done){
@@ -14893,12 +14909,16 @@ document.addEventListener('click', e=>{
     case 'add': spEdit = { id:'', name:'', logo:'' }; break;
     case 'rename': { const c = spaceOf(id); spEdit = c ? { id, name:c.name } : null; break; }
     case 'edit-close': spEdit = null; break;
+    case 'edit-adopt': keepName(); spEdit.adopt = !spEdit.adopt; break;
     case 'edit-logo': keepName(); spPickLogo(u=>{ if(spEdit){ spEdit.logo = u; renderDevice(); } }); return;
     case 'edit-save': {
       keepName(); const name = (spEdit && spEdit.name || '').trim();
       if(!name){ showToast('Type the company’s name'); return; }
       if(spEdit.id){ spaceSave(list.map(c=>c.id === spEdit.id ? Object.assign({}, c, { name }) : c)); }
-      else { spaceSave(list.concat([{ id:'c' + Date.now().toString(36), name, logo: spEdit.logo || '' }])); showToast(name + ' added'); }
+      else { const nid = 'c' + Date.now().toString(36), adopt = spEdit.adopt && litSpace() === 'personal';
+        spaceSave(list.concat([{ id:nid, name, logo: spEdit.logo || '' }])); spEdit = null;
+        if(adopt){ spaceAdopt(nid).then(()=>{ showToast(name + ' has everything you had - Personal starts fresh'); spaceGo(nid, true); }); return; }
+        showToast(name + ' added'); }
       spEdit = null; break;
     }
     case 'logo': spPickLogo(u=>{ spaceSave(spaceList().map(c=>c.id === id ? Object.assign({}, c, { logo:u }) : c)); renderDevice(); }); return;

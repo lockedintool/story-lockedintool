@@ -2,6 +2,37 @@
 <html lang="en" dir="ltr">
 <head>
 <script>
+/* #313 (owner, 13 Nov 2026: 'when a pop up is showing anywhere in lockedintool ... it has cancel but tapping anywhere outside
+   of that box it closes - I don't want that anywhere in lockedintool. To avoid accidental taps'; chose 'Nothing happens'):
+   a tap on the dark / blurred space around a pop-up that has its own way out (Cancel, Close, Done, ✕, Back...) does
+   NOTHING - it closes only with its own button. A pop-up with no button of its own still closes from outside (never stuck). */
+(function(){ try{
+  var EXIT_TXT = /^(cancel|close|done|not now|keep|keep open|back|no|✕|×|x|‹.*)$/i;
+  var EXIT_ATTR = /(^|[\s_-])(close|cancel|back|dismiss|exit|x)([\s_-]|$)/i;
+  var BG_CLASS = /(^|\s)(modal-overlay|notes-popover-overlay|lit-sheet-bg|sub-pop-bg)(\s|$)|overlay|backdrop|scrim/i;
+  function attrs(t){ return (t.getAttribute('data-action') || '') + ' ' + (t.getAttribute('data-sp-act') || '') + ' ' + (t.getAttribute('data-pf') || ''); }
+  function isBg(t){
+    if(!t || t.nodeType !== 1 || t === document.body || t === document.documentElement || t.id === 'content-area') return false;
+    var c = typeof t.className === 'string' ? t.className : '';
+    if(!BG_CLASS.test(c) && !/-bg(\s|$)|bg$/.test(attrs(t).trim())) return false;
+    var cs = getComputedStyle(t); if(cs.position !== 'fixed' && cs.position !== 'absolute') return false;
+    var r = t.getBoundingClientRect(), ps = t.closest && t.closest('.phone-screen'), sr = ps ? ps.getBoundingClientRect() : { width: innerWidth, height: innerHeight };
+    return r.width >= sr.width * 0.85 && r.height >= sr.height * 0.45;
+  }
+  function hasExit(root){
+    var l = root.querySelectorAll('button,[data-action],[data-sp-act],[data-pf],[role=button]');
+    for(var i = 0; i < l.length; i++){ var b = l[i]; if(b === root || isBg(b)) continue;
+      var r = b.getBoundingClientRect(); if(!r.width || !r.height) continue;
+      var tx = (b.textContent || '').trim();
+      if(tx.length <= 12 && EXIT_TXT.test(tx)) return true;
+      if(EXIT_ATTR.test(attrs(b) + ' ' + (b.getAttribute('aria-label') || '') + ' ' + (typeof b.className === 'string' ? b.className : ''))) return true; }
+    return false;
+  }
+  window.litOutsideTapBlocked = function(t){ return isBg(t) && (hasExit(t) || (!t.children.length && !!t.parentElement && hasExit(t.parentElement))); };
+  document.addEventListener('click', function(e){ try{ if(window.litOutsideTapBlocked(e.target)){ e.stopPropagation(); e.preventDefault(); } }catch(err){} }, true);
+}catch(e){} })();
+</script>
+<script>
 /* BUSINESS ACCOUNTS - COMPANY SPACES (owner, 13 Nov 2026: 'Like when I go to lockedintool anything and everything on the
    phone will be about and for lockedintool. Same as for the other ones ... Personal will have anything and everything
    except for the companies'; chose 'One account, company spaces'): while a company is in focus ('story-space'), the
@@ -14715,7 +14746,9 @@ async function spaceBg(id){
 let spIdx = 0;
 window.litSpacesOpen = function(){
   if(/[?&](s3|widget)=/.test(location.search) || !bizOn() || !spaceList().length) return 'none';
-  spacesShow(); return 'ok';
+  if(!document.body){ return 'loading'; }
+  spacesShow(); try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){}
+  return document.getElementById('lit-spaces') ? 'ok' : 'not drawn';
 };
 function spacesClose(){ document.querySelectorAll('#lit-spaces').forEach(x=>x.remove()); }
 function spacesShow(){
@@ -15010,8 +15043,10 @@ function subAcctScreen(locked){
 setTimeout(()=>{ try{
   if(/[?&](s3|widget)=/.test(location.search)) return;
   spaceTell();
+  // #312: unlocked while this page was (re)loading - the chooser the app asked for opens now.
   if(litSpace() !== 'personal' && !spaceOf(litSpace())) localStorage.setItem('story-space', '');
   if(sessionStorage.getItem('lit-space-home')){ sessionStorage.removeItem('lit-space-home'); if(window.storyShow) window.storyShow(null); }
+  try{ if(NATIVE && window.StoryNative.spacesPending && window.StoryNative.spacesPending()) window.litSpacesOpen(); }catch(e){}
 }catch(e){} }, 0);
 function communityGuidelinesScreen(){
   const acc = state.accountStatus;

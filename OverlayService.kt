@@ -2962,21 +2962,42 @@ class OverlayService : Service(), StoryBridge.Host {
     //      shows when the app opens). Lockedintool security's unlock counts the phone's own unlock as always. ----
     override fun spacesOn(on: Boolean) { ui.post { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", on).apply() } }
     private fun spacesWanted() = getSharedPreferences("story", MODE_PRIVATE).getBoolean("spaces_on", false)
+    /** The chooser was asked for in the last 20 s and hasn't shown yet (the page was loading) - the page opens it once ready. */
+    override fun spacesPending(): Boolean = System.currentTimeMillis() - getSharedPreferences("story", MODE_PRIVATE).getLong("spaces_pending", 0L) < 20_000L
+    override fun spacesDone() { getSharedPreferences("story", MODE_PRIVATE).edit().putLong("spaces_pending", 0L).apply() }
     // #309 (owner, 13 Nov 2026: 'I'm turning off and unlocking my phone and I'm not seeing that screen'): it answers BOTH
     // the unlock broadcast and the phone's own locked / unlocked listener (once per unlock), and any reason it didn't
     // open is reported, so the cause shows in the problem report.
     @Volatile private var spacesShownAt = 0L
+    @Volatile private var pickerAt = 0L
+    /** #312 (owner, 13 Nov 2026: 'I'm turning my phone off and on, nothing is happening, I'm not seeing that screen'): a
+     *  picker / app-opening that started BEFORE the screen went off is over (the phone was locked since) - it never blocks. */
+    private fun spacesStale() {
+        if (pickerHid.isNotEmpty() && pickerAt < screenOffAt) { pickerHid = listOf(); sysFromPages = false }
+        if (openingPkg != null && screenOffAt > 0L) openingPkg = null
+    }
+    private fun spacesWhy(why: String) {
+        ProblemLog.record(this, "spaces", "chooser not shown: " + why, "unlock")
+        if (Release.isOwner(this)) showToast("Company screen didn’t open: " + why)   // the owner's phone says why straight away
+    }
     private fun spacesAfterUnlock() {
         if (!spacesWanted()) return
         if (spacesShownAt > screenOffAt) return   // already shown for this unlock
+        if (!keyguardLocked()) spacesStale()
         val why = when {
             sysQuiet() -> "app mode / widgets"; callActive -> "call"; createActive -> "create"; keyguardLocked() -> "still locked"
             pickerHid.isNotEmpty() -> "picker"; openingPkg != null -> "opening app"; pagesPane == null -> "no pages"; else -> null }
-        if (why != null) { if (why != "app mode / widgets") ProblemLog.record(this, "spaces", "chooser not shown: " + why, "unlock"); return }
+        if (why != null) { if (why != "app mode / widgets" && why != "still locked") spacesWhy(why); return }
         val p = pagesPane ?: return
         spacesShownAt = System.currentTimeMillis()
         hideLiveWidgets()
-        secGate(p) { showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar() } }
+        getSharedPreferences("story", MODE_PRIVATE).edit().putLong("spaces_pending", spacesShownAt).apply()
+        secGate(p) { showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar()
+            // The page answers whether it opened; a page that was (re)loading opens it itself once ready (spacesPending).
+            ui.postDelayed({ p.web.evaluateJavascript("(function(){try{return document.getElementById('lit-spaces')?'ok':(window.litSpacesOpen?window.litSpacesOpen():'loading')}catch(e){return 'error '+e.message}})()") { r ->
+                val res = (r ?: "").trim('"')
+                if (res == "ok") spacesDone() else if (res != "loading") spacesWhy("page: " + res)
+            } }, 700) } }
     }
     /** As an app: the chooser shows each time the app is opened (after it was left). */
     private var appLeft = true
@@ -3167,6 +3188,7 @@ class OverlayService : Service(), StoryBridge.Host {
 
     private fun stepAsideForSystem(): Boolean {
         if (pickerHid.isNotEmpty()) return false
+        pickerAt = System.currentTimeMillis()
         pickerHid = listOfNotNull(profilePane, pagesPane).filter { it.shown }
         for (p in pickerHid) setShown(p, false)
         return true

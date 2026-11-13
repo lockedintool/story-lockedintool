@@ -69,6 +69,8 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun createMode(video: Boolean)
         fun lockedNav(screen: String)
         fun spacesOn(on: Boolean)
+        fun spacesPending(): Boolean
+        fun spacesDone()
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -866,6 +868,10 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     /** Business accounts (#302): there are companies to choose from - the chooser shows after every unlock. */
     @JavascriptInterface
     fun spacesOn(on: Boolean) { if (pages) host.spacesOn(on) }
+    @JavascriptInterface
+    fun spacesPending(): Boolean = pages && host.spacesPending()
+    @JavascriptInterface
+    fun spacesDone() { if (pages) host.spacesDone() }
 
     /** Returns "<postId>:<photo|video>" ("" if nothing was made). */
     @JavascriptInterface

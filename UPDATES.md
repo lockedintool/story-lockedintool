@@ -302,3 +302,4 @@ commits, pushed as a new update) - nothing else changes.
 | 293 | 2026-11-13 | The lock screen behind DEVICE LOCKED is blurred and a little darker, so the sign reads on any wallpaper | 980f2cf |
 | 294 | 2026-11-13 | The DEVICE LOCKED sign is removed everywhere (your phone's own lock screen shows as it is) and the Always On Display lock screen switch is gone from Settings | 5c3a5a4 |
 | 295 | 2026-11-13 | The DEVICE LOCKED sign, the Always On Display lock screen and Lockedintool's old lock screen are deleted from the app completely (not just switched off) | b44273b |
+| 296 | 2026-11-13 | The lock screen's Wallet page button opens the Wallet page straight away, no unlock (fast access); going to anything other than the Wallet still asks for the phone's unlock | (this update) |

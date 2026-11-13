@@ -67,6 +67,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun createDiscard()
         fun createSwitchCamera()
         fun createMode(video: Boolean)
+        fun lockedNav(screen: String)
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -852,6 +853,9 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     /** #282: Create's chosen box - Video = the camera records video at its best, else full-size pictures. */
     @JavascriptInterface
     fun createMode(video: Boolean) { if (profile) host.createMode(video) }
+    /** The Wallet page opened on the lock screen (#296): somewhere else was asked for - the phone's unlock first. */
+    @JavascriptInterface
+    fun lockedNav(screen: String) { if (pages) host.lockedNav(screen) }
 
     /** Returns "<postId>:<photo|video>" ("" if nothing was made). */
     @JavascriptInterface

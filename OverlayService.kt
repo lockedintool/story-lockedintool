@@ -68,7 +68,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private val unlocked = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             userPresentAt = System.currentTimeMillis()
-            ui.post { secWaitUnlocked() }
+            ui.post { secWaitUnlocked(); endLockWallet() }
             widgetLiveEvent(false)  // unlocked onto the home screen: live widgets come back
             if (SystemMode.on(c)) { ui.removeCallbacks(systemCheckRun); ui.postDelayed(systemCheckRun, 500) }  // Lockedintool as your system: unlocked onto another app / the home screen
             AodActivity.instance?.finish()  // unlocked (e.g. fingerprint) while the Always On Display was up
@@ -110,7 +110,8 @@ class OverlayService : Service(), StoryBridge.Host {
         // Privacy, the second guard (#273 - owner: 'double fix incase so that nothing ever happens'): whatever of Station 3
         // was open (Messages, Profile, Updates, Create, Call history, the dial pad) closes when the phone locks - never
         // left showing on the lock screen. A call keeps its screen.
-        ui.post { if (!callActive) { profilePane?.takeIf { it.shown }?.let { hideOne(it) }; dialPane?.takeIf { it.shown }?.let { hideOne(it) }; updateBubble() } }
+        ui.post { if (!callActive) { profilePane?.takeIf { it.shown }?.let { hideOne(it) }; dialPane?.takeIf { it.shown }?.let { hideOne(it) }; updateBubble() }
+            if (lockWallet) { pagesPane?.takeIf { it.shown }?.let { hideOne(it) }; endLockWallet() } }
         val aod = AodActivity.instance
         if (aod != null && !aod.isFinishing) {
             // Power pressed on the Always On Display (owner): the screen comes straight back on the lock screen,
@@ -991,6 +992,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // Inside Lockedintool's Home (Only system) the Pages are your home screen, and a home screen never pauses what's
         // playing - a pop-up window's video / music keeps going (owner, 4 Nov 2026: 'when I have a pop up on and I'm on
         // apps from the dashboard the sound pauses').
+        if (p === pagesPane && !shown && lockWallet) ui.post { if (pagesPane?.shown != true) endLockWallet() }
         if (p === pagesPane) { quietApps(shown && !pagesInHome()); updateBarLine(); if (!shown && pagesTyping) pagesBackToTop(); updateBubble()
             if (!shown) tvView?.place(org.json.JSONObject().put("show", false)) }
         // Only system: Pages that step aside while they live inside Lockedintool's Home stay DRAWN there (not touchable,
@@ -2863,7 +2865,7 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     /** Could it show now (the lock screen, nothing of Lockedintool's open over it)? */
     private fun walletBtnCan(locked: Boolean) = locked && QuickAccess.walletLock(this) && walletOk() && walletBtn != null && !sysQuiet() && !walletOpening && !callActive && !createActive &&
-        s3Pane?.shown != true && profilePane?.let { it.shown && it.wm === layerWm } != true   // (the Pages / a normal-layer Profile are under the lock screen)
+        s3Pane?.shown != true && !(lockWallet && pagesPane?.shown == true) && profilePane?.let { it.shown && it.wm === layerWm } != true   // (the Pages / a normal-layer Profile are under the lock screen)
     private fun showWalletBtn(on: Boolean) {
         val v = walletBtn ?: return; val lp = walletBtnLp ?: return
         // Beside Station 3's button (or in the corner when the button isn't there); above the lock screen dial pad when it's up.
@@ -2884,10 +2886,66 @@ class OverlayService : Service(), StoryBridge.Host {
         if (walletBtn?.visibility != View.VISIBLE) return
         walletOpening = true; syncLockDial()
         if (!keyguardLocked()) { walletDone("ok"); return }
-        // The phone's own unlock first (its PIN page / fingerprint) - for both security settings.
-        if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Open the Wallet page")
-            .putExtra(IdentityActivity.EXTRA_FOR, "wallet").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 22)) walletDone("fail")   // #271: allowed from the background
+        walletOnLock()
     }
+    // ---- The Wallet page straight from the lock screen / Always On Display, NO unlock (#296 - owner, 13 Nov 2026: 'the
+    //      wallet page being in the lockscreen or always on display - it need the phone to be unlocked to use it or see the
+    //      page. Remove that for the wallet page coz it acts as fast access'). The Pages are lifted above the lock screen
+    //      (Lockedintool's top layer) showing ONLY the Wallet page; going anywhere else (another page, the Dashboard...)
+    //      asks for the phone's own unlock first. Unlocking, the screen going off or the Pages closing ends it. ----
+    @Volatile private var lockWallet = false
+    private fun walletOnLock() {
+        AodActivity.instance?.let { a -> runCatching { a.finish(); a.overridePendingTransition(0, 0) } }
+        warmUp()
+        val p = pagesPane ?: run { walletOpening = false; syncLockDial(); return }
+        if (pagesInHome()) homeDetach()
+        lockWallet = true
+        pagesLayer(true)
+        hideLiveWidgets()
+        showPagesOn(p, "window.__litLockWallet=true;window.storyShow&&window.storyShow('wallet',false)") { walletOpening = false; updateBubble(); syncLockDial() }
+    }
+    /** The Pages move between the normal overlay layer (under the lock screen) and Lockedintool's top layer (above it),
+     *  with Station 3's windows and buttons put back above them. */
+    private fun pagesLayer(top: Boolean) {
+        val p = pagesPane ?: return
+        if (pagesInHome()) return
+        val want = if (top) layerWm else wm
+        if (p.wm === want) return
+        pagesTyping = false
+        runCatching { p.wm.removeView(p.frame) }
+        p.lp.type = if (top) layerType else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY; p.wm = want
+        if (runCatching { want.addView(p.frame, p.lp) }.isFailure) { p.lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY; p.wm = wm; runCatching { wm.addView(p.frame, p.lp) } }
+        if (p.wm === layerWm) {
+            dialStrip?.let { v -> dialStripLp?.let { lp -> runCatching { (dialStripWm ?: layerWm).removeView(v); (dialStripWm ?: layerWm).addView(v, lp) } } }; barBg?.let { v -> barBgLp?.let { lp -> runCatching { (barBgWm ?: wm).removeView(v); (barBgWm ?: wm).addView(v, lp) } } }
+            for (q in listOfNotNull(s3Pane, dialPane)) runCatching { q.wm.removeView(q.frame); q.wm.addView(q.frame, q.lp) }
+            raiseBubble(); addBar()
+        }
+    }
+    /** Unlocked, the screen off, or the Pages closed: the Wallet page is an ordinary page again (under the lock screen). */
+    private fun endLockWallet() {
+        if (!lockWallet) return
+        lockWallet = false
+        pagesPane?.web?.evaluateJavascript("window.__litLockWallet=false", null)
+        pagesLayer(false)
+    }
+    /** On the lock screen something other than the Wallet page was asked for: the phone's own unlock first, then it opens. */
+    @Volatile private var lockNavWant: String? = null
+    override fun lockedNav(screen: String) { ui.post {
+        if (!lockWallet) return@post
+        if (!keyguardLocked()) { endLockWallet(); evalPages("window.storyShow&&window.storyShow(" + org.json.JSONObject.quote(screen) + ",false)"); return@post }
+        lockNavWant = screen
+        if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
+            .putExtra(IdentityActivity.EXTRA_FOR, "walletnav").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 24)) lockNavWant = null
+    } }
+    fun walletNavDone(result: String) { ui.post {
+        val w = lockNavWant; lockNavWant = null
+        if (result != "ok" || w == null) return@post
+        if (Security.lit(this) && !secOpen) { secOpen = true; secTell() }   // the phone's own unlock counts for Lockedintool security
+        endLockWallet()
+        val p = pagesPane ?: return@post
+        if (p.shown) evalPages("window.storyShow&&window.storyShow(" + org.json.JSONObject.quote(w) + ",false)")
+        else showPagesOn(p, "window.storyShow&&window.storyShow(" + org.json.JSONObject.quote(w) + ",false)") { updateBubble(); addBar() }
+    } }
     fun walletDone(result: String) { ui.post {
         walletOpening = false
         if (result == "ok") {

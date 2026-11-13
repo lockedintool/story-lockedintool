@@ -4744,6 +4744,7 @@ function syncAppPages(){
 syncAppPages();
 // Go to another row (swipe up / down, or a page in Rows): lands on that row's first page (Row 1: where you were).
 function goToRow(n, key){
+  if(window.__litLockWallet){ try{ StoryNative.lockedNav(key || 'dashboard'); }catch(e){} return; }   // #296: only the Wallet page on the lock screen
   const rows = rowsList();
   if(n < 1 || n > rows.length) return false;
   if(curRow === 1 && PAGES.includes(state.current)) state.row1Page = state.current;
@@ -17316,6 +17317,9 @@ notesDb().then(db=>new Promise(res=>{
 }).catch(()=>{ notesLoaded = true; });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ if(noteLiveSaveT){ clearTimeout(noteLiveSaveT); noteLiveSaveT = null; } persistNotesNow(); } });
 function renderDevice(){
+  // The Wallet page opened from the lock screen with no unlock (#296): ONLY the Wallet page - anything else asks the
+  // phone's own unlock first (the app opens it right after).
+  if(window.__litLockWallet && state.current !== 'wallet'){ const want = state.current; state.current = 'wallet'; try{ StoryNative.lockedNav(want); }catch(e){} }
   if(state.cardReveal && state.current !== 'wallet') cardRevealClear();   // card details never follow you off Wallet
   if(CORE_ITEMS.some(it=>it.key === state.current) && hiddenPages().includes(state.current) && PAGES.length) state.current = PAGES[0];   // a removed page (Page layout) never shows
   // An app page that isn't in your rows any more (Only system, Basic plan, the app uninstalled) never shows either.
@@ -22208,6 +22212,7 @@ function refreshNeighbors(force){
   neighborTimer = setTimeout(step, 350);
 }
 function beginPageSlide(next){
+  if(window.__litLockWallet){ const k = PAGES[next]; if(k && k !== 'wallet'){ try{ StoryNative.lockedNav(k); }catch(e){} } return null; }   // #296
   const idx = PAGES.indexOf(state.current);
   if(next===idx || next<0 || next>PAGES.length-1 || pageSwipeAnimating) return null;
   const wrap = document.getElementById('device-wrap');

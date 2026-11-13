@@ -33,7 +33,7 @@ class IdentityActivity : Activity() {
             })
             return
         }
-        if (purpose == "wallet") { done("ok"); return }   // already unlocked: the Wallet page just opens (Lockedintool security asks next)
+        if (purpose == "wallet" || purpose == "walletnav") { done("ok"); return }   // already unlocked: the Wallet page just opens (Lockedintool security asks next)
         if (!km.isDeviceSecure) { done("nolock"); return }
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Confirm it's you"
         if (Build.VERSION.SDK_INT >= 29) {
@@ -64,7 +64,7 @@ class IdentityActivity : Activity() {
 
     private fun report(result: String) {
         val s = OverlayService.instance ?: return
-        when (purpose) { "security" -> s.secDone(result); "wallet" -> s.walletDone(result); "s3" -> s.s3UnlockDone(result); "card" -> s.cardDone(result); "systemsw" -> s.systemSwitchDone(result); "system" -> s.systemPickDone(result); else -> s.identityDone(result) }
+        when (purpose) { "security" -> s.secDone(result); "wallet" -> s.walletDone(result); "walletnav" -> s.walletNavDone(result); "s3" -> s.s3UnlockDone(result); "card" -> s.cardDone(result); "systemsw" -> s.systemSwitchDone(result); "system" -> s.systemPickDone(result); else -> s.identityDone(result) }
     }
 
     private fun done(result: String) {

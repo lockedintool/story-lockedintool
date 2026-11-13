@@ -3971,11 +3971,14 @@
      screens, bars, pop-ups, page switches all appear instantly. (It completes rather than cancels - 0.001s, not none -
      so transitionend / animationend still fire and no element is ever left mid-change or invisible.) The window side is
      already instant natively: windowAnimations = 0 on every Lockedintool window. Keep this; never slow it back down. ===== */
+  /* #290 (owner, 13 Nov 2026: 'Everytime i open lockedintool and I go to a page it like jumps ... the insides of the page
+     jumps. Also when I swipe to the other page'): a 0.001s duration TURNED ON a transition for every property of every
+     element (transition-property starts as 'all'), so each page's fitted size (zoom) and everything the fit changes was
+     drawn from the old value first, then jumped. Transitions are now simply OFF - every change is instant. */
   *, *::before, *::after{
-    transition-duration:0.001s !important;
-    transition-delay:0s !important;
+    transition:none !important;
     animation-duration:0.001s !important;
-    animation-delay:0s !important;
+    animation-delay:-1s !important;   /* #290: already finished when it appears - never one frame of its starting look */
     animation-iteration-count:1 !important;
     scroll-behavior:auto !important;
   }
@@ -22328,7 +22331,8 @@ function endPageSlide(sl, commit){
     refreshNeighbors();
   };
   sl.finishNow = ()=>{ sl.newFrame.style.transition = sl.oldFrame.style.transition = 'none'; finish(); };
-  requestAnimationFrame(()=>{ sl.newFrame.addEventListener('transitionend', finish, { once:true }); setTimeout(finish, 260); });
+  // #290: no transitions any more - the slide lands at once, so it finishes on the next frame (the rest are only backups).
+  requestAnimationFrame(()=>{ sl.newFrame.addEventListener('transitionend', finish, { once:true }); requestAnimationFrame(finish); setTimeout(finish, 260); });
 }
 function goToPageIndex(next){
   const idx = PAGES.indexOf(state.current);

@@ -104,8 +104,7 @@ class CreateCameraActivity : AppCompatActivity() {
                 // 1920 x 1440 (sharper than the screen it fills), not whatever small size the phone hands out by default.
                 preview = Preview.Builder().setResolutionSelector(androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
                     .setAspectRatioStrategy(androidx.camera.core.resolutionselector.AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-                    .setResolutionStrategy(androidx.camera.core.resolutionselector.ResolutionStrategy(android.util.Size(1920, 1440),
-                        androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
+                    .setResolutionStrategy(androidx.camera.core.resolutionselector.ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
                     .build()).build().also { it.setSurfaceProvider(previewView?.surfaceProvider) }
                 bindBest()
             }.exceptionOrNull()
@@ -116,7 +115,9 @@ class CreateCameraActivity : AppCompatActivity() {
 
     private fun recorder(q: Quality) = VideoCapture.withOutput(Recorder.Builder()
         .setAspectRatio(androidx.camera.core.AspectRatio.RATIO_4_3)  // videos in the same frame as pictures
-        .setQualitySelector(QualitySelector.from(q, FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))).build())
+        // #284: the highest the phone can record - 4K first, then Full HD, HD, SD.
+        .setQualitySelector(if (q == Quality.FHD) QualitySelector.fromOrderedList(listOf(Quality.UHD, Quality.FHD, Quality.HD, Quality.SD), FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))
+            else QualitySelector.from(q, FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))).build())
 
     /** #282 (owner, 13 Nov 2026: 'the camera quality on the create tab' - 'The videos and pictures'): with pictures AND
      *  video switched on together the phone only gives pictures at about video size (~1.5 MP) and can drop the video
@@ -124,8 +125,8 @@ class CreateCameraActivity : AppCompatActivity() {
      *  otherwise the camera + pictures at the camera's full size. Holding the shutter for a video outside Video
      *  switches video in for that recording (startVideo) and pictures back after it. */
     private fun hqImage() = ImageCapture.Builder()
-        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-        .setJpegQuality(95)
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)   // #284: the highest possible quality
+        .setJpegQuality(100)
         .setResolutionSelector(androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
             .setAspectRatioStrategy(androidx.camera.core.resolutionselector.AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
             .setResolutionStrategy(androidx.camera.core.resolutionselector.ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)

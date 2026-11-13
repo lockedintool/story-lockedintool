@@ -2969,11 +2969,11 @@ class OverlayService : Service(), StoryBridge.Host {
     // the unlock broadcast and the phone's own locked / unlocked listener (once per unlock), and any reason it didn't
     // open is reported, so the cause shows in the problem report.
     @Volatile private var spacesShownAt = 0L
-    @Volatile private var pickerAt = 0L
+    @Volatile private var sysAsideAt = 0L
     /** #312 (owner, 13 Nov 2026: 'I'm turning my phone off and on, nothing is happening, I'm not seeing that screen'): a
      *  picker / app-opening that started BEFORE the screen went off is over (the phone was locked since) - it never blocks. */
     private fun spacesStale() {
-        if (pickerHid.isNotEmpty() && pickerAt < screenOffAt) { pickerHid = listOf(); sysFromPages = false }
+        if (pickerHid.isNotEmpty() && sysAsideAt < screenOffAt) { pickerHid = listOf(); sysFromPages = false }
         if (openingPkg != null && screenOffAt > 0L) openingPkg = null
     }
     private fun spacesWhy(why: String) {
@@ -3188,7 +3188,7 @@ class OverlayService : Service(), StoryBridge.Host {
 
     private fun stepAsideForSystem(): Boolean {
         if (pickerHid.isNotEmpty()) return false
-        pickerAt = System.currentTimeMillis()
+        sysAsideAt = System.currentTimeMillis()
         pickerHid = listOfNotNull(profilePane, pagesPane).filter { it.shown }
         for (p in pickerHid) setShown(p, false)
         return true

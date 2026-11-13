@@ -14750,6 +14750,7 @@ async function spaceBg(id){
 }
 // ---- The chooser (after every unlock on Second / Only system; when the app opens as an app) ----
 let spIdx = 0;
+window.litSpacesWanted = function(){ return bizOn() && spaceList().length > 0; };   // #317: the app asks before every chooser
 window.litSpacesOpen = function(){
   if(/[?&](s3|widget)=/.test(location.search) || !bizOn() || !spaceList().length) return 'none';
   if(!document.body){ return 'loading'; }

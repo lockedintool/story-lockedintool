@@ -295,3 +295,4 @@ commits, pushed as a new update) - nothing else changes.
 | 286 | 2026-11-13 | Hold one of your highlights on Profile to delete it (Delete highlight, with Cancel) | 88f2d9a |
 | 287 | 2026-11-13 | Inside a highlight there's only the bin (deletes the video / picture you're watching); a whole highlight is deleted only by holding its circle on Profile | eae61d2 |
 | 288 | 2026-11-13 | Deleting the last video / picture in a highlight leaves the highlight there (empty); holding a highlight on Profile = Rename or Delete highlight | 762c16b |
+| 289 | 2026-11-13 | No more black pieces / black flashes: the 3D Circle used ~10x too much drawing memory (now each strip draws only its own slice), and opening Lockedintool from its icon shows your Home Screen straight away instead of a second of black | b143d41 |

@@ -313,4 +313,4 @@ commits, pushed as a new update) - nothing else changes.
 | 304 | 2026-11-13 | Add company has 'Make it everything I have now': what you have now moves into that company (e.g. Lockedintool) and Personal starts fresh | 5fb5ec5 |
 | 305 | 2026-11-13 | Business settings: tapping the company name box (or anything inside a sheet) no longer closes the sheet | e8c13e2 |
 | 306 | 2026-11-13 | Choosing a company's logo is one tap on the picture (no Send button) | b2019f9 |
-| 307 | 2026-11-13 | The picture list (company logos, album, files) shows real square pictures, and '+ More pictures' when the phone only allows some of them | (this update) |
+| 307 | 2026-11-13 | The picture list (company logos, album, files) shows real square pictures, and '+ More pictures' when the phone only allows some of them | 15efb01 |

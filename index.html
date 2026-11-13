@@ -2895,6 +2895,18 @@
     width:calc(100% / var(--mscale, 0.4)); transform:scale(var(--mscale, 0.4));
     transform-origin:top left; pointer-events:none;
   }
+  /* (#278 - owner, 13 Nov 2026: 'add a page indicator that shows the page number you're in and how many pages you
+     have, and each page shows what page number it is - on Page Styles and Rows only, not on the normal pages') */
+  .pg-num{ position:absolute; top:8px; right:8px; z-index:3; min-width:24px; height:24px; padding:0 6px; box-sizing:border-box;
+    border-radius:12px; background:#000; color:#fff; border:1.5px solid #fff; font-size:12px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; pointer-events:none; line-height:1; }
+  .pswitch-vcard .pg-num, .pswitch-vfloat-card .pg-num{ top:10px; right:10px; transform:scale(1.25); transform-origin:top right; }
+  .pg-count{ font-size:12px; font-weight:800; color:#fff; background:#000; border:1.5px solid #fff; border-radius:14px;
+    padding:5px 11px; white-space:nowrap; pointer-events:none; }
+  .wheel3d-num{ position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:11px;
+    background:#000; color:#fff; border:1.5px solid #fff; box-sizing:border-box; font-size:11px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; pointer-events:none; line-height:1;
+    -webkit-backface-visibility:hidden; backface-visibility:hidden; }
   .pswitch-tile-label{
     position:absolute; left:8px; bottom:8px; z-index:2; font-size:10.5px; font-weight:800;
     color:#fff; background:rgba(0,0,0,0.55); padding:3px 8px; border-radius:8px;
@@ -4774,10 +4786,16 @@ function station3QuickRowHTML(){
 // A single tile: the real live page, shrunk, with a small caption. navAttr picks which
 // data-* attribute the click handler listens for (the Rows modal and the live Page Style
 // screen use two different ones so their handlers can behave differently on tap).
-function pswitchTileHTML(item, navAttr){
+function pgNumHTML(num){ return num ? `<div class="pg-num">${num}</div>` : ''; }
+// 'Page X of N' (Page Styles / Rows only): which page you're on in the row, and how many pages the row has.
+function pgCountHTML(idx, n){ return `<span class="pg-count" data-pgcount data-n="${n}">Page ${Math.min(n, idx + 1)} of ${n}</span>`; }
+function pgCountSet(idx){ document.querySelectorAll('[data-pgcount]').forEach(el=>{ const n = +el.getAttribute('data-n') || 0;
+  const t = `Page ${Math.max(1, Math.min(n, idx + 1))} of ${n}`; if(el.textContent !== t) el.textContent = t; }); }
+function pswitchTileHTML(item, navAttr, num){
   return `
     <div class="pswitch-tile" data-${navAttr}="${item.key}">
       ${miniPagePreviewHTML(item.key)}
+      ${pgNumHTML(num)}
       ${tileLabelHTML(item, navAttr)}
     </div>
   `;
@@ -4812,11 +4830,11 @@ function pswitchVStackHTML(horiz){
     <div class="pswitch-vstack${horiz ? ' pswitch-hstack' : ''}" data-vstack style="--n:${n}; --v:${Math.min(n, DECK_MAX)};">
       ${order.map((item, i)=>{ return `
         <div class="pswitch-tile pswitch-vcard${pick && pick.key === item.key ? ' picked' : ''}" data-vpick="${item.key}" style="--i:${i}; opacity:0;">
-          ${miniPagePreviewHTML(item.key)}
+          ${miniPagePreviewHTML(item.key)}${pgNumHTML(i + 1)}
         </div>`; }).join('')}
       ${pick ? `
       <div class="pswitch-vfloat" data-vstack-close></div>
-      <div class="pswitch-tile pswitch-vfloat-card" data-pagestyle-nav="${pick.key}">${miniPagePreviewHTML(pick.key)}</div>` : ''}
+      <div class="pswitch-tile pswitch-vfloat-card" data-pagestyle-nav="${pick.key}">${miniPagePreviewHTML(pick.key)}${pgNumHTML(items.indexOf(pick) + 1)}</div>` : ''}
     </div>
   `;
 }
@@ -4832,7 +4850,7 @@ function pswitchCircle2dHTML(navAttr){
       <div class="circle-track-ring"></div>
       ${PAGE_SWITCH_ITEMS.map((item,i)=>`
         <div class="pswitch-tile pswitch-circle2d-item" data-${navAttr}="${item.key}" data-baseangle="${90 - (i - Math.floor(PAGE_SWITCH_ITEMS.length / 2)) * 36}">
-          ${miniPagePreviewHTML(item.key)}
+          ${miniPagePreviewHTML(item.key)}${pgNumHTML(i + 1)}
           ${tileLabelHTML(item, navAttr)}
         </div>
       `).join('')}
@@ -4941,7 +4959,10 @@ function pswitchWheel3dHTML(navAttr){
               </div>
             `;
           }
-          return `<div class="curve-page" data-${navAttr}="${item.key}" data-faceangle="${baseAngle}">${strips}${tileLabelHTML(item, navAttr)}</div>`;
+          // The page's number (#278), at the face's top-right corner, on the curve.
+          const numAng = baseAngle + arc/2 - sliceAngle*1.2;
+          const num = `<div class="wheel3d-num" style="transform:rotateY(${numAng.toFixed(2)}deg) translateZ(${(radius + 1).toFixed(2)}px) translateY(${(-h/2 + 18).toFixed(1)}px);">${i + 1}</div>`;
+          return `<div class="curve-page" data-${navAttr}="${item.key}" data-faceangle="${baseAngle}">${strips}${num}${tileLabelHTML(item, navAttr)}</div>`;
         }).join('')}
         ${wheelPageDividersHTML(maxTileH, arc, radius)}
       </div>
@@ -4981,7 +5002,7 @@ function pswitchBodyHTML(style, navAttr){
   if((style==='vertical' || style==='horizontal') && navAttr === 'pagestyle-nav') return pswitchVStackHTML(style === 'horizontal');
   if(style==='circle') return pswitchCircle2dHTML(navAttr);
   if(style==='wheel') return pswitchWheel3dHTML(navAttr);
-  return `<div class="pswitch-${style}">${PAGE_SWITCH_ITEMS.map(item=>pswitchTileHTML(item, navAttr)).join('')}</div>`;
+  return `<div class="pswitch-${style}">${PAGE_SWITCH_ITEMS.map((item, i)=>pswitchTileHTML(item, navAttr, i + 1)).join('')}</div>`;
 }
 // Rows is a grid overview of every row the user's pages live in -- not a Page Fast Access
 // style, and independent of whatever one of those 5 is toggled on. Row 1 is always Money,
@@ -4995,7 +5016,7 @@ function pageSwitcherRowsGridHTML(){
       ${rowsList().map((items, i)=>`<div class="pswitch-rows-row">
         <div class="pswitch-rows-row-label">Row ${i + 1}</div>
         <div class="pswitch-rows-tiles${items.length > 3 ? ' many' : ''}" style="--cols:${Math.max(3, items.length)};">
-          ${items.map(item=>pswitchTileHTML(item, 'pswitch-nav')).join('')}
+          ${items.map((item, k)=>pswitchTileHTML(item, 'pswitch-nav', k + 1)).join('')}
         </div>
       </div>`).join('')}
     </div>
@@ -5016,7 +5037,8 @@ function rowsContentScreen(){
         <button class="dash-back" data-action="rows-view-close">‹ Back</button>
         <span class="page-title">Rows</span>
       </div>
-      <div class="page-top-right-group"></div>
+      <div class="page-top-right-group">${(()=>{ const cur = state.lastPage || state.current; const r = rowsList().find(items=>items.some(it=>it.key === cur)) || rowsList()[0] || [];
+        return pgCountHTML(Math.max(0, r.findIndex(it=>it.key === cur)), r.length); })()}</div>
     </div>
     ${pageSwitcherRowsGridHTML()}
     </div>
@@ -5049,7 +5071,7 @@ function pageStyleContentScreen(){
       <div class="page-top-left">
         <button class="dash-back" data-action="page-style-close">‹ Back</button>
       </div>
-      <div class="page-top-right-group"></div>
+      <div class="page-top-right-group">${pgCountHTML(Math.max(0, PAGE_SWITCH_ITEMS.findIndex(it=>it.key === (state.lastPage || state.current))), PAGE_SWITCH_ITEMS.length)}</div>
     </div>
     ${body}
     </div>
@@ -16810,6 +16832,9 @@ function setupCircleAndWheelDrag(){
         el.style.zIndex = String(10 + Math.round(depth*100));
         el.style.opacity = String(Math.max(0, Math.min(1, (depth - 0.12) / 0.3)).toFixed(2));
       });
+      // The page in front is the one you're on (#278).
+      let best = 0, bz = -1; items.forEach((el, i)=>{ const z = +el.style.zIndex || 0; if(z > bz){ bz = z; best = i; } });
+      pgCountSet(best);
     };
     const settle = ()=>{
       state.circleRotDeg = clampRot(Math.round(state.circleRotDeg / STEP) * STEP);
@@ -16873,6 +16898,10 @@ function setupCircleAndWheelDrag(){
     const applyTransform = ()=>{
       rig.style.transform = depthZ + `rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY}deg)`;
       updateSliceShading();
+      // The face turned most towards you is the page you're on (#278).
+      const faces = rig.querySelectorAll('.curve-page'); let best = 0, bs = -2;
+      faces.forEach((el, i)=>{ const c = Math.cos(((parseFloat(el.getAttribute('data-faceangle')) || 0) + state.wheelRotY) * Math.PI / 180); if(c > bs){ bs = c; best = i; } });
+      pgCountSet(best);
     };
     updateSliceShading(); // paint the correct shading immediately, not just after the first drag
     // The phone builds the 42 curved strips' 3D layers the first time the wheel turns (a one-time ~0.1-0.4 s job);
@@ -17730,6 +17759,7 @@ function attachHandlers(){
         c.style.visibility = op <= 0.001 ? 'hidden' : '';
         c.style.pointerEvents = (op < 0.5) ? 'none' : '';
       });
+      pgCountSet(Math.round(pos));
     };
     deckPlace();
     st.addEventListener('pointerdown', e=>{

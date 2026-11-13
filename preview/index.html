@@ -2903,12 +2903,14 @@
   /* Vertical Page Style (owner's drawing): a stack - home in the middle in front, the others peeking out above
      and below, a little smaller behind it. */
   .pswitch-vstack{ --card-w:280px; --card-h:360px; --step:72px; position:relative; width:var(--card-w); margin:0 auto;
-    height:calc(var(--card-h) + (var(--n) - 1) * (var(--step) + var(--spread, 0px))); touch-action:none; -webkit-user-select:none; user-select:none; }
-  .pswitch-vcard{ position:absolute; left:0; top:calc(var(--i) * var(--step)); width:var(--card-w); height:var(--card-h); --mscale:0.68;
-    transform:translateY(calc(var(--i) * var(--spread, 0px))) scale(calc(1 - var(--b) * 0.06)); transform-origin:50% 0; will-change:transform; box-shadow:0 -6px 22px rgba(0,0,0,0.55); transition:opacity 0.2s ease; }
+    height:calc(var(--card-h) + (var(--v) - 1) * var(--step)); touch-action:none; -webkit-user-select:none; user-select:none; }
+  /* (#277) Every card keeps ONE size however many pages the row has: at most 5 show stacked and you swipe the stack to
+     bring the rest forward (the deck's place is set per card by JS - deckPlace). */
+  .pswitch-vcard{ position:absolute; left:0; top:0; width:var(--card-w); height:var(--card-h); --mscale:0.68;
+    transform-origin:50% 0; will-change:transform, opacity; box-shadow:0 -6px 22px rgba(0,0,0,0.55); }
   /* Horizontal: the same stack sideways - home in front on the right, the others peeking out to its left. */
-  .pswitch-hstack{ --card-w:260px; --card-h:420px; --step:56px; width:calc(var(--card-w) + (var(--n) - 1) * (var(--step) + var(--spread, 0px))); height:var(--card-h); max-width:none; }
-  .pswitch-hstack .pswitch-vcard{ top:0; left:calc(var(--i) * var(--step)); transform:translateX(calc(var(--i) * var(--spread, 0px))) scale(calc(1 - var(--b) * 0.06)); --mscale:0.63; transform-origin:0 50%; box-shadow:-6px 0 22px rgba(0,0,0,0.55); }
+  .pswitch-hstack{ --card-w:260px; --card-h:420px; --step:56px; width:calc(var(--card-w) + (var(--v) - 1) * var(--step)); height:var(--card-h); max-width:none; }
+  .pswitch-hstack .pswitch-vcard{ top:0; left:0; --mscale:0.63; transform-origin:0 50%; box-shadow:-6px 0 22px rgba(0,0,0,0.55); }
   .pswitch-vcard.picked{ opacity:0.25; }
   .pswitch-vfloat{ position:fixed; inset:0; z-index:40; background:rgba(0,0,0,0.6); }
   /* Exactly the size of the whole stack, right where the stack is (owner). */
@@ -4792,6 +4794,14 @@ function tileLabelHTML(item, navAttr){
 // out and floats in the middle, exactly the size of the whole stack; tap it again to go to that page; tap anywhere
 // else and it goes back into the stack. Horizontal (owner: "same thing, just horizontal"): the same stack sideways -
 // in row order left to right, the last one in front on the right, the others peeking out to its LEFT.
+const DECK_MAX = 5;   // (#277) the most pages a Vertical / Horizontal stack shows at once - the rest are a swipe away
+// Where the deck starts: the page you came from in front (the last page for short rows, as before), with a full stack
+// behind it whenever there are enough pages.
+function deckStartPos(n){
+  const cur = PAGE_SWITCH_ITEMS.findIndex(it=>it.key === (state.lastPage || state.current));
+  const lo = Math.min(n - 1, DECK_MAX - 1);
+  return n <= DECK_MAX ? n - 1 : Math.max(lo, Math.min(n - 1, cur < 0 ? n - 1 : cur));
+}
 function pswitchVStackHTML(horiz){
   const items = PAGE_SWITCH_ITEMS, n = items.length;
   // The stack follows how your pages are placed in the row (default Money, Wallet, Focus): first at the top / left,
@@ -4799,9 +4809,9 @@ function pswitchVStackHTML(horiz){
   const order = items.slice();
   const pick = state.vstackPick && items.find(it=>it.key === state.vstackPick);
   return `
-    <div class="pswitch-vstack${horiz ? ' pswitch-hstack' : ''}" data-vstack style="--n:${n}; --spread:${state.vstackSpread || 0}px;">
-      ${order.map((item, i)=>{ const back = n - 1 - i; return `
-        <div class="pswitch-tile pswitch-vcard${pick && pick.key === item.key ? ' picked' : ''}" data-vpick="${item.key}" style="--i:${i}; --b:${back}; z-index:${i + 1};">
+    <div class="pswitch-vstack${horiz ? ' pswitch-hstack' : ''}" data-vstack style="--n:${n}; --v:${Math.min(n, DECK_MAX)};">
+      ${order.map((item, i)=>{ return `
+        <div class="pswitch-tile pswitch-vcard${pick && pick.key === item.key ? ' picked' : ''}" data-vpick="${item.key}" style="--i:${i}; opacity:0;">
           ${miniPagePreviewHTML(item.key)}
         </div>`; }).join('')}
       ${pick ? `
@@ -4902,28 +4912,36 @@ function pswitchWheel3dHTML(navAttr){
   const maxTileH = Math.max(...PAGE_SWITCH_ITEMS.map(item=>tileH[item.key]));
   const sceneH = maxTileH + 110; // breathing room so the content/shading isn't clipped
   // Every page of the row gets an equal slot of the drum (3 pages = 120deg each, as always; app pages add slots).
-  const arc = 360 / PAGE_SWITCH_ITEMS.length, sliceAngle = arc / WHEEL_SLICES;
-  const radius = WHEEL_SLICE_W / (2 * Math.sin((sliceAngle/2) * Math.PI/180));
+  // (#277 - owner, 13 Nov 2026: 'the more pages I add into the row the more the pages get bigger in the circle'; chose
+  // 'Same size, more around'): every face keeps the same width and curve, so more pages make a wider drum - and the drum
+  // is pushed back by exactly how much wider it got, so the page in front is always the same size as with 3 pages
+  // (about 3 show at the front, the rest further round). Fewer strips per page as the drum widens (each page curves
+  // less), so the phone never has to draw more strips than the 3-page drum (42).
+  const n = PAGE_SWITCH_ITEMS.length, arc = 360 / n;
+  const slices = Math.max(3, Math.min(WHEEL_SLICES, Math.round(arc / (120 / WHEEL_SLICES))));
+  const sliceW = WHEEL_TILE_W / slices, sliceAngle = arc / slices;
+  const radius = sliceW / (2 * Math.sin((sliceAngle/2) * Math.PI/180));
+  const depth = Math.min(0, WHEEL_RADIUS - radius);   // 0 for 3 pages or fewer - exactly as before
   return `
     <div class="pswitch-wheel3d-scene" data-wheel3d style="height:${sceneH}px;">
-      <div class="pswitch-wheel3d-rig" data-wheel3d-rig style="transform:rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY}deg);">
+      <div class="pswitch-wheel3d-rig" data-wheel3d-rig data-depth="${depth.toFixed(1)}" style="transform:translateZ(${depth.toFixed(1)}px) rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY}deg);">
         ${PAGE_SWITCH_ITEMS.map((item,i)=>{
           const baseAngle = i*arc;
           const h = tileH[item.key];
-          let slices = '';
-          for(let k=0;k<WHEEL_SLICES;k++){
+          let strips = '';
+          for(let k=0;k<slices;k++){
             const rel = -arc/2 + sliceAngle*(k+0.5);
             const angle = baseAngle + rel;
-            const cropLeft = -(k*WHEEL_SLICE_W).toFixed(2);
+            const cropLeft = -(k*sliceW).toFixed(2);
             // Front only: each strip hides itself when turned away (backface-visibility on the strip).
-            const marginLeft = (-WHEEL_SLICE_W/2).toFixed(2);
-            slices += `
-              <div class="curve-slice" data-angle="${angle.toFixed(2)}" style="width:${(WHEEL_SLICE_W + 0.8).toFixed(2)}px;height:${h}px;margin:${-h/2}px 0 0 ${marginLeft}px;transform:rotateY(${angle.toFixed(2)}deg) translateZ(${radius.toFixed(2)}px);">
+            const marginLeft = (-sliceW/2).toFixed(2);
+            strips += `
+              <div class="curve-slice" data-angle="${angle.toFixed(2)}" style="width:${(sliceW + 0.8).toFixed(2)}px;height:${h}px;margin:${-h/2}px 0 0 ${marginLeft}px;transform:rotateY(${angle.toFixed(2)}deg) translateZ(${radius.toFixed(2)}px);">
                 <div class="curve-slice-inner" style="left:${cropLeft}px;height:${h}px;">${preview[item.key]}</div>
               </div>
             `;
           }
-          return `<div class="curve-page" data-${navAttr}="${item.key}" data-faceangle="${baseAngle}">${slices}${tileLabelHTML(item, navAttr)}</div>`;
+          return `<div class="curve-page" data-${navAttr}="${item.key}" data-faceangle="${baseAngle}">${strips}${tileLabelHTML(item, navAttr)}</div>`;
         }).join('')}
         ${wheelPageDividersHTML(maxTileH, arc, radius)}
       </div>
@@ -5366,7 +5384,7 @@ let state = {
   pageStyleOn:false,
   pageStyleViewOpen:false,
   vstackPick:null,   // Vertical Page Style: the page that popped out of the stack (null = none)
-  vstackSpread:0,    // Vertical / Horizontal: how far you've pulled the stack apart (px added between pages)
+  vstackPos:null,    // Vertical / Horizontal (#277): which page is in front of the deck (null = where it starts)
   circleRotDeg:0,        // flat Circle style: current rotation (degrees), drag-follows, no momentum
   wheelRotY:0,           // 3D Circle: spin rotation (degrees) -- has momentum
   wheelRotX:0,           // 3D Circle: tilt rotation (degrees) -- direct drag, no momentum, clamped
@@ -10824,7 +10842,7 @@ window.addEventListener('storage', (e)=>{ if(!e || e.key === 'story-color-system
 window.storyPagesAction = function(a){
   if(planGateRows(a)){ state.station3Open = false; renderDevice(); return; }
   if(a === 'page-quick-rows') state.rowsViewOpen = true;
-  else if(a === 'page-quick-style'){ state.pageStyleOn = true; state.pageStyleViewOpen = true; state.vstackPick = null; state.vstackSpread = 0; }
+  else if(a === 'page-quick-style'){ state.pageStyleOn = true; state.pageStyleViewOpen = true; state.vstackPick = null; state.vstackPos = null; }
   else return;
   state.station3Open = false; renderDevice();
 };
@@ -16851,14 +16869,15 @@ function setupCircleAndWheelDrag(){
     // the call sites) so applyTransform() and the rest of the drag/spin code don't need to
     // change their shape.
     const updateSliceShading = ()=>{};
+    const depthZ = `translateZ(${parseFloat(rig.getAttribute('data-depth')) || 0}px) `;   // (#277) the wider drum sits further back
     const applyTransform = ()=>{
-      rig.style.transform = `rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY}deg)`;
+      rig.style.transform = depthZ + `rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY}deg)`;
       updateSliceShading();
     };
     updateSliceShading(); // paint the correct shading immediately, not just after the first drag
     // The phone builds the 42 curved strips' 3D layers the first time the wheel turns (a one-time ~0.1-0.4 s job);
     // do it right as the 3D Circle opens (an invisible turn there and back) so the first swipe is already smooth.
-    requestAnimationFrame(()=>{ if(!rig.isConnected) return; rig.style.transform = `rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY + 0.01}deg)`;
+    requestAnimationFrame(()=>{ if(!rig.isConnected) return; rig.style.transform = depthZ + `rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY + 0.01}deg)`;
       requestAnimationFrame(()=>{ if(rig.isConnected) applyTransform(); }); });
     // Left alone, the wheel keeps itself turning slowly on its own -- a drag (or its
     // momentum afterward) takes over immediately and this pauses for it, then picks back up
@@ -17670,41 +17689,52 @@ function attachHandlers(){
     });
   });
   // Vertical Page Style: tap a page in the stack -> it pops out and floats in the middle; tap outside -> back.
-  // Vertical / Horizontal: drag along the stack to pull it apart and look through the pages (down / right opens it,
-  // back the other way closes it); it stays where you leave it. A drag never counts as a tap.
+  // Vertical / Horizontal (#277 - owner, 13 Nov 2026: 'when I continue adding more pages to the row it will be very hard
+  // to select pages because they will keep getting smaller and smaller'; chose 'Fixed size, swipe through'): every card
+  // keeps one size; at most DECK_MAX are stacked, the front one at the bottom / right with the earlier pages peeking out
+  // behind it. Swipe along the stack (down / right) to slide the front page off and bring the one behind forward; back the
+  // other way brings it back. The cards follow the finger and settle on a page when you let go. A drag never counts as a tap.
   document.querySelectorAll('[data-vstack]').forEach(st=>{
     const horiz = st.classList.contains('pswitch-hstack');
-    const n = st.querySelectorAll('.pswitch-vcard').length;
-    let down = null, moved = false, startSpread = 0;
-    // Pulls all the way apart (no overlap); the stack shrinks to keep fitting the screen as it opens.
-    const card0 = st.querySelector('.pswitch-vcard');
+    const cards = Array.from(st.querySelectorAll('.pswitch-vcard'));
+    const n = cards.length, V = Math.min(n, DECK_MAX);
+    let down = null, moved = false, startPos = 0;
+    const card0 = cards[0];
     const step = parseFloat(getComputedStyle(st).getPropertyValue('--step')) || 0;
     const cw = card0 ? card0.offsetWidth : 0, ch = card0 ? card0.offsetHeight : 0;
-    const maxSpread = ()=>n < 2 ? 0 : Math.max(0, (horiz ? cw : ch) + 10 - step);
-    const fit = ()=>{
-      const sp = state.vstackSpread || 0;
-      const len = (horiz ? cw : ch) + (n - 1) * (step + sp);
-      const room = horiz ? window.innerWidth - 24 : window.innerHeight - 170;
-      const k = Math.min(1, room / Math.max(1, len));
-      // Keep it centred even while it's wider / taller than the screen before shrinking.
-      if(horiz) st.style.marginLeft = `calc(50% - ${(len / 2).toFixed(1)}px)`;
-      st.style.transform = ''; st.style.transformOrigin = '50% 50%';
-      let dy = 0;
-      if(!horiz && k < 1){ const r = st.getBoundingClientRect(); dy = Math.round(window.innerHeight / 2 + 30 - (r.top + r.height / 2)); }
-      st.style.transform = (dy ? `translateY(${dy}px) ` : '') + (k < 1 ? `scale(${k.toFixed(4)})` : '');
+    const PER = 110;   // finger travel (px) that moves the deck by one page
+    if(state.vstackPos == null || state.vstackPos > n - 1) state.vstackPos = deckStartPos(n);
+    let pos = state.vstackPos;
+    // The stack is always the same size (V cards), fitted to the screen once - adding pages never shrinks it.
+    const len = (horiz ? cw : ch) + (V - 1) * step;
+    const room = horiz ? window.innerWidth - 24 : window.innerHeight - 170;
+    const k = Math.min(1, room / Math.max(1, len));
+    if(horiz) st.style.marginLeft = `calc(50% - ${(len / 2).toFixed(1)}px)`;
+    st.style.transformOrigin = '50% 50%';
+    st.style.transform = k < 1 ? `scale(${k.toFixed(4)})` : '';
+    if(!horiz && k < 1){ const r = st.getBoundingClientRect(); const dy = Math.round(window.innerHeight / 2 + 30 - (r.top + r.height / 2)); if(dy) st.style.transform = `translateY(${dy}px) scale(${k.toFixed(4)})`; }
+    const out = horiz ? cw : ch;
+    const deckPlace = ()=>{
+      cards.forEach((c, i)=>{
+        const d = pos - i;   // how far behind the front page this one is (negative = sliding off the front)
+        let t, sc = 1, op = 1, z;
+        if(d >= 0){
+          const slot = Math.max(0, V - 1 - d);
+          t = slot * step; sc = 1 - Math.min(d, V) * 0.06; z = 100 - Math.round(d * 10);
+          if(d > V - 1) op = Math.max(0, 1 - (d - (V - 1)));   // past the 5th: fades out at the back
+        } else {
+          t = (V - 1) * step + (-d) * out * 0.9; z = 101 + Math.round(-d * 10); op = Math.max(0, 1 + d);
+        }
+        c.style.transform = (horiz ? 'translateX(' : 'translateY(') + t.toFixed(1) + 'px) scale(' + sc.toFixed(4) + ')';
+        c.style.opacity = op.toFixed(3); c.style.zIndex = z;
+        c.style.visibility = op <= 0.001 ? 'hidden' : '';
+        c.style.pointerEvents = (op < 0.5) ? 'none' : '';
+      });
     };
-    const cards = Array.from(st.querySelectorAll('.pswitch-vcard'));
-    const spreadNow = ()=>{
-      const sp = state.vstackSpread || 0;
-      cards.forEach((c, i)=>{ const b = parseFloat(c.style.getPropertyValue('--b')) || 0;
-        c.style.transform = (horiz ? 'translateX(' : 'translateY(') + (i * sp) + 'px) scale(' + (1 - b * 0.06).toFixed(4) + ')'; });
-      const len = (horiz ? cw : ch) + (n - 1) * (step + sp);
-      if(horiz) st.style.width = len + 'px'; else st.style.height = len + 'px';
-    };
-    fit();
+    deckPlace();
     st.addEventListener('pointerdown', e=>{
       if(state.vstackPick) return;
-      down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; startSpread = state.vstackSpread || 0;
+      down = { x: e.clientX, y: e.clientY, id: e.pointerId }; moved = false; startPos = pos;
       e.stopPropagation();
     });
     st.addEventListener('pointermove', e=>{
@@ -17712,14 +17742,13 @@ function attachHandlers(){
       const d = horiz ? e.clientX - down.x : e.clientY - down.y;
       if(!moved && Math.abs(d) < 8) return;
       if(!moved){ moved = true; try{ st.setPointerCapture(down.id); }catch(err){} }  // (only once it's a drag, so taps still pick a page)
-      state.vstackSpread = Math.round(Math.max(0, Math.min(maxSpread(), startSpread + d)));
-      // One update per drawn frame (smooth on every phone): the finger can report several moves per frame.
-      // Each card moves by its own transform and the stack's size is set directly - changing the --spread variable
-      // made every element inside every page preview recompute its style (seconds of work per drag on a phone).
-      if(!st.__raf) st.__raf = requestAnimationFrame(()=>{ st.__raf = 0; spreadNow(); fit(); });
+      pos = Math.max(0, Math.min(n - 1, startPos - d / (PER / Math.max(0.3, k))));
+      // One update per drawn frame; each card moves by its own transform (no page preview is restyled).
+      if(!st.__raf) st.__raf = requestAnimationFrame(()=>{ st.__raf = 0; deckPlace(); });
       e.stopPropagation();
     });
-    const up = e=>{ if(!down) return; down = null; e.stopPropagation(); if(moved){ st.__dragged = true; setTimeout(()=>{ st.__dragged = false; }, 0); } };
+    const up = e=>{ if(!down) return; down = null; e.stopPropagation();
+      if(moved){ pos = Math.round(pos); state.vstackPos = pos; deckPlace(); st.__dragged = true; setTimeout(()=>{ st.__dragged = false; }, 0); } };
     st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
   });
   document.querySelectorAll('[data-vpick]').forEach(el=>{
@@ -19012,7 +19041,7 @@ function attachHandlers(){
         // quick button again.
         case 'page-quick-rows': if(planGateRows('page-quick-rows')){ state.station3Open = false; break; } state.rowsViewOpen = true; state.station3Open = false; break;
         case 'rows-view-close': state.rowsViewOpen = false; break;
-        case 'page-quick-style': if(planGateRows('page-quick-style')){ state.station3Open = false; break; } state.pageStyleOn = true; state.pageStyleViewOpen = true; state.vstackPick = null; state.vstackSpread = 0; state.station3Open = false; break;
+        case 'page-quick-style': if(planGateRows('page-quick-style')){ state.station3Open = false; break; } state.pageStyleOn = true; state.pageStyleViewOpen = true; state.vstackPick = null; state.vstackPos = null; state.station3Open = false; break;
         case 'page-style-close': state.pageStyleOn = false; state.pageStyleViewOpen = false; state.vstackPick = null; break;
         case 'station3-dial-digit': {
           const d = el.getAttribute('data-digit') || '';

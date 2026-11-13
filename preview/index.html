@@ -14901,6 +14901,9 @@ function spaceAlbumScreen(){
 // ---- Every tap in these screens ----
 document.addEventListener('click', e=>{
   const b = e.target.closest && e.target.closest('[data-sp-act]'); if(!b) return;
+  // A sheet's dark backdrop closes it only when the tap is on the backdrop itself - never a tap inside the sheet (#305:
+  // tapping the company name box closed the sheet).
+  if(b.classList.contains('modal-overlay') && e.target !== b) return;
   e.stopPropagation();
   const a = b.getAttribute('data-sp-act'), id = b.getAttribute('data-id');
   const list = spaceList();

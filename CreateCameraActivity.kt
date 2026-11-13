@@ -100,7 +100,13 @@ class CreateCameraActivity : AppCompatActivity() {
         future.addListener({
             val err = runCatching {
                 provider = future.get()
-                preview = Preview.Builder().setTargetAspectRatio(androidx.camera.core.AspectRatio.RATIO_4_3).build().also { it.setSurfaceProvider(previewView?.surfaceProvider) }
+                // #283 (owner, 13 Nov 2026: 'the live camera view'): the live picture asks for the sharpest 4:3 size up to
+                // 1920 x 1440 (sharper than the screen it fills), not whatever small size the phone hands out by default.
+                preview = Preview.Builder().setResolutionSelector(androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(androidx.camera.core.resolutionselector.AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                    .setResolutionStrategy(androidx.camera.core.resolutionselector.ResolutionStrategy(android.util.Size(1920, 1440),
+                        androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
+                    .build()).build().also { it.setSurfaceProvider(previewView?.surfaceProvider) }
                 bindBest()
             }.exceptionOrNull()
             if (err != null) OverlayService.instance?.createEvent("error", "camera: " + (err.message ?: err.javaClass.simpleName))

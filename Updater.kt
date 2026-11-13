@@ -132,7 +132,18 @@ object Updater {
                 prefs.edit().putLong("upd_apk_ver", latest).apply()
             }
             doneProgress(ctx)
-            // Installs straight away, screen on or off (owner, 4 Nov 2026: 'why don't I get the updates even when my screen is
+            // #314 (owner, 13 Nov 2026: 'to avoid work loss or any progress loss, updates should be manual install, but a
+            // notification pops up that a new update is available, please install. And to avoid accidental touches put a
+            // double confirmation'): an update NEVER installs by itself. It waits downloaded; a notification says it's
+            // there, and only you install it - after two confirmations (UpdateConfirmActivity).
+            prefs.edit().putLong("upd_ready", latest).apply()
+            setStatus(ctx, "Build $latest is ready - tap the notification to install it")
+            if (now) UpdateConfirmActivity.open(ctx) else if (prefs.getLong("upd_notified", 0) != latest) {
+                prefs.edit().putLong("upd_notified", latest).apply()
+                InstallResultReceiver.showUpdateNotification(ctx)
+            }
+            return
+            // (Before #314:) Installs straight away, screen on or off (owner, 4 Nov 2026: 'why don't I get the updates even when my screen is
             // on / Why does it have to be off'). Only a call waits (installing restarts Lockedintool for a moment) - the
             // screen going off or the next check installs it after.
             if (now) ctx.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putBoolean("session_confirm_tried", false).apply()
@@ -161,6 +172,7 @@ object Updater {
 
     /** The screen just went off: a downloaded update that was waiting installs now, out of sight. */
     fun installWaiting(ctx: Context) {
+        if (true) return   // #314: updates install only when you choose to (never by themselves when the screen goes off)
         val p = ctx.getSharedPreferences("story", Context.MODE_PRIVATE)
         val v = p.getLong("upd_waiting", 0); if (v <= 0) return
         val apk = apkFile(ctx)
@@ -183,6 +195,24 @@ object Updater {
         val apk = runCatching { download(Release.base(ctx), ctx, v) }.getOrNull() ?: run { doneProgress(ctx); return "Couldn't download the update. Check your connection and try again." }
         setProgress(ctx, -1)
         return runCatching { install(ctx, apk); null }.getOrElse { doneProgress(ctx); "Couldn't start the update: ${it.message}" }
+    }
+
+    /** #314: you confirmed twice - the downloaded update installs now (Android's own screen if the phone wants a tap). */
+    fun installReady(ctx: Context): String? {
+        val apk = apkFile(ctx)
+        val mine = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).longVersionCode }.getOrDefault(0)
+        if (!apk.exists() || apkVersion(ctx, apk) <= mine) return "This update isn't downloaded any more - Lockedintool will fetch it again."
+        if (!ctx.packageManager.canRequestPackageInstalls()) return "allow"
+        ctx.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putLong("upd_now_at", System.currentTimeMillis()).putBoolean("session_confirm_tried", false).apply()
+        if (callOn(ctx)) return "A call is on - install the update after the call."
+        setStatus(ctx, "Installing build ${apkVersion(ctx, apk)}…")
+        return runCatching { install(ctx, apk); null }.getOrElse { "Couldn't start the update: ${it.message}" }
+    }
+    fun readyVersion(ctx: Context): Long {
+        val apk = apkFile(ctx)
+        val mine = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).longVersionCode }.getOrDefault(0)
+        val v = if (apk.exists()) apkVersion(ctx, apk) else 0L
+        return if (v > mine) v else 0L
     }
 
     private fun apkFile(ctx: Context) = File(ctx.cacheDir, "story-update.apk")
@@ -357,14 +387,14 @@ class InstallResultReceiver : BroadcastReceiver() {
         fun showUpdateNotification(c: Context) {
             val nm = c.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(NotificationChannel("story_update", "Lockedintool updates", NotificationManager.IMPORTANCE_HIGH))
-            val open = PendingIntent.getActivity(c, 0, Intent(c, MainActivity::class.java).putExtra(MainActivity.EXTRA_INSTALL, true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val open = PendingIntent.getActivity(c, 0, Intent(c, UpdateConfirmActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val n = Notification.Builder(c, "story_update")
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle("Lockedintool update ready")
-                .setContentText("Tap to install")
+                .setContentTitle("A new Lockedintool update is available")
+                .setContentText("Please install it - tap to install")
                 .setContentIntent(open)
-                .setOngoing(true)       // can't be swiped away by accident
+                .setOngoing(false)
                 .setAutoCancel(false)   // stays after tapping, until the update is really installed
                 .build()
             runCatching { nm.notify(UPDATE_NOTIFICATION, n) }
@@ -394,5 +424,52 @@ class BootReceiver : BroadcastReceiver() {
         }
         Updater.schedule(c)
         KeepAlive.ensureRunning(c)
+    }
+}
+
+/** #314 - the update is installed only after TWO confirmations (owner: 'to avoid accidental touches put a double
+ *  confirmation'). Opened from the 'update available' notification or the setup screen's Check for updates now. A tap
+ *  outside does nothing (#313); Back = Not now. */
+class UpdateConfirmActivity : android.app.Activity() {
+    private var step = 1
+    override fun onCreate(b: android.os.Bundle?) { super.onCreate(b); setFinishOnTouchOutside(false); draw() }
+    private fun draw() {
+        val v = Updater.readyVersion(this)
+        if (v <= 0L) { Updater.check(applicationContext, force = true); finish(); return }
+        val d = resources.displayMetrics.density; val pad = (24 * d).toInt()
+        val card = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL; setPadding(pad, pad, pad, pad)
+            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 20 * d; setColor(android.graphics.Color.parseColor("#FF151517")) } }
+        fun text(t: String, size: Float, color: Int) = android.widget.TextView(this).apply { text = t; textSize = size; setTextColor(color); setPadding(0, 0, 0, pad / 2) }
+        if (step == 1) {
+            card.addView(text("Update available", 22f, android.graphics.Color.WHITE))
+            card.addView(text("A new version of Lockedintool (build $v) is ready to install.", 15f, android.graphics.Color.parseColor("#FFCCCCCC")))
+        } else {
+            card.addView(text("Install now?", 22f, android.graphics.Color.WHITE))
+            card.addView(text("Lockedintool closes for a moment while it updates. Save anything you're working on first.", 15f, android.graphics.Color.parseColor("#FFCCCCCC")))
+        }
+        val row = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; gravity = android.view.Gravity.END }
+        row.addView(android.widget.Button(this).apply { text = if (step == 1) "Not now" else "Cancel"; isAllCaps = false; setOnClickListener { finish() } })
+        row.addView(android.widget.Button(this).apply { text = if (step == 1) "Install" else "Yes, install now"; isAllCaps = false
+            setOnClickListener {
+                if (step == 1) { step = 2; draw(); return@setOnClickListener }
+                isEnabled = false
+                val app = applicationContext
+                Thread {
+                    val err = Updater.installReady(app)
+                    runOnUiThread {
+                        when (err) {
+                            null -> finish()
+                            "allow" -> { runCatching { startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, android.net.Uri.parse("package:$packageName"))) }; finish() }
+                            else -> { android.widget.Toast.makeText(app, err, android.widget.Toast.LENGTH_LONG).show(); finish() }
+                        }
+                    }
+                }.start()
+            } })
+        card.addView(row)
+        setContentView(android.widget.LinearLayout(this).apply { gravity = android.view.Gravity.CENTER; setPadding(pad, pad, pad, pad)
+            setBackgroundColor(android.graphics.Color.parseColor("#B3000000")); addView(card, android.widget.LinearLayout.LayoutParams(-1, -2)) })
+    }
+    companion object {
+        fun open(c: Context) { runCatching { c.startActivity(Intent(c, UpdateConfirmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     }
 }

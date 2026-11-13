@@ -115,6 +115,15 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.Story.Home" />
 
+        <!-- #314: install the downloaded update - two confirmations. -->
+        <activity
+            android:name=".UpdateConfirmActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Story.Clear" />
+
         <!-- "Update available" for Live users (Update now / Later; required after 3 days). -->
         <activity
             android:name=".UpdateActivity"

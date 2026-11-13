@@ -14714,7 +14714,7 @@ function spacesShow(){
   el.innerHTML = '<div class="sp-bg"></div><div class="sp-name"></div><div class="sp-track"></div>' +
     '<div class="sp-dots">' + list.map((c, i)=>'<span class="sp-dot" data-i="' + i + '"><i></i>' + (i + 1) + '</span>').join('') + '</div>' +
     '<div class="sp-bottom"><button class="sp-personal" data-sp="personal">View Personal account</button>' +
-    '<button class="sp-gear" data-sp="settings" aria-label="Company settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>' +
+    '<button class="sp-gear" data-sp="settings" aria-label="Business settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>' +
     '<div class="sp-hint">Swipe to your company · tap it to focus</div>';
   const track = el.querySelector('.sp-track');
   track.innerHTML = list.map((c, i)=>'<button class="sp-card" data-sp-card="' + i + '"><span class="sp-card-l">' + escText(c.name) + '</span><span class="sp-card-in">' + (c.logo ? '<img alt="" src="' + c.logo + '">' : '<b>' + escText((c.name || '?').charAt(0).toUpperCase()) + '</b>') + '</span></button>').join('');
@@ -14765,7 +14765,7 @@ function spacesSettingsScreen(){
   const list = spaceList();
   return `
     <div class="page-shell">
-    ${topBar('Companies', false)}
+    ${topBar('Business settings', false)}
     <div class="note" style="margin:2px 0 12px;">Each company has its own Lockedintool: its own Pages, apps, cards, notes, photo album, colours and background. You choose which one to focus on after every unlock. Everything else stays in Personal.</div>
     <div class="section-title">YOUR COMPANIES</div>
     ${list.length ? list.map((c, i)=>`

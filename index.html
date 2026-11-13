@@ -4563,6 +4563,26 @@ async function litBgLoadAll(){
   litBgTell(true);
 }
 if(!/[?&]s3=/.test(location.search)) setTimeout(()=>{ try{ litBgLoadAll(); }catch(e){} }, 0);   // the pictures in memory at start
+// EVERY time you come into Lockedintool, not only the first (#280 - owner, 13 Nov 2026: 'that background color pops up
+// sometimes even if I have a background picture' - 'Everywhere' - 'When I enter on lockedintool'): while Lockedintool is
+// away the phone drops the decoded picture to save memory, so coming back showed your background COLOUR until the picture
+// was decoded again. Now going away tells the app 'picture not ready', and the screen you come back to says 'ready' only
+// once its picture is decoded - the app shows the Pages then (0.6 s at most, never stuck). The decoded pictures are also
+// kept referenced (LIT_BG_IMG) so the phone keeps them as long as it can.
+const LIT_BG_IMG = {};
+let litBgSaid = null;
+function litBgSay(ready){ if(litBgSaid === ready) return; litBgSaid = ready; litBgTell(ready); }
+function litBgReadyFor(url){
+  if(!url){ litBgSay(true); return; }
+  let im = LIT_BG_IMG[url]; if(!im){ im = new Image(); im.src = url; LIT_BG_IMG[url] = im; }
+  const want = url; litBgReadyFor.want = want;
+  Promise.resolve(im.decode ? im.decode() : null).catch(()=>{}).then(()=>{ if(litBgReadyFor.want === want) litBgSay(true); });
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(/[?&](s3|widget)=/.test(location.search)) return;
+  if(!document.hidden){ const ar = document.querySelector('#device-wrap #content-area'); if(litBgSaid === false) litBgReadyFor(ar && ar.__litbg || null); return; }
+  if(Object.keys(litBgSet()).length) litBgSay(false);
+});
 async function litBgPut(target, blob){
   const db = await litBgDb();
   await new Promise((res, rej)=>{ const t = db.transaction('pics', 'readwrite'); if(blob) t.objectStore('pics').put(blob, target); else t.objectStore('pics').delete(target); t.oncomplete = res; t.onerror = ()=>rej(t.error); });
@@ -4623,7 +4643,7 @@ function litApplyColors(){
   // uses - a Page Style left open in the background used to switch your colours off on EVERY screen, the Dashboard too),
   // and then the screen wears the colours and picture of the page you came from, and every page in it its own.
   const styleUp = PAGES.includes(state.current) && (state.rowsViewOpen || (state.pageStyleOn && state.pageStyleViewOpen));
-  if(styleUp){ litRecolorArea(area, state.current); litBgArea(area, state.current); litPreviewColors(area); return; }
+  if(styleUp){ litRecolorArea(area, state.current); litBgArea(area, state.current); litPreviewColors(area); litBgReadyFor(area.__litbg || null); return; }
   // Layouts > Pages > Color customization: the screen shows the PAGES' colours ('all pages'), each row / page its own.
   // The background takes 'all pages' only when EVERY page uses the same colours; if a row or a page has its own, the
   // background stays your System theme's and only the options are coloured (owner, 4 Nov 2026: 'if you apply to all
@@ -4646,6 +4666,7 @@ function litApplyColors(){
   }
   litRecolorArea(area, state.current || 'dashboard');
   litBgArea(area, state.current === 'layouts-bg' ? null : (state.current || 'dashboard'));
+  litBgReadyFor(area.__litbg || null);
   litMarkOnPic(area);
 }
 // Each page shown inside Page Styles / Rows (the stacks' cards, the Circle's tiles, every strip of the 3D Circle) wears

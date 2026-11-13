@@ -2809,6 +2809,10 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun addLockSign() {
         removeLockSign()
         val v = android.widget.FrameLayout(this).apply {
+            // #293 (owner, 13 Nov 2026, chose 'whole screen, more blur': 'so that this works with every wallpaper'): the lock
+            // screen behind the sign is blurred (the window's blur-behind, set while it shows - syncLockSign) and a little darker.
+            addView(View(this@OverlayService).apply { tag = "lit-sign-dim"; setBackgroundColor(Color.BLACK); alpha = lockSignDim() },
+                android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
             addView(LockArt(this@OverlayService), android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
             visibility = View.INVISIBLE
         }
@@ -2821,6 +2825,10 @@ class OverlayService : Service(), StoryBridge.Host {
         lockSign = v; lockSignWm = layerAdd(v, lp)
     }
     private var keyguardListener: Any? = null
+    /** The phone can blur what's behind a window right now (Android 12+, not switched off e.g. by battery saver). */
+    private fun lockBlurOk() = Build.VERSION.SDK_INT >= 31 && runCatching { wm.isCrossWindowBlurEnabled }.getOrDefault(false)
+    /** Without the phone's blur it is only darker - a bit more, so the words still read on any wallpaper. */
+    private fun lockSignDim() = if (lockBlurOk()) 0.35f else 0.55f
     private fun removeLockSign() { lockSign?.let { runCatching { (lockSignWm ?: layerWm).removeView(it) } }; lockSign = null; lockSignWm = null }
     /** The DEVICE LOCKED sign shows while the phone is locked with the screen on, where Lockedintool was your lock screen
      *  (Only system / Lockedintool security) or the Always On Display lock screen is on - and steps away for the phone's own
@@ -2837,8 +2845,16 @@ class OverlayService : Service(), StoryBridge.Host {
         if (want && (StoryAccessibilityService.unlockEntryShowing() == true || StoryAccessibilityService.shadeShowing() == true)) want = false
         val lp = v.layoutParams as? WindowManager.LayoutParams ?: return want
         val a = if (want) 1f else 0f
-        if (lp.alpha != a) {
+        // The blur only while the sign shows (an invisible window could still blur the screen behind it).
+        val blur = if (want && lockBlurOk()) (60 * resources.displayMetrics.widthPixels / 1080).coerceAtLeast(20) else 0
+        val blurNow = Build.VERSION.SDK_INT >= 31 && lp.blurBehindRadius != blur
+        if (lp.alpha != a || blurNow) {
             lp.alpha = a; v.visibility = if (want) View.VISIBLE else View.INVISIBLE
+            if (Build.VERSION.SDK_INT >= 31) {
+                lp.blurBehindRadius = blur
+                lp.flags = if (blur > 0) lp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND else lp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+            }
+            v.findViewWithTag<View>("lit-sign-dim")?.alpha = lockSignDim()
             runCatching { (lockSignWm ?: layerWm).updateViewLayout(v, lp) }
         }
         return want

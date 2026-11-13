@@ -277,6 +277,11 @@ class OverlayService : Service(), StoryBridge.Host {
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(appsChanged, pkgFilter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(appsChanged, pkgFilter)
         val unlockFilter = android.content.IntentFilter(Intent.ACTION_USER_PRESENT)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(unlocked, unlockFilter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(unlocked, unlockFilter)
+        // #292 (owner, 13 Nov 2026: 'my phone was unlocked but it took time to move' - the DEVICE LOCKED sign stayed over
+        // the app after unlocking): it used to look once a second; now the phone tells Lockedintool the moment it unlocks.
+        if (Build.VERSION.SDK_INT >= 33) runCatching {
+            val l = android.app.KeyguardManager.KeyguardLockedStateListener { locked -> if (!locked) syncLockDial() }
+            getSystemService(android.app.KeyguardManager::class.java).addKeyguardLockedStateListener(mainExecutor, l); keyguardListener = l }
         val offFilter = android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenOff, offFilter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(screenOff, offFilter)
         runCatching { getSystemService(android.hardware.display.DisplayManager::class.java).registerDisplayListener(displayWatch, ui) }
@@ -298,6 +303,8 @@ class OverlayService : Service(), StoryBridge.Host {
         if (gated) { super.onDestroy(); return }
         quietApps(false)
         removePanelNow(); hidePicker(); destroyPanes()
+        if (Build.VERSION.SDK_INT >= 33) (keyguardListener as? android.app.KeyguardManager.KeyguardLockedStateListener)?.let { l ->
+            runCatching { getSystemService(android.app.KeyguardManager::class.java).removeKeyguardLockedStateListener(l) } }
         bubble?.let { runCatching { (bubbleWm ?: wm).removeView(it) } }
         instance = null
         ui.removeCallbacks(updateLoop); ui.removeCallbacks(resumeAfterInstall)
@@ -2525,7 +2532,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val sign = syncLockSign(locked, awake)
         // While it's up, keep checking: the moment the phone unlocks (by any route) it goes.
         // (and while the PIN page is up, it comes back as soon as you drag that away).
-        if (awake && (want || wallet || aodOn || entry == true || shade || sign)) ui.postDelayed(lockWatch, if (shade) 400L else 1000L)
+        if (awake && (want || wallet || aodOn || entry == true || shade || sign)) ui.postDelayed(lockWatch, if (shade) 400L else if (sign) 250L else 1000L)
     }
     override fun setLockDialSize(w: Int, h: Int) { ui.post {
         val p = lockDialPane ?: return@post
@@ -2813,6 +2820,7 @@ class OverlayService : Service(), StoryBridge.Host {
         }
         lockSign = v; lockSignWm = layerAdd(v, lp)
     }
+    private var keyguardListener: Any? = null
     private fun removeLockSign() { lockSign?.let { runCatching { (lockSignWm ?: layerWm).removeView(it) } }; lockSign = null; lockSignWm = null }
     /** The DEVICE LOCKED sign shows while the phone is locked with the screen on, where Lockedintool was your lock screen
      *  (Only system / Lockedintool security) or the Always On Display lock screen is on - and steps away for the phone's own

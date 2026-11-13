@@ -1412,6 +1412,11 @@
   .sub-opt-tip{ display:none; position:absolute; left:0; right:0; top:calc(100% + 8px); z-index:5; padding:10px 12px; border-radius:12px; border:1px solid #2a2a2a; background:#000000; color:#ffffff; font-size:12.5px; font-weight:500; line-height:1.45; text-align:left; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
   .sub-opt-tip b{ display:block; font-size:13px; margin-bottom:3px; }
   @media (hover:hover){ .sub-opt:hover .sub-opt-tip{ display:block; } }
+  .sub-pop{ position:fixed; inset:0; z-index:80; background:rgba(0,0,0,0.62) !important; -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .sub-pop-bg{ position:absolute; inset:0; }
+  .sub-pop-in{ position:relative; width:100%; max-width:440px; max-height:100%; overflow-y:auto; scrollbar-width:none; }
+  .sub-pop-in::-webkit-scrollbar{ display:none; }
+  .sub-pop .sub-opt-card{ margin:0; }
   .sub-opt-acts{ display:flex; justify-content:center; gap:18px; margin:18px 0 8px; }
   .sub-opt-acts button{ width:56px; height:56px; border-radius:50%; border:1px solid #2a2a2a; background:#000000; color:#ffffff; font:inherit; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
   .sub-opt-acts .sub-opt-ok{ background:#ffffff; color:#000000; border-color:#ffffff; }
@@ -9689,8 +9694,9 @@ function subscriptionScreen(){
     : !s.connected ? 'Subscriptions open once LOCKED IN TOOL’s payments are set up.'
     : soon ? 'Free: the Dashboard is yours. Basic & Premium are coming soon.'
     : locked ? 'Free: the Dashboard. Choose a plan for the Pages.' : 'Choose a plan to use LOCKED IN TOOL.';
-  if(state.sub.optView) return subOptionScreen(locked);
-  if(state.sub.acctView) return subAcctScreen(locked);
+  // #311 (owner, 13 Nov 2026: 'These messages for the system and account type should show on top of the screen with the
+  // background a blurred black, not have their own space like that'): the details pop up OVER the Subscription page.
+  const subPop = state.sub.optView ? subOptionScreen(locked) : state.sub.acctView ? subAcctScreen(locked) : '';
   const mode = subMode();
   return `
     <div class="page-shell sub-page">
@@ -9727,6 +9733,7 @@ function subscriptionScreen(){
     <div class="legal-links">By choosing a plan you agree to the <button data-action="legal-open" data-v="legal-terms" data-from="subscription">Terms of Service</button> and <button data-action="legal-open" data-v="legal-privacy" data-from="subscription">Privacy Policy</button>.</div>
     ${state.sub.endConfirm ? subEndConfirmTemplate(s, until) : ''}
     ${state.permAgree.open ? permAgreeModal() : ''}
+    ${subPop}
     </div>`;
 }
 // Cancel the current plan (owner): Lemon Squeezy -> told not to renew (you keep it until the paid date); Stitch -> it
@@ -9793,9 +9800,7 @@ function subMode(){ if(sysModeState().on) return 'only'; return state.sub.mode |
 function subOptionScreen(locked){
   const o = SUB_OPTIONS.find(x=>x.key === state.sub.optView) || SUB_OPTIONS[0];
   return `
-    <div class="page-shell sub-page">
-    ${topBar('Subscription', false, '', 'dashboard', '', locked)}
-    <div class="sub-head">LOCKED IN TOOL</div>
+    <div class="sub-pop" data-keep-color><div class="sub-pop-bg" data-action="sub-opt-back"></div><div class="sub-pop-in">
     <div class="sub-card sub-opt-card">
       <div class="sub-top"><div class="sub-name">${o.name}</div></div>
       <div class="sub-tag">${o.short}</div>
@@ -9807,7 +9812,7 @@ function subOptionScreen(locked){
       <button class="sub-opt-x" data-action="sub-opt-back" aria-label="Back">✕</button>
       <button class="sub-opt-ok" data-action="sub-opt-ok" aria-label="Choose ${o.name}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
     </div>
-    </div>`;
+    </div></div>`;
 }
 function subOptConfirm(){
   const k = state.sub.optView; state.sub.optView = null;
@@ -9869,7 +9874,7 @@ function subBuy(plan){
   const s = subState() || {};
   if(!plansOnSale()){ showToast('Basic and Premium are coming soon'); return; }   // FREE-ONLY launch (owner): paid plans not for sale yet
   if(!subMode()){ showToast('Choose Second system or Only system first'); return; }   // owner: no plan without an option
-  if(!acctType()){ showToast('Choose Personal or Business first'); return; }   // #302: the account type, the same way
+  if(!acctType() && !fullAccess()){ showToast('Choose Personal or Business first'); return; }   // #302: the account type, the same way
   if(!s.connected){ showToast('Subscriptions open once LOCKED IN TOOL’s payments are set up'); return; }
   if(!msgAccount()){ showToast('Your Lockedintool account is being set up - try again in a moment'); return; }
   const p = SUB_PLANS.find(x=>x.key === plan), pr = (s.plans || {})[plan] || {};
@@ -10845,6 +10850,7 @@ function settingsHubScreen(){
     ['widgets', 'Widgets', widgetsOnlySettingsHTML],
     ['security', 'Security', securitySettingsHTML],
     ['privacy', 'Privacy', privacySettingsHTML],
+    ['business', 'Business account', bizSettingsHTML],
   ].map(([k, name, f])=>[k, name, f()]).filter(x=>x[2]);
   const open = sections.find(x=>x[0] === state.setSection);
   if(open) return `
@@ -14950,6 +14956,10 @@ document.addEventListener('click', e=>{
     case 'photo-remove': albumSave(albumIds().filter(x=>String(x) !== String(state.spPhoto))); state.spPhoto = null; break;
     case 'acct': state.sub.acctView = b.getAttribute('data-v'); break;
     case 'acct-back': state.sub.acctView = null; break;
+    case 'open-biz': state.current = 'spaces-settings'; break;
+    case 'acct-set': { const k = b.getAttribute('data-v'); localStorage.setItem('story-acct-type', k); spaceTell();
+      if(k === 'personal' && litSpace() !== 'personal'){ spaceGo('personal'); return; }
+      break; }
     case 'acct-ok': { const k = state.sub.acctView; state.sub.acctView = null; localStorage.setItem('story-acct-type', k); spaceTell();
       if(k === 'business'){ state.current = 'spaces-settings'; if(!spaceList().length) showToast('Business - add your companies'); }   // #309: Business always opens Business settings
       else if(litSpace() !== 'personal'){ spaceGo('personal'); return; }
@@ -14958,16 +14968,32 @@ document.addEventListener('click', e=>{
   renderDevice();
 }, true);
 // The account type, chosen on the Subscription page the same way as the systems (owner).
+// The owner's phone (#310 - owner, 13 Nov 2026: 'Put the business account and personal switch for me on the settings, not
+// on the subscriptions page. But users will have it like that'): Settings > Business account; customers keep it on the
+// Subscription page.
+function bizSettingsHTML(){
+  if(!fullAccess()) return '';
+  const t = acctType();
+  return `<div class="set2-card">
+      <div class="set2-row set2-stack">
+        <div class="set2-text"><div class="set2-name">Account type</div><div class="set2-sub">Business: a space for each of your companies, chosen after every unlock - plus Personal.</div></div>
+        <div class="set2-seg">
+          <button class="theme-opt${t === 'personal' ? ' on' : ''}" data-sp-act="acct-set" data-v="personal">Personal</button>
+          <button class="theme-opt${t === 'business' ? ' on' : ''}" data-sp-act="acct-set" data-v="business">Business</button>
+        </div>
+      </div>
+      ${t === 'business' ? `<div class="set2-row set2-link" data-sp-act="open-biz"><div class="set2-text"><div class="set2-name">Business settings</div><div class="set2-sub">${spaceList().length ? spaceList().map(c=>escText(c.name)).join(', ') : 'Add your companies'}</div></div><span class="chev-right">›</span></div>` : ''}
+    </div>`;
+}
 function subAcctRowHTML(){
+  if(fullAccess()) return '';   // the owner's is in Settings (#310)
   const t = acctType();
   return `<div class="sub-opts sub-accts">${SUB_ACCTS.map(o=>`<button class="sub-opt${t === o.key ? ' on' : ''}" data-sp-act="acct" data-v="${o.key}"><span class="sub-opt-mark">${t === o.key ? '✓' : ''}</span>${o.name}<span class="sub-opt-tip"><b>${o.name}</b>${o.short}</span></button>`).join('')}</div>`;
 }
 function subAcctScreen(locked){
   const o = SUB_ACCTS.find(x=>x.key === state.sub.acctView) || SUB_ACCTS[0];
   return `
-    <div class="page-shell sub-page">
-    ${topBar('Subscription', false, '', 'settings', '', locked)}
-    <div class="sub-head">LOCKED IN TOOL</div>
+    <div class="sub-pop" data-keep-color><div class="sub-pop-bg" data-sp-act="acct-back"></div><div class="sub-pop-in">
     <div class="sub-card sub-opt-card">
       <div class="sub-top"><div class="sub-name">${o.name}</div></div>
       <div class="sub-tag">${o.short}</div>
@@ -14978,7 +15004,7 @@ function subAcctScreen(locked){
       <button class="sub-opt-x" data-sp-act="acct-back" aria-label="Back">✕</button>
       <button class="sub-opt-ok" data-sp-act="acct-ok" aria-label="Choose ${o.name}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
     </div>
-    </div>`;
+    </div></div>`;
 }
 // Started again in another space: land on its Home Screen.
 setTimeout(()=>{ try{

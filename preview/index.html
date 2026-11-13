@@ -11477,8 +11477,6 @@ window.storyProfileOnly = function(){
     else if(k === 'rep-act') repAct(b.getAttribute('data-id'), b.getAttribute('data-a'));
     else if(k === 'bfx-act') bfxAct(b.getAttribute('data-id'), b.getAttribute('data-a'));
     else if(k === 'up-p-more'){ const p = UP.person; if(p) litPersonSheet(p, { after: ()=>upOpenPerson(p.id) }); }
-    else if(k === 'upv-more' && UP.view && UP.view.local){ const v = UP.view; upPause();   // #285: your own highlight
-      litSheet({ onClose: ()=>{ if(UP.view === v) upShowItem(); }, items: [{ label: 'Delete highlight', danger:true, fn: ()=>hlDeleteWhole(v.hl) }] }); }
     else if(k === 'upv-more'){ const v = UP.view; if(!v) return; const it = v.items[v.i]; upPause();
       litSheet({ onClose: ()=>{ if(UP.view === v) upShowItem(); }, items: [
         { label: v.status ? 'Report status' : 'Report post', fn: ()=>litReport(v.status ? 'status' : 'post', it.id, { onClose: ()=>{ if(UP.view === v) upShowItem(); } }) },
@@ -12553,7 +12551,7 @@ function upShowItem(){
   box.querySelector('.up-v-bars').innerHTML = v.status ? v.items.map((x, i)=>'<span class="up-v-bar' + (i < v.i ? ' done' : '') + '"><i' + (i === v.i ? ' class="run"' : '') + '></i></span>').join('') : '';
   box.querySelector('.up-v-who').innerHTML = upPic(v.user) + '<span class="up-v-name">' + escText(upName(v.user)) + '</span><span class="up-v-time">' + upAgo(it.at) + '</span>';
   box.querySelector('[data-pf="upv-delete"]').hidden = v.user.id !== meId && !v.local;   // #285: your own highlight's videos / pictures can be deleted
-  box.querySelector('[data-pf="upv-more"]').hidden = v.user.id === meId && !v.local;   // #285: ⋮ > Delete highlight
+  box.querySelector('[data-pf="upv-more"]').hidden = v.user.id === meId;   // #287: a whole highlight is deleted by holding its circle on Profile, not from here
   // Statuses (owner): heart it, comment under it, or message the person.
   box.querySelector('.up-v-bottom').hidden = !v.status;
   if(v.status) upVActs();

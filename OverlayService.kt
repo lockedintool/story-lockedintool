@@ -1098,7 +1098,11 @@ class OverlayService : Service(), StoryBridge.Host {
         if (!(p === pagesPane && pagesInHome())) p.frame.alpha = 1f
         var done = false
         val go = Runnable { if (!done) { done = true; whenBgReady(p, Runnable { if (!p.shown) setShown(p, true) else if (p.frame.alpha < 1f) p.frame.alpha = 1f; after() }) } }
-        p.web.evaluateJavascript(js) {
+        // #281: the Pages wait for your background picture EVERY time they come in - asked right now, not left to the
+        // page noticing it was hidden (an invisible window never tells it, so the colour showed before the picture).
+        val ask = if (p === pagesPane) { pagesBgWaiting = true; ";window.litBgEnsure?window.litBgEnsure():'none'" } else ""
+        p.web.evaluateJavascript(js + ask) { res ->
+            if (p === pagesPane && res != "\"wait\"") { pagesBgWaiting = false; val w = bgWaiters.toList(); bgWaiters.clear(); w.forEach { it.run() } }
             runCatching { p.web.postVisualStateCallback(1L, object : WebView.VisualStateCallback() { override fun onComplete(requestId: Long) { ui.post(go) } }) }
                 .onFailure { ui.post(go) }
         }
@@ -1465,7 +1469,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private val bgWaiters = mutableListOf<Runnable>()
     override fun bgState(ready: Boolean) { ui.post {
         pagesBgWaiting = !ready
-        if (ready) { val w = bgWaiters.toList(); bgWaiters.clear(); w.forEach { it.run() } }
+        if (ready) { val w = bgWaiters.toList(); bgWaiters.clear(); w.forEach { it.run() }; if (homeUp) homeShotSoon() }
     } }
     private fun whenBgReady(p: Pane, r: Runnable) {
         if (p !== pagesPane || !pagesBgWaiting) { r.run(); return }
@@ -1739,6 +1743,7 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile var homeShotWhy = "never asked"
     private fun homeShotCopy() { if (Build.VERSION.SDK_INT >= 34) runCatching {
         val p = pagesPane ?: run { homeShotWhy = "no pages"; return }
+        if (pagesBgWaiting) { homeShotWhy = "picture not drawn yet"; return }   // #281: retaken once it is (bgState)
         if (!p.shown || !homeUp || !lockScreenOurs() || keyguardLocked() || p.frame.alpha < 1f || p.loading) {
             homeShotWhy = "skipped shown=${p.shown} home=$homeUp ours=${lockScreenOurs()} locked=${keyguardLocked()} alpha=${p.frame.alpha} loading=${p.loading}"; return }
         val v = p.web; if (v.width <= 0 || v.height <= 0 || !v.isAttachedToWindow) return
@@ -2159,8 +2164,8 @@ class OverlayService : Service(), StoryBridge.Host {
         if (!homeWaking) return
         val p = pagesPane ?: run { homeWaking = false; return }
         var done = false
-        val go = Runnable { if (!done) { done = true; homeWaking = false
-            if (pagesInHome() && !(p.loading && p.web.progress < 100) && (p.shown || (!Security.lit(this) && p.lp.alpha > 0f))) p.frame.alpha = 1f } }
+        val go = Runnable { if (!done) { done = true; whenBgReady(p, Runnable { homeWaking = false
+            if (pagesInHome() && !(p.loading && p.web.progress < 100) && (p.shown || (!Security.lit(this) && p.lp.alpha > 0f))) p.frame.alpha = 1f }) } }
         runCatching { p.web.postVisualStateCallback(3L, object : WebView.VisualStateCallback() { override fun onComplete(requestId: Long) { p.frame.postOnAnimation(go) } }) }
             .onFailure { ui.post(go) }
         ui.postDelayed(go, 350)
@@ -2176,6 +2181,7 @@ class OverlayService : Service(), StoryBridge.Host {
         if (!SystemMode.on(this) || keyguardLocked() || WidgetMode.on(this) || Security.lit(this)) return false
         if (p.lp.alpha <= 0f || (p.loading && p.web.progress < 100)) return false
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive) return false
+        if (pagesBgWaiting) return false   // #281: the picture isn't drawn yet - the normal way waits for it
         parkedDash = false
         setInLit(true); hideLiveWidgets()
         setShown(p, true); updateBubble(); addBar()

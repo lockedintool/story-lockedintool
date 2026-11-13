@@ -4576,8 +4576,23 @@ function litBgReadyFor(url){
   if(!url){ litBgSay(true); return; }
   let im = LIT_BG_IMG[url]; if(!im){ im = new Image(); im.src = url; LIT_BG_IMG[url] = im; }
   const want = url; litBgReadyFor.want = want;
-  Promise.resolve(im.decode ? im.decode() : null).catch(()=>{}).then(()=>{ if(litBgReadyFor.want === want) litBgSay(true); });
+  // #281: decoded is not yet PAINTED - 'ready' only once the screen has drawn a frame with it (two frames, 0.25 s at most).
+  Promise.resolve(im.decode ? im.decode() : null).catch(()=>{}).then(()=>{
+    if(litBgReadyFor.want !== want) return;
+    let said = false; const say = ()=>{ if(!said){ said = true; if(litBgReadyFor.want === want) litBgSay(true); } };
+    try{ requestAnimationFrame(()=>requestAnimationFrame(say)); }catch(e){ say(); }
+    setTimeout(say, 250);
+  });
 }
+// #281 (owner, 13 Nov 2026: 'Yes it still happens' - the colour before the picture every time you come in): the app asks
+// at the moment it is about to show the Pages, instead of trusting the page to have noticed it was hidden (a window
+// that is only made invisible never tells the page). 'wait' = the app waits for bgState(true); 'none' = no picture.
+window.litBgEnsure = function(){
+  const ar = document.querySelector('#device-wrap #content-area'), url = ar && ar.__litbg || null;
+  if(!url){ litBgSaid = true; return 'none'; }
+  litBgSaid = false; litBgReadyFor.want = null; litBgReadyFor(url);
+  return litBgSaid === true ? 'none' : 'wait';
+};
 document.addEventListener('visibilitychange', ()=>{
   if(/[?&](s3|widget)=/.test(location.search)) return;
   if(!document.hidden){ const ar = document.querySelector('#device-wrap #content-area'); if(litBgSaid === false) litBgReadyFor(ar && ar.__litbg || null); return; }

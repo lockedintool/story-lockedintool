@@ -47,9 +47,39 @@
     'story-trade-last':1,'story-page-sections':1,'story-wallet-hide':1,'story-wallet-nw':1,'story-money-all':1,'story-networth':1,
     'story-money-range':1,'story-spend-limit':1,'story-memberships':1,'story-quote':1,'story-tf-favs':1,'story-tap-pays':1,
     'story-pay-favs':1,'story-album':1};
-  var sp = null;
+  /* #321 (owner, 13 Nov 2026: 'I only have one lockedintool account and it's for lockedintool - I don't have my personal
+     account and for the other business'; chose 'Each its own account', 'same plan'): each space is its OWN Lockedintool
+     account too - its sign-in, keys, profile, messages, calls, followers, privacy... (AK) are kept per space. The space
+     that already had the account ('story-acct-home': the owner's Lockedintool company; everyone else's Personal) keeps the
+     plain keys; every other space uses key + '@a-<space>' and starts on Create your account / Log in. */
+  var AK = {'story-msg-account':1,'story-msg-peers':1,'story-messages':1,'story-msg-outbox':1,'story-profile':1,'story-profile-stats':1,
+    'story-profile-locks':1,'story-posts':1,'story-highlights':1,'story-upost-queue':1,'story-status-seen':1,'story-status-remind':1,
+    'story-activity':1,'story-calls':1,'story-privacy':1,'story-blocked':1,'story-community':1,'story-community-chats':1,
+    'story-community-always-mine':1,'story-sub':1,'story-sub-wait':1,'story-sub-linked':1,'story-photo-up':1,'story-recovery':1,'story-auth-locked':1,
+    'story-glive':1,'story-recent-messages':1,'story-recent-updates':1,'story-recent-calls':1,'story-recent-groups':1,'story-country':1,
+    'story-bank':1,'story-bank-ping':1,'story-profile-photo':1,'story-currency':1,'story-currency-total':1,'story-signed-out':1,
+    'story-account-deleted':1,'story-imp-at':1,'story-gcall-req':1,'story-hl-live':1,'story-hl-live-style':1,'story-logout-now':1,
+    'story-deactivate-now':1,'story-send-origin':1,'story-calls-clean1':1};
+  var sp = null, home = null;
   function cur(){ if(sp === null){ try{ sp = g.call(window.localStorage, 'story-space') || ''; }catch(e){ sp = ''; } } return sp; }
-  function map(store, k){ var c; return (k && KEYS[k] && store === window.localStorage && (c = cur()) && c !== 'personal') ? k + '@' + c : k; }
+  function acctHome(){
+    if(home !== null) return home;
+    try{
+      home = g.call(window.localStorage, 'story-acct-home');
+      if(home === null){   // decided once: the owner's official account belongs to their Lockedintool company
+        var subv = JSON.parse(g.call(window.localStorage, 'story-sub') || '{}') || {}, comps = JSON.parse(g.call(window.localStorage, 'story-companies') || '[]') || [], h = '';
+        if(subv.official) for(var i = 0; i < comps.length; i++){ if(/lockedintool/i.test(String(comps[i].name || '').replace(/\s/g, ''))){ h = comps[i].id; break; } }
+        if(subv.official || comps.length){ st.call(window.localStorage, 'story-acct-home', h); }
+        home = h;
+      }
+    }catch(e){ home = ''; }
+    return home;
+  }
+  function acctSfx(){ var c = cur() || 'personal', h = acctHome() || 'personal'; return c === h ? '' : '@a-' + c; }
+  function map(store, k){ var c; if(!k || store !== window.localStorage) return k;
+    if(KEYS[k]) return ((c = cur()) && c !== 'personal') ? k + '@' + c : k;
+    if(AK[k]) return k + acctSfx();
+    return k; }
   S.getItem = function(k){ return g.call(this, map(this, k)); };
   S.setItem = function(k, v){ if(k === 'story-space') sp = null; return st.call(this, map(this, k), v); };
   S.removeItem = function(k){ if(k === 'story-space') sp = null; return rm.call(this, map(this, k)); };
@@ -58,11 +88,22 @@
   window.litLsRaw = function(k){ try{ return g.call(window.localStorage, k); }catch(e){ return null; } };
   window.litLsRawSet = function(k, v){ try{ if(v === null) rm.call(window.localStorage, k); else st.call(window.localStorage, k, v); }catch(e){} };
   window.litSpaceKeys = function(){ return Object.keys(KEYS); };
+  window.litAcctSfx = acctSfx;
+  window.litAcctHomeToken = function(){ try{ var h = acctHome(); if((cur() || 'personal') === (h || 'personal')) return ''; var a = JSON.parse(g.call(window.localStorage, 'story-msg-account') || '{}') || {}; return a.token || ''; }catch(e){ return ''; } };
+  try{ if(window.StoryNative && window.StoryNative.acctSpace) window.StoryNative.acctSpace(acctSfx()); }catch(e){}
   // Another window changed something: listeners see the plain key when it's this space's, and nothing they know when
   // it's another space's (a company's cards never land on Personal's screen).
   window.addEventListener('storage', function(e){
-    if(e.key === 'story-space'){ sp = null; return; }
+    if(e.key === 'story-space'){ sp = null; home = null;
+      // #321: another window changed the focus - every other Lockedintool window starts again as that space's account
+      // (never in the middle of a call: it waits for the call to end).
+      var again = function(){ if(document.querySelector('.pf-callview:not([hidden]), .pf-gcallview:not([hidden])')) { setTimeout(again, 4000); return; } location.reload(); };
+      if(/[?&](s3|widget)=/.test(location.search)) again();
+      return; }
     var k = e.key || '', i = k.lastIndexOf('@'), c = cur();
+    var ai = k.lastIndexOf('@a-');
+    if(ai > 0 && AK[k.slice(0, ai)]){ try{ Object.defineProperty(e, 'key', { value: k.slice(ai) === acctSfx() ? k.slice(0, ai) : '~other-space' }); }catch(err){} return; }
+    if(AK[k]){ if(acctSfx()){ try{ Object.defineProperty(e, 'key', { value: '~other-space' }); }catch(err){} } return; }
     if(i > 0 && KEYS[k.slice(0, i)]){ try{ Object.defineProperty(e, 'key', { value: (c && c !== 'personal' && k.slice(i + 1) === c) ? k.slice(0, i) : '~other-space' }); }catch(err){} }
     else if(KEYS[k] && c && c !== 'personal'){ try{ Object.defineProperty(e, 'key', { value: '~other-space' }); }catch(err){} }
   }, true);
@@ -9687,6 +9728,12 @@ function isPagesScreen(k){ return PAGES.includes(k) || ['money', 'wallet', 'trad
 function subRefresh(force){
   if(!msgAccount() || IN_STATION3_WINDOW) return;
   const s = subState();
+  // #321: one of a business's other accounts - linked once to the main account on this phone, so it shares that plan.
+  const parent = window.litAcctHomeToken ? window.litAcctHomeToken() : '';
+  if(parent && localStorage.getItem('story-sub-linked') !== '1'){
+    msgApi('/v1/sub/link', { parent }).then(i=>{ try{ localStorage.setItem('story-sub-linked', '1'); }catch(e){} subSave(i); subApplyMode(); syncAppPages(); renderDevice(); }).catch(()=>{});
+    return;
+  }
   if(!force && s && Date.now() - (s.checked || 0) < 3 * 3600000) return;
   msgApi('/v1/sub/info').then(i=>{ const was = subLocked(); subSave(i); subApplyMode(); syncAppPages(); if(was !== subLocked() || state.current === 'subscription') renderDevice(); }).catch(()=>{});
 }
@@ -10571,15 +10618,16 @@ async function delStep4(noLock){
 // (owner) - Pages, notes, money, cards, trading logins, settings - and Lockedintool starts fresh, like a new app.
 // A banned account only loses the account (its phone keeps its own notes and pages).
 function litAccountGone(why){
-  sysModeOff();   // ... and when the account is deleted
+  if(!spaceList().length) sysModeOff();   // ... and when the account is deleted (#321: not one of a business's several accounts)
   delAccountForget();
-  if(why !== 'banned'){
+  const others = (()=>{ try{ return (JSON.parse(litLsRaw('story-companies') || '[]') || []).length > 0; }catch(e){ return false; } })();
+  if(why !== 'banned' && !others){   // #321: with company spaces only THIS account goes - never the phone's other accounts
     if(NATIVE && window.StoryNative.wipeAll){ try{ localStorage.clear(); }catch(e){} window.StoryNative.wipeAll('ACCOUNT-DELETED'); return; }   // the app closes every window, clears it all and reopens them
     try{ localStorage.clear(); }catch(e){}
     ['story-keys', 'story-notes'].forEach(n=>{ try{ indexedDB.deleteDatabase(n); }catch(e){} });
   }
   try{ localStorage.setItem(ACCOUNT_DELETED_KEY, why === 'banned' ? 'b' + Date.now() : String(Date.now())); }catch(e){}
-  if(MSG_ENGINE){ try{ if(msgWs) msgWs.close(); }catch(e){} try{ indexedDB.deleteDatabase('story-keys'); }catch(e){} showToast(why === 'banned' ? 'This account was removed by Lockedintool' : 'Your account is deleted'); setTimeout(()=>location.reload(), 600); }
+  if(MSG_ENGINE){ try{ if(msgWs) msgWs.close(); }catch(e){} try{ indexedDB.deleteDatabase(keysDbName()); }catch(e){} showToast(why === 'banned' ? 'This account was removed by Lockedintool' : 'Your account is deleted'); setTimeout(()=>location.reload(), 600); }
   else setTimeout(()=>location.reload(), 300);
 }
 function delAccountForget(){
@@ -10595,7 +10643,7 @@ window.addEventListener('storage', e=>{
   if(e.key !== ACCOUNT_DELETED_KEY || !e.newValue) return;
   if(!MSG_ENGINE){ setTimeout(()=>location.reload(), 300); return; }
   try{ if(msgWs) msgWs.close(); }catch(err){}
-  try{ indexedDB.deleteDatabase('story-keys'); }catch(err){}
+  try{ indexedDB.deleteDatabase(keysDbName()); }catch(err){}
   setTimeout(()=>location.reload(), 300);
 });
 function setStoryPrivacy(p){ try{ localStorage.setItem('story-privacy', JSON.stringify(p)); }catch(e){} try{ const q = JSON.parse(localStorage.getItem('story-msg-outbox') || '[]') || []; q.push({ at: Date.now(), type:'privacy', privacy: p }); localStorage.setItem('story-msg-outbox', JSON.stringify(q.slice(-500))); }catch(e){} }
@@ -13274,7 +13322,8 @@ async function msgApi(path, body){
 }
 // ---- Keys (IndexedDB 'story-keys': the private key is stored as a non-extractable CryptoKey) ----
 const B64 = { to: b=>btoa(String.fromCharCode(...new Uint8Array(b))), from: s=>Uint8Array.from(atob(s), c=>c.charCodeAt(0)) };
-function keysDb(){ return new Promise((res, rej)=>{ const r = indexedDB.open('story-keys', 1); r.onupgradeneeded = ()=>r.result.createObjectStore('k'); r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); }); }
+function keysDbName(){ return 'story-keys' + ((window.litAcctSfx && window.litAcctSfx()) || ''); }   // #321: each account its own keys
+function keysDb(){ return new Promise((res, rej)=>{ const r = indexedDB.open(keysDbName(), 1); r.onupgradeneeded = ()=>r.result.createObjectStore('k'); r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); }); }
 async function keysGet(){ const db = await keysDb(); return new Promise(res=>{ const q = db.transaction('k').objectStore('k').get('me'); q.onsuccess = ()=>res(q.result || null); q.onerror = ()=>res(null); }); }
 async function keysPut(v){ const db = await keysDb(); return new Promise(res=>{ const t = db.transaction('k', 'readwrite'); t.objectStore('k').put(v, 'me'); t.oncomplete = ()=>res(); t.onerror = ()=>res(); }); }
 async function myKeys(fresh){
@@ -21731,7 +21780,8 @@ function litAuthOpen(mode){
   el.hidden = false; el.scrollTop = 0; litAuthCheck();
   if(typeof dashTellNative === 'function') dashTellNative();   // the gate is up over the Dashboard - tell the app so Station 3's Dashboard band steps away (owner: it was popping up everywhere)
 }
-function litAuthClose(){ const el = document.querySelector('.lit-auth'); if(el) el.remove(); litAuthTemp = null; if(typeof dashTellNative === 'function') dashTellNative(); }
+function litAuthClose(){ const el = document.querySelector('.lit-auth'); if(el) el.remove(); litAuthTemp = null; if(typeof dashTellNative === 'function') dashTellNative();
+  if(window.litAcctHomeToken && window.litAcctHomeToken() && litSignedIn()) setTimeout(()=>subRefresh(true), 1500); }   // #321: a new company / Personal account shares the main account's plan at once
 function litAuthCheck(){
   const el = document.querySelector('.lit-auth'); if(!el) return;
   const go = el.querySelector('.lit-auth-go'), msg = el.querySelector('.lit-auth-msg'); if(!go) return;
@@ -21975,10 +22025,10 @@ async function litLogoutHere(){
 }
 // Signed out (logged out here, or logged in on another phone): the account leaves this phone; the Pages stay.
 function litSignedOut(){
-  sysModeOff();   // Lockedintool as your system goes off when you log out (owner)
+  if(!(window.litAcctSfx && (window.litAcctSfx() || spaceList().length))) sysModeOff();   // Lockedintool as your system goes off when you log out (owner) - not for one of a business's several accounts (#321)
   delAccountForget();
   try{ localStorage.setItem('story-signed-out', String(Date.now())); }catch(e){}
-  if(MSG_ENGINE){ try{ if(msgWs) msgWs.close(); }catch(e){} try{ indexedDB.deleteDatabase('story-keys'); }catch(e){} setTimeout(()=>location.reload(), 400); }
+  if(MSG_ENGINE){ try{ if(msgWs) msgWs.close(); }catch(e){} try{ indexedDB.deleteDatabase(keysDbName()); }catch(e){} setTimeout(()=>location.reload(), 400); }
   else litAuthGate();
 }
 window.addEventListener('storage', e=>{

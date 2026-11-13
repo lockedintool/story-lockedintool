@@ -311,3 +311,4 @@ commits, pushed as a new update) - nothing else changes.
 | 302 | 2026-11-13 | Business accounts: choose Personal or Business on the Subscription page; a Business account adds its companies (name + logo) and after every unlock chooses its focus - each company has its own Pages, apps, cards, notes, photo album, colours and background, Personal keeps everything else | b3d9841 |
 | 303 | 2026-11-13 | The company settings screen is called Business settings | 8f6da75 |
 | 304 | 2026-11-13 | Add company has 'Make it everything I have now': what you have now moves into that company (e.g. Lockedintool) and Personal starts fresh | 5fb5ec5 |
+| 305 | 2026-11-13 | Business settings: tapping the company name box (or anything inside a sheet) no longer closes the sheet | (this update) |

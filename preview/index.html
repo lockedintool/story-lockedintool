@@ -14841,7 +14841,7 @@ function spPickLogo(done){
       URL.revokeObjectURL(url);
       done(c.toDataURL('image/jpeg', 0.86));
     }catch(e){ showToast('Couldn’t use that picture'); }
-  });
+  }, { one:true });
 }
 // ---- A company's apps: Personal shows every app that isn't one of your companies'; a company shows its own ----
 function appSpaceMap(){ try{ return JSON.parse(litLsRaw('story-app-space') || '{}') || {}; }catch(e){ return {}; } }
@@ -21269,23 +21269,24 @@ function litBrowserPick(kind, onFiles){
   inp.onchange = ()=>{ const list = [...(inp.files || [])].slice(0, LIT_MAX_FILES).map(f=>({ kind, name: f.name, mime: f.type || 'application/octet-stream', size: f.size, get: async ()=>new Uint8Array(await f.arrayBuffer()), preview: kind === 'photo' ? URL.createObjectURL(f) : '' })); if(list.length) onFiles(list); };
   inp.click();
 }
-function litPickMedia(kind, onFiles){
+function litPickMedia(kind, onFiles, opts){
   if(!NATIVE || !window.StoryNative.listMedia){ litBrowserPick(kind, onFiles); return; }
   const access = window.StoryNative && window.StoryNative.mediaAccess ? window.StoryNative.mediaAccess() : 'none';
-  if(access === 'none'){ litGridWant = { kind, onFiles }; if(typeof pfGridFor !== 'undefined') pfGridFor = 'chat'; window.StoryNative.requestPhotoAccess(); return; }
-  litGrid(kind, onFiles);
+  if(access === 'none'){ litGridWant = { kind, onFiles, opts }; if(typeof pfGridFor !== 'undefined') pfGridFor = 'chat'; window.StoryNative.requestPhotoAccess(); return; }
+  litGrid(kind, onFiles, opts);
 }
 window.storyChatAccessDone = function(access){
   const w = litGridWant; litGridWant = null; if(!w) return;
-  if(access === 'none') showToast('Lockedintool isn’t allowed to see your pictures and videos'); else litGrid(w.kind, w.onFiles);
+  if(access === 'none') showToast('Lockedintool isn’t allowed to see your pictures and videos'); else litGrid(w.kind, w.onFiles, w.opts);
 };
-function litGrid(kind, onFiles){
+function litGrid(kind, onFiles, opts){
+  const one = !!(opts && opts.one);   // one picture: a tap chooses it (a logo - #306)
   let all = []; try{ all = JSON.parse(window.StoryNative.listMedia() || '[]'); }catch(e){}
   all = all.filter(m=>kind === 'video' ? m.v : !m.v);
   const chosen = [];
   document.querySelectorAll('.lit-grid-bg').forEach(x=>x.remove());
   const bg = document.createElement('div'); bg.className = 'lit-grid-bg';
-  bg.innerHTML = '<div class="lit-grid-head"><button data-g="x" aria-label="Close">✕</button><b>' + (kind === 'video' ? 'Choose videos' : 'Choose pictures') + '</b><button data-g="send" disabled>Send</button></div><div class="lit-grid"></div>';
+  bg.innerHTML = '<div class="lit-grid-head"><button data-g="x" aria-label="Close">✕</button><b>' + (one ? 'Choose a picture' : kind === 'video' ? 'Choose videos' : 'Choose pictures') + '</b><button data-g="send" disabled' + (one ? ' style="visibility:hidden"' : '') + '>Send</button></div><div class="lit-grid"></div>';
   const grid = bg.querySelector('.lit-grid'), send = bg.querySelector('[data-g="send"]'), title = bg.querySelector('b');
   let shown = 0;
   const more = ()=>{ const next = all.slice(shown, shown + 90); shown += next.length;
@@ -21300,6 +21301,7 @@ function litGrid(kind, onFiles){
         preview: PF_PHOTO_BASE + (kind === 'video' ? 'thumbv/' : 'thumb/') + id }))); } return; }
     const t = e.target.closest('.lit-grid button'); if(!t) return;
     const id = t.getAttribute('data-id'), i = chosen.indexOf(id);
+    if(one){ chosen.length = 0; chosen.push(id); send.disabled = false; send.click(); return; }
     if(i >= 0){ chosen.splice(i, 1); t.classList.remove('on'); }
     else if(chosen.length >= LIT_MAX_FILES){ showToast('Up to ' + LIT_MAX_FILES + ' at a time'); return; }
     else { chosen.push(id); t.classList.add('on'); }

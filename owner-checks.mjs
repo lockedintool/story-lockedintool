@@ -214,6 +214,32 @@ for (const [w, h] of SIZES) {
   }
   await ctx.close();
 }
+// 'Everytime i open lockedintool and I go to a page it like jumps ... the insides of the page jumps. Also when I swipe'
+// (#290 - owner, 13 Nov 2026): a page must look exactly the same from its first drawn frame on - no transition (the old
+// 0.001s rule switched transitions ON for everything) and no animation showing its starting look for a frame.
+{
+  const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); } catch (e) {}
+    window.StoryNative = new Proxy({}, { get: (t, k) => k === 'bottomRoom' ? (() => 48) : (() => '') }); });
+  await ctx.route('**/*', r => r.request().url().startsWith('http://localhost') ? r.continue() : r.abort());
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  for (const p of ['money', 'wallet', 'trading', 'dashboard']) {
+    await pg.evaluate(() => window.storyShow('dashboard', false)); await pg.waitForTimeout(300);
+    const r = await pg.evaluate(async p => {
+      const snap = () => { const m = new Map(); document.querySelectorAll('#device-wrap #content-area *').forEach(e => { const b = e.getBoundingClientRect(); if (b.width || b.height) m.set(e, [b.left, b.top, b.width, b.height].map(Math.round)); }); return m; };
+      window.storyShow(p, false);
+      const tr = document.getAnimations().filter(x => x.constructor.name === 'CSSTransition').length;
+      await new Promise(r => requestAnimationFrame(r));
+      const a = snap(); for (let f = 0; f < 40; f++) await new Promise(r => requestAnimationFrame(r)); const z = snap();
+      let n = 0, first = ''; for (const [e, v] of a) { const w = z.get(e); if (w && v.some((x, i) => Math.abs(x - w[i]) > 1)) { n++; if (!first) first = String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className).slice(0, 30); } }
+      return { tr, n, first };
+    }, p);
+    if (r.tr) fail('pages never jump', p, r.tr + ' transitions ran when the page opened');
+    if (r.n) fail('pages never jump', p, r.n + ' parts moved after the first frame (first: ' + r.first + ')');
+  }
+  await ctx.close();
+}
 // The tour for new users (#245 - owner, 11 Nov 2026: 'new users should get a tour guide around the whole app. Also they can
 // skip the tutorial if they want'): a new account sees it, every step has Skip tour, and once skipped it never comes back.
 {

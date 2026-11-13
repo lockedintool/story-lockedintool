@@ -316,5 +316,5 @@ commits, pushed as a new update) - nothing else changes.
 | 307 | 2026-11-13 | The picture list (company logos, album, files) shows real square pictures, and '+ More pictures' when the phone only allows some of them | 15efb01 |
 | 308 | 2026-11-13 | Sharper pictures in every picture list (the previews are made almost twice as big) | 237567d |
 | 309 | 2026-11-13 | Business on Subscription always opens Business settings; the company chooser answers the unlock more reliably and reports why if it can't open | 11a650b |
-| 310 | 2026-11-13 | On the owner's phone the Personal / Business choice lives in Settings > Business account, not on the Subscription page (customers keep it there) | (this) |
-| 311 | 2026-11-13 | The details of Second system / Only system / Personal / Business pop up on top of the Subscription page over a blurred black background | (this) |
+| 310 | 2026-11-13 | On the owner's phone the Personal / Business choice lives in Settings > Business account, not on the Subscription page (customers keep it there) | 4739fe9 |
+| 311 | 2026-11-13 | The details of Second system / Only system / Personal / Business pop up on top of the Subscription page over a blurred black background | 4739fe9 |

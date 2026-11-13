@@ -59,12 +59,32 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait" />
+        <!-- The app icon's name says which Lockedintool you're on (#300 - owner, 13 Nov 2026: 'everytime the switch happens
+             this app name should indicate also on the apps icons names'; chose 'Lockedintool System / App' in both places):
+             two icons for the same screen, only one switched on at a time (AppMode.syncLauncher). -->
+        <activity-alias
+            android:name=".LauncherSystem"
+            android:targetActivity=".MainActivity"
+            android:label="Lockedintool System"
+            android:exported="true"
+            android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherApp"
+            android:targetActivity=".MainActivity"
+            android:label="Lockedintool App"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Lockedintool as your phone's HOME app - part of Only system (owner, 28 Oct 2026: 'Make it my real Home app').
              When the owner picks Lockedintool as the Home app (Only system asks them to), the phone's OWN gestures

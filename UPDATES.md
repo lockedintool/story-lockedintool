@@ -306,3 +306,4 @@ commits, pushed as a new update) - nothing else changes.
 | 297 | 2026-11-13 | On the Always On Display, Station 3's bar shows all its icons again (they vanished into the grey burn-in pattern, only the + was left) | d708626 |
 | 298 | 2026-11-13 | The Wallet opened from the lock screen closes with Back (gesture or button) or a swipe up, back to the lock screen | 2038312 |
 | 299 | 2026-11-13 | From the lock screen's Wallet, going to the Dashboard / another page now shows the phone's unlock (the Wallet covered it - you only felt a vibration), then opens what you asked for | 1219f8c |
+| 300 | 2026-11-13 | The app's name follows the System switch: 'Lockedintool System' or 'Lockedintool App' - under the phone's app icon and in Lockedintool's Apps list | (this update) |

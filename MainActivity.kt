@@ -28,6 +28,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         Updater.schedule(this)          // updates keep coming every 15 minutes, even when STORY is off
         SystemMode.syncHome(this)       // Lockedintool is the phone's Home app only in Only system (#237)
+        AppMode.syncLauncher(this)      // the icon's name: Lockedintool System / App (#300)
         KeepAlive.ensureRunning(this)   // switched on but not running (killed by the phone)? bring it back
         if (!Release.agreedAuto(this)) UpdateActivity.ask(this, force = true)  // using STORY = agreeing to automatic updates
         val pad = (24 * resources.displayMetrics.density).toInt()

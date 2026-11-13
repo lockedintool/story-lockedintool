@@ -246,6 +246,7 @@ class OverlayService : Service(), StoryBridge.Host {
         if (AppMove.needed(this)) { gated = true; running = false; stopSelf(); return }
         instance = this
         SystemMode.syncHome(this); homePkgCache = null   // Lockedintool is the phone's Home app only in Only system (#237)
+        AppMode.syncLauncher(this)   // the icon's name: Lockedintool System / App (#300)
         getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("enabled", true).apply()
         quietApps(false)  // never leave the phone muted (e.g. STORY was restarted while the Pages were open)
         pickLayer()

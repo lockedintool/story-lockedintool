@@ -105,7 +105,12 @@ class TvView(ctx: Context, private val onSymbol: (String) -> Unit) : FrameLayout
     /** Where the chart goes (from the page, in CSS px; dpr = the page's pixels per CSS px). */
     fun place(o: JSONObject) {
         // Cooling (owner): TradingView rests while it isn't on screen and wakes when it is (same chart, no reload).
-        if (!o.optBoolean("show")) { if (visibility != View.GONE) { visibility = View.GONE; runCatching { web.onPause() } }; return }
+        // #291 (owner's video, 13 Nov 2026: 'how the chart will be flashing'): hidden for a page swipe or a sheet it is only
+        // cut away (nothing drawn, no touches) and stays awake, so coming back is the same frame - no dark frames while it
+        // wakes up. Only after 3 s out of sight does it really rest.
+        if (!o.optBoolean("show")) { if (visibility == View.VISIBLE && !box.isEmpty) { box.setEmpty(); invalidate() }
+            removeCallbacks(rest); if (visibility == View.VISIBLE) postDelayed(rest, 3000); return }
+        removeCallbacks(rest)
         val k = o.optDouble("dpr", 1.0).toFloat()
         val x = (o.optDouble("x") * k).toFloat(); val y = (o.optDouble("y") * k).toFloat()
         val w = Math.round(o.optDouble("w") * k).toInt().coerceAtLeast(1); val h = Math.round(o.optDouble("h") * k).toInt().coerceAtLeast(1)
@@ -119,9 +124,20 @@ class TvView(ctx: Context, private val onSymbol: (String) -> Unit) : FrameLayout
             holes.add(RectF((b.optDouble(0) * k).toFloat() + x, (b.optDouble(1) * k).toFloat() + y, ((b.optDouble(0) + b.optDouble(2)) * k).toFloat() + x, ((b.optDouble(1) + b.optDouble(3)) * k).toFloat() + y))
         } }
         dim = o.optDouble("dim", 0.0).toFloat()
-        if (visibility != View.VISIBLE) { runCatching { web.onResume() }; visibility = View.VISIBLE }
+        if (visibility != View.VISIBLE) {
+            // Waking from a rest: it stays invisible until TradingView has drawn again (the page's picture of the chart
+            // shows meanwhile) - never its dark empty frames.
+            runCatching { web.onResume() }; web.alpha = 0.004f; visibility = View.VISIBLE
+            var done = false; val show = Runnable { if (!done) { done = true; web.alpha = 1f } }
+            runCatching { web.postVisualStateCallback(7L, object : WebView.VisualStateCallback() { override fun onComplete(requestId: Long) { web.postOnAnimation(show) } }) }
+                .onFailure { show.run() }
+            postDelayed(show, 600)
+        }
         invalidate()
     }
+    private val rest = Runnable { if (box.isEmpty && visibility != View.GONE) { visibility = View.GONE; runCatching { web.onPause() } } }
+    /** On screen right now (shown, drawn, not cut away). */
+    fun liveShown() = visibility == View.VISIBLE && !box.isEmpty && web.alpha >= 1f
 
     private fun inside(px: Float, py: Float) = box.contains(px, py) && holes.none { it.contains(px, py) }
 

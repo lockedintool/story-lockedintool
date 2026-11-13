@@ -7,6 +7,10 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowShowWallpaper">false</item>
         <item name="android:windowAnimationStyle">@null</item>
+        <!-- Tapping the app icon (#291 - owner's video, 13 Nov 2026: 'how the black screen will flash'): no Lockedintool
+             logo flashing on black before your screen - Android 12+ draws a splash for the setup screen's task. -->
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="android:windowSplashScreenBackground">@android:color/black</item>
     </style>
     <!-- The see-through helper screens (permission asks, pickers, camera, the phone's switches...). -->
     <style name="Theme.Story.Clear" parent="@android:style/Theme.Translucent.NoTitleBar">

@@ -796,6 +796,7 @@ class OverlayService : Service(), StoryBridge.Host {
             }
             override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? {
                 val u = r.url.toString()
+                if (u.startsWith(ProfilePhotoActivity.PHOTO_BASE + "tvshot")) return WebResourceResponse("image/jpeg", null, java.io.ByteArrayInputStream(tvShotJpg ?: ByteArray(0)))
                 if (u.startsWith(ProfilePhotoActivity.PHOTO_BASE)) return photoResponse(r)
                 return loader.shouldInterceptRequest(r.url)
             }
@@ -1095,7 +1096,10 @@ class OverlayService : Service(), StoryBridge.Host {
         // never drew while hidden, the 'drawn' answer never came, and after 0.3 s the window showed its OLD picture (the
         // page you were on before - Money - or black) and only then drew the new one. Now the window stays invisible
         // (window alpha 0, untouchable) while its view DRAWS the new page, and shows only once that picture is ready.
-        if (!(p === pagesPane && pagesInHome())) p.frame.alpha = 1f
+        // #291 (owner's video, 13 Nov 2026: black for about half a second after opening the app): inside the app's / Home's
+        // window too - while that window is still invisible the page draws there first (it was kept from drawing, so it
+        // showed black until its first picture). A Home that keeps the page drawn (visible) is left as it is.
+        if (!(p === pagesPane && pagesInHome()) || p.lp.alpha <= 0f) p.frame.alpha = 1f
         var done = false
         val go = Runnable { if (!done) { done = true; whenBgReady(p, Runnable { if (!p.shown) setShown(p, true) else if (p.frame.alpha < 1f) p.frame.alpha = 1f; after() }) } }
         // #281: the Pages wait for your background picture EVERY time they come in - asked right now, not left to the
@@ -1159,6 +1163,7 @@ class OverlayService : Service(), StoryBridge.Host {
         wv.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? {
                 val u = r.url.toString()
+                if (u.startsWith(ProfilePhotoActivity.PHOTO_BASE + "tvshot")) return WebResourceResponse("image/jpeg", null, java.io.ByteArrayInputStream(tvShotJpg ?: ByteArray(0)))
                 if (u.startsWith(ProfilePhotoActivity.PHOTO_BASE)) return photoResponse(r)
                 return loader.shouldInterceptRequest(r.url)
             }
@@ -1302,6 +1307,7 @@ class OverlayService : Service(), StoryBridge.Host {
         web.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? {
                 val u = r.url.toString()
+                if (u.startsWith(ProfilePhotoActivity.PHOTO_BASE + "tvshot")) return WebResourceResponse("image/jpeg", null, java.io.ByteArrayInputStream(tvShotJpg ?: ByteArray(0)))
                 if (u.startsWith(ProfilePhotoActivity.PHOTO_BASE)) return photoResponse(r)
                 return loader.shouldInterceptRequest(r.url)
             }
@@ -2079,7 +2085,8 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun pagesDrawn(p: Pane) {
         if (!p.loading || p !== pagesPane) return
         p.loading = false
-        if (pagesInHome() && !homeWaking && (p.shown || (!Security.lit(this) && p.lp.alpha > 0f))) p.frame.alpha = 1f
+        // ... and not before your background picture is drawn (#291 - a freshly loaded page showed black first).
+        whenBgReady(p, Runnable { if (!p.loading && pagesInHome() && !homeWaking && (p.shown || (!Security.lit(this) && p.lp.alpha > 0f))) p.frame.alpha = 1f })
     }
     /** Lockedintool's Home (Only system) got the screen's focus: if the Pages are away and nothing else is up, the Dashboard
      *  shows. Only right after a Home / Recents step aside, or when the Home has no picture to show - so a floating window
@@ -3400,8 +3407,42 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     override fun tvPlace(json: String) { ui.post {
         val o = runCatching { org.json.JSONObject(json) }.getOrNull() ?: return@post
+        ui.removeCallbacks(tvSnapRun)
         if (!o.optBoolean("show")) { tvView?.place(o); return@post }
         tvViewNow()?.place(o)
+        // The chart box on the page, fully on screen: a picture of the chart is taken for the page to show in the box
+        // while the live chart is away (a page swipe...).
+        if (o.optInt("snap") == 1) { val k = o.optDouble("dpr", 1.0).toFloat(); val y = (o.optDouble("y") * k).toFloat()
+            tvSnapRect = android.graphics.RectF((o.optDouble("sx") * k).toFloat(), y, ((o.optDouble("sx") + o.optDouble("sw")) * k).toFloat(), y + (o.optDouble("h") * k).toFloat())
+            ui.postDelayed(tvSnapRun, 1200) } else tvSnapRect = null
+    } }
+    // #291 (owner's video, 13 Nov 2026: 'how the chart will be flashing'): the live chart can't slide with the page (it is
+    // the phone's own view laid over it), so the page's chart box used to slide in and out EMPTY and the chart popped in
+    // after. Now the box holds an exact copy of the chart (taken off the screen, PixelCopy - 1.2 s after it settles, then
+    // every 5 s while it shows), served to the page at story-photo/tvshot - so it slides in and out with the page and the
+    // live chart takes over at exactly the same place.
+    @Volatile var tvShotJpg: ByteArray? = null
+    private var tvShotVer = 0
+    private var tvSnapRect: android.graphics.RectF? = null
+    private val tvSnapRun = Runnable { tvSnapNow() }
+    private fun tvSnapNow() { if (Build.VERSION.SDK_INT >= 34) runCatching {
+        val p = pagesPane ?: return; val tv = tvView ?: return; val r = tvSnapRect ?: return
+        if (!p.shown || p.frame.alpha < 1f || !tv.liveShown() || getSystemService(android.os.PowerManager::class.java)?.isInteractive != true) return
+        if (!p.frame.isAttachedToWindow) return
+        val loc = IntArray(2); tv.getLocationInWindow(loc)
+        val src = android.graphics.Rect((r.left + loc[0]).toInt(), (r.top + loc[1]).toInt(), (r.right + loc[0]).toInt(), (r.bottom + loc[1]).toInt())
+        if (src.width() < 20 || src.height() < 20) return
+        val req = android.view.PixelCopy.Request.Builder.ofWindow(p.frame).setSourceRect(src).build()
+        android.view.PixelCopy.request(req, mainExecutor) { res -> runCatching {
+            if (res.status != android.view.PixelCopy.SUCCESS) return@runCatching
+            val b = res.bitmap
+            if (tvView?.liveShown() != true) { b.recycle(); return@runCatching }   // went away meanwhile - not the chart
+            val ver = ++tvShotVer
+            Thread { runCatching { val out = java.io.ByteArrayOutputStream(); b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out); tvShotJpg = out.toByteArray() }
+                b.recycle()
+                ui.post { if (ver == tvShotVer) pagesPane?.web?.evaluateJavascript("window.storyTvShot&&window.storyTvShot($ver)", null) } }.start()
+        } }
+        ui.postDelayed(tvSnapRun, 5000)
     } }
     override fun tvOpen(sym: String, interval: String) { ui.post { tvViewNow()?.open(sym, interval) } }
 

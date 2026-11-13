@@ -3275,6 +3275,7 @@
   .sys-card{ margin-bottom:10px; }
   .sys-box{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
   .sys-box .sys-opt.none{ grid-column:1 / -1; }
+  .sys-box .sys-opt.acct-biz{ grid-column:1 / -1; flex-direction:row; align-items:center; display:flex; gap:10px; padding:12px; min-height:0; } .acct-biz .sys-opt-sub{ margin-top:0 !important; } .acct-biz .sys-opt-name{ flex:0 0 auto; } .acct-biz .sys-opt-sub{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .sys-opt{ position:relative; border:1px solid var(--line, #2a2a2a); border-radius:16px; padding:12px 12px 44px; background:var(--card, #0b0b0b); cursor:pointer; min-height:92px; }
   .sys-opt.on{ border-color:#f3f2ee; }
   .sys-opt-name{ font-size:13.5px; font-weight:700; }
@@ -10524,6 +10525,9 @@ function delStep3(){
   window.StoryNative.confirmIdentity('Delete your Lockedintool account');
 }
 window.storyIdentity = function(result){
+  if(window.__acctWant){ const k = window.__acctWant; window.__acctWant = null;   // #316: Personal | Business needs the phone's unlock
+    if(result === 'ok' || result === 'nolock') acctApply(k); else showToast('Not confirmed - your account type stays');
+    return; }
   if(!delFlow) return;
   if(result === 'ok') delStep4(false);
   else if(result === 'nolock') delStep4(true);
@@ -10884,7 +10888,6 @@ function settingsHubScreen(){
     ['widgets', 'Widgets', widgetsOnlySettingsHTML],
     ['security', 'Security', securitySettingsHTML],
     ['privacy', 'Privacy', privacySettingsHTML],
-    ['business', 'Business account', bizSettingsHTML],
   ].map(([k, name, f])=>[k, name, f()]).filter(x=>x[2]);
   const open = sections.find(x=>x[0] === state.setSection);
   if(open) return `
@@ -10897,7 +10900,7 @@ function settingsHubScreen(){
   return `
     <div class="page-shell set2">
     ${topBar('Settings', false)}
-    ${systemCardsHTML()}
+    ${systemCardsHTML()}${acctBoxHTML()}
     <div class="set2-card">
       ${sections.map(([k, name])=>row(`data-action="set-open" data-v="${k}"`, name)).join('')}
       ${row('data-nav="notif-settings"', 'Notifications')}
@@ -14993,6 +14996,10 @@ document.addEventListener('click', e=>{
     case 'acct': state.sub.acctView = b.getAttribute('data-v'); break;
     case 'acct-back': state.sub.acctView = null; break;
     case 'open-biz': state.current = 'spaces-settings'; break;
+    case 'acct-pick': { const k = b.getAttribute('data-v'); if(k === acctType()) return;
+      if(NATIVE && window.StoryNative.confirmIdentity){ window.__acctWant = k; window.StoryNative.confirmIdentity('Switch to ' + (k === 'business' ? 'Business' : 'Personal')); }
+      else acctApply(k);
+      return; }
     case 'acct-set': { const k = b.getAttribute('data-v'); localStorage.setItem('story-acct-type', k); spaceTell();
       if(k === 'personal' && litSpace() !== 'personal'){ spaceGo('personal'); return; }
       break; }
@@ -15007,6 +15014,27 @@ document.addEventListener('click', e=>{
 // The owner's phone (#310 - owner, 13 Nov 2026: 'Put the business account and personal switch for me on the settings, not
 // on the subscriptions page. But users will have it like that'): Settings > Business account; customers keep it on the
 // Subscription page.
+// #316 (owner, 13 Nov 2026, circling the Settings list: 'The business account and personal - add it the same as the system
+// switch underneath it. Same needs security to switch'): on the owner's phone Personal | Business is a box like Second
+// system | Only system, right under it; switching asks for the phone's fingerprint / face / PIN first.
+function acctBoxHTML(){
+  if(!fullAccess()) return '';
+  const t = acctType();
+  const SUBS = { personal:'Everything on your phone in one Lockedintool', business:'A space for each of your companies' };
+  return `<div class="sys-box acct-box">${SUB_ACCTS.map(o=>{ const cur = t === o.key; return `
+      <div class="sys-opt${cur ? ' on' : ''}" data-sp-act="acct-pick" data-v="${o.key}">
+        <div class="sys-opt-name">${o.name}</div><div class="sys-opt-sub">${SUBS[o.key] || o.short}</div>
+        <span class="toggle-switch sm${cur ? ' on' : ''}"><span class="toggle-knob"></span></span>
+      </div>`; }).join('')}
+      ${t === 'business' ? `<div class="sys-opt acct-biz" data-sp-act="open-biz"><div class="sys-opt-name">Business settings</div><div class="sys-opt-sub">${spaceList().length ? spaceList().map(c=>escText(c.name)).join(', ') : 'Add your companies'}</div><span class="chev-right">›</span></div>` : ''}
+    </div>`;
+}
+function acctApply(k){
+  localStorage.setItem('story-acct-type', k); spaceTell();
+  if(k === 'personal' && litSpace() !== 'personal'){ spaceGo('personal'); return; }
+  if(k === 'business' && !spaceList().length){ state.current = 'spaces-settings'; showToast('Business - add your companies'); }
+  renderDevice();
+}
 function bizSettingsHTML(){
   if(!fullAccess()) return '';
   const t = acctType();

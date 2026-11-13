@@ -3207,6 +3207,7 @@ class OverlayService : Service(), StoryBridge.Host {
         }.start()
     }
     override fun createSwitchCamera() { ui.post { CreateCameraActivity.instance?.switchCamera() } }
+    override fun createMode(video: Boolean) { ui.post { CreateCameraActivity.wantVideo = video; CreateCameraActivity.instance?.setMode(video) } }
     override fun createDiscard() { ui.post { CreateCameraActivity.instance?.stopPlayback() }; CreateCameraActivity.clearCapture(this) }
     override fun liveMode(on: Boolean) { ui.post { if (profilePane?.shown == true) { s3Page = if (on) "live" else "create"; syncCreate() } } }
     override fun createKeep(): String { ui.post { CreateCameraActivity.instance?.stopPlayback() }; return CreateCameraActivity.keepCapture(this) }

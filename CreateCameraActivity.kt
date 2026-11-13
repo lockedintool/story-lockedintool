@@ -112,13 +112,39 @@ class CreateCameraActivity : AppCompatActivity() {
         .setAspectRatio(androidx.camera.core.AspectRatio.RATIO_4_3)  // videos in the same frame as pictures
         .setQualitySelector(QualitySelector.from(q, FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))).build())
 
-    /** Not every phone can run preview + pictures + video at once: try the best set first, then step down.
-     *  Whatever is left out is switched in only when it's needed (see startVideo). */
+    /** #282 (owner, 13 Nov 2026: 'the camera quality on the create tab' - 'The videos and pictures'): with pictures AND
+     *  video switched on together the phone only gives pictures at about video size (~1.5 MP) and can drop the video
+     *  lower too. So only what you're making is switched on, at its best: Video chosen = the camera + video;
+     *  otherwise the camera + pictures at the camera's full size. Holding the shutter for a video outside Video
+     *  switches video in for that recording (startVideo) and pictures back after it. */
+    private fun hqImage() = ImageCapture.Builder()
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+        .setJpegQuality(95)
+        .setResolutionSelector(androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
+            .setAspectRatioStrategy(androidx.camera.core.resolutionselector.AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+            .setResolutionStrategy(androidx.camera.core.resolutionselector.ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
+            .build())
+        .build()
+    /** What Create's chosen box asks for (the page tells it - createMode); kept for when the camera screen opens. */
+    @Volatile private var boundVideo: Boolean? = null
+    fun setMode(video: Boolean) {
+        wantVideo = video
+        if (recording != null || provider == null || boundVideo == video) return
+        runCatching { bindBest() }.onFailure { OverlayService.instance?.createEvent("error", "camera: " + (it.message ?: "")) }
+    }
     private fun bindBest() {
         val p = provider ?: throw IllegalStateException("no camera")
         val pv = preview ?: throw IllegalStateException("no preview")
         val sel = selector()
-        var last: Throwable? = null
+        // #282: only what you're making, at its best.
+        val one = runCatching {
+            p.unbindAll()
+            if (wantVideo) { val vc = recorder(Quality.FHD); p.bindToLifecycle(this, sel, pv, vc); videoCapture = vc; imageCapture = null }
+            else { val ic = hqImage(); p.bindToLifecycle(this, sel, pv, ic); imageCapture = ic; videoCapture = null }
+        }
+        if (one.isSuccess) { boundVideo = wantVideo; return }
+        boundVideo = null
+        var last: Throwable? = one.exceptionOrNull()
         for (q in listOf(Quality.FHD, Quality.HD, Quality.SD, null)) {
             val r = runCatching {
                 p.unbindAll()
@@ -166,7 +192,7 @@ class CreateCameraActivity : AppCompatActivity() {
             // This phone couldn't keep pictures switched on alongside video: switch them in now.
             ic = runCatching {
                 val p = provider!!; p.unbindAll()
-                ImageCapture.Builder().build().also { p.bindToLifecycle(this, selector(), preview!!, it); imageCapture = it; videoCapture = null }
+                hqImage().also { p.bindToLifecycle(this, selector(), preview!!, it); imageCapture = it; videoCapture = null; boundVideo = false }
             }.getOrNull()
         }
         if (ic == null) { OverlayService.instance?.createEvent("error", "pictures aren't available on this camera"); return }
@@ -185,7 +211,7 @@ class CreateCameraActivity : AppCompatActivity() {
             // Video wasn't switched on alongside pictures on this phone: switch it in for this recording.
             vc = runCatching {
                 val p = provider!!; p.unbindAll()
-                recorder(Quality.HD).also { p.bindToLifecycle(this, selector(), preview!!, it); videoCapture = it; imageCapture = null }
+                recorder(Quality.FHD).also { p.bindToLifecycle(this, selector(), preview!!, it); videoCapture = it; imageCapture = null; boundVideo = true }
             }.getOrNull()
         }
         if (vc == null) { OverlayService.instance?.createEvent("error", "video isn't available on this camera"); return }
@@ -199,6 +225,8 @@ class CreateCameraActivity : AppCompatActivity() {
                 is VideoRecordEvent.Start -> OverlayService.instance?.createEvent("recording", "")
                 is VideoRecordEvent.Finalize -> {
                     recording = null
+                    // A held-shutter video outside Video: pictures back at full size (the video plays on top meanwhile).
+                    if (!wantVideo && boundVideo != false) runCatching { bindBest() }
                     if (e.hasError() && (!f.exists() || f.length() == 0L)) OverlayService.instance?.createEvent("error", "video: error " + e.error)
                     else OverlayService.instance?.createEvent("video", "")
                 }
@@ -221,6 +249,8 @@ class CreateCameraActivity : AppCompatActivity() {
 
     companion object {
         @Volatile var instance: CreateCameraActivity? = null
+        /** #282: Create's Video box is chosen (the camera binds video instead of full-size pictures). */
+        @Volatile var wantVideo = false
 
         private fun dir(c: android.content.Context) = File(c.filesDir, "create").apply { mkdirs() }
         fun captureFile(c: android.content.Context, ext: String) = File(dir(c), "capture.$ext")

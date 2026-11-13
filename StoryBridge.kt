@@ -66,6 +66,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun createUseFromPhone(id: Long, video: Boolean)
         fun createDiscard()
         fun createSwitchCamera()
+        fun createMode(video: Boolean)
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -852,6 +853,10 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
 
     @JavascriptInterface
     fun createSwitchCamera() { if (profile) host.createSwitchCamera() }
+
+    /** #282: Create's chosen box - Video = the camera records video at its best, else full-size pictures. */
+    @JavascriptInterface
+    fun createMode(video: Boolean) { if (profile) host.createMode(video) }
 
     /** Returns "<postId>:<photo|video>" ("" if nothing was made). */
     @JavascriptInterface

@@ -11969,6 +11969,7 @@ function crRender(){
   cr.querySelectorAll('.cr-mode').forEach(b=>b.classList.toggle('on', b.getAttribute('data-m') === crMode));
   cr.querySelector('.cr-shutter').classList.toggle('rec', crRecording);
   cr.querySelector('.cr-shutter').classList.toggle('vid', crMode === 'video');
+  try{ if(NATIVE && window.StoryNative.createMode) window.StoryNative.createMode(crMode === 'video'); }catch(e){}   // #282: the camera switches on only what you're making, at its best
   const shot = cr.querySelector('.cr-shot'), img = shot.querySelector('img'), vid = shot.querySelector('video');
   shot.hidden = !crHas;
   // In the app a video plays on the phone's own player underneath (see-through here); the browser plays it itself.

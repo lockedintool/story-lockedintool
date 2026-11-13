@@ -160,10 +160,10 @@ class ProfilePhotoActivity : Activity() {
 
         /** A small square preview of one picture, JPEG bytes (for the grid). */
         fun thumbBytes(c: Context, id: Long): ByteArray? = runCatching {
-            val bmp = if (Build.VERSION.SDK_INT >= 29) c.contentResolver.loadThumbnail(photoUri(id), android.util.Size(256, 256), null)
+            val bmp = if (Build.VERSION.SDK_INT >= 29) c.contentResolver.loadThumbnail(photoUri(id), android.util.Size(480, 480), null)   // #308: sharp in the bigger picture tiles (was 256 - blurry)
                 else MediaStore.Images.Thumbnails.getThumbnail(c.contentResolver, id, MediaStore.Images.Thumbnails.MINI_KIND, null)
             val out = java.io.ByteArrayOutputStream()
-            bmp?.compress(Bitmap.CompressFormat.JPEG, 82, out) ?: return@runCatching null
+            bmp?.compress(Bitmap.CompressFormat.JPEG, 90, out) ?: return@runCatching null
             out.toByteArray()
         }.getOrNull()
 

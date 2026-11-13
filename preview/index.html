@@ -10869,7 +10869,10 @@ function loadNativeApps(){
       // The Lockedintool app itself sits in Lockedintool's own space, first - never mixed with the phone's apps (owner,
       // 4 Nov 2026: 'move lockedintool app to be always on the lockedintool own space ... so that it's not mixed with the apps').
       const own = a.pkg === 'com.story.launcher' || a.pkg === 'com.lockedintool.app';
-      return { id:'pkg:'+a.pkg, pkg:a.pkg, name:a.label, icon:'📱', iconUrl, iconSrc:a.icon, section: own ? 'STORY' : 'PHONE APPS', own };
+      // Its name says which Lockedintool you're on, like its icon (#300): Lockedintool System / Lockedintool App.
+      let name = a.label;
+      if(own){ try{ name = String(StoryNative.systemState()).split('|')[0] === 'on' ? 'Lockedintool System' : 'Lockedintool App'; }catch(e){} }
+      return { id:'pkg:'+a.pkg, pkg:a.pkg, name, icon:'📱', iconUrl, iconSrc:a.icon, section: own ? 'STORY' : 'PHONE APPS', own };
     }));
     Object.values(prev).forEach(a=>{ try{ URL.revokeObjectURL(a.iconUrl); }catch(e){} });
     // An app that's gone from the phone stops being a page.

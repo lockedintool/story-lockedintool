@@ -944,7 +944,8 @@ class OverlayService : Service(), StoryBridge.Host {
         // The lock screen dial pad sits UNDER Station 3's windows: Station 3, extended, goes on top of it (owner).
         // Memory (Android kept closing Lockedintool's windows on 4 GB phones): it's only built for people who put the dial
         // pad on the lock screen - turning that on later builds it then (setQuickAccess).
-        if (lockSign == null) addLockSign()   // the DEVICE LOCKED sign over the phone's own lock screen (#274): under everything else of ours
+        // The DEVICE LOCKED sign over the phone's lock screen is REMOVED (#294 - owner, 13 Nov 2026: 'let's remove this ... This
+        // device locked picture'): never added, so syncLockSign does nothing and the phone's own lock screen shows as it is.
         if (lockDialPane == null && QuickAccess.lockDial(this)) lockDialPane = buildLockDial()
         if (walletBtn == null) addWalletBtn()   // the lock screen's Wallet page button: under Station 3's windows
         if (s3Pane == null) { addBarBg(); s3Pane = buildPane(true) }  // the white goes in first, so it sits under Station 3's page

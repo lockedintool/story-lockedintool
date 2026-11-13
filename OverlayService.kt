@@ -68,11 +68,10 @@ class OverlayService : Service(), StoryBridge.Host {
     private val unlocked = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             userPresentAt = System.currentTimeMillis()
-            ui.post { secWaitUnlocked(); LockDashActivity.instance?.unlockedNow() }   // unlocked some other way: Lockedintool's lock screen goes
+            ui.post { secWaitUnlocked() }
             widgetLiveEvent(false)  // unlocked onto the home screen: live widgets come back
             if (SystemMode.on(c)) { ui.removeCallbacks(systemCheckRun); ui.postDelayed(systemCheckRun, 500) }  // Lockedintool as your system: unlocked onto another app / the home screen
             AodActivity.instance?.finish()  // unlocked (e.g. fingerprint) while the Always On Display was up
-            aodHoldOff()   // the lock-screen Always On Display lets the screen go normally again
             ui.post { syncLockDial() }
             ui.post { syncLockDial(); profileLayer(false)   // unlocked: Station 3's window back where the keyboard works
                 // Lockedintool security: something of Lockedintool's is already on screen (the Dashboard as your home...) - unlock it.
@@ -96,12 +95,6 @@ class OverlayService : Service(), StoryBridge.Host {
             // Was the lock screen really up when the screen came on? Only then can an unlock be on its way (secPrompt waits for it).
             lockedAtScreenOn = runCatching { getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked }.getOrDefault(false)
             screenOnAt = System.currentTimeMillis()
-            ui.post { LockDashActivity.instance?.screenOnNow() }   // already up (put there while the screen was off): it asks now
-            // The phone's own lock screen must never show (owner's video, 5 Nov 2026: 'see how I was able to still see my
-            // phone's original lock screen? That's a huge no no'): the moment the screen comes on, Lockedintool's lock
-            // screen is brought to the front - or opened at once if it isn't up - not 0.35 s later.
-            ui.post { lockDashFront() }
-            ui.removeCallbacks(lockDashRun); ui.post(lockDashRun); ui.postDelayed(lockDashRun, 350)
             ui.post { syncLockDial(); updateBubble() }; ui.postDelayed({ syncLockDial(); updateBubble() }, 400) }   // on the lock screen the Dashboard band must step out (keyguardLocked)
     }
     // Always On Display: the moment the screen goes off, switch it straight back on with Station 3
@@ -118,7 +111,6 @@ class OverlayService : Service(), StoryBridge.Host {
         // was open (Messages, Profile, Updates, Create, Call history, the dial pad) closes when the phone locks - never
         // left showing on the lock screen. A call keeps its screen.
         ui.post { if (!callActive) { profilePane?.takeIf { it.shown }?.let { hideOne(it) }; dialPane?.takeIf { it.shown }?.let { hideOne(it) }; updateBubble() } }
-        lockDashPrepare()   // before the Always On Display, so it sits underneath it
         val aod = AodActivity.instance
         if (aod != null && !aod.isFinishing) {
             // Power pressed on the Always On Display (owner): the screen comes straight back on the lock screen,
@@ -128,10 +120,6 @@ class OverlayService : Service(), StoryBridge.Host {
             return
         }
         if (!AodActivity.enabled(this)) return
-        // The Always On Display lock screen (#274 - owner, 12 Nov 2026: 'not show lockedintool anymore but like actually
-        // show the person's actual lockscreen but still the device locked text/logo'): no screen of ours - the phone's
-        // OWN lock screen stays on (a bright wake lock until the phone is unlocked) with the DEVICE LOCKED sign over it.
-        if (QuickAccess.aodLock(this)) { aodHoldOn(); ui.post { syncLockDial() }; return }
         // The Always On Display turns the screen back on ITSELF the moment it's ready (turnScreenOn), so the screen comes
         // back already showing it - waking the screen first showed black / the phone's own lock screen in between (owner,
         // 5 Nov 2026: 'it should feel like your phone never turns off ... I shouldn't see any black'). The wake below is
@@ -487,7 +475,7 @@ class OverlayService : Service(), StoryBridge.Host {
         profilePane?.let { runCatching { it.wm.removeView(it.frame) }; it.web.destroy() }; profilePane = null
         profileGapPane?.let { runCatching { it.wm.removeView(it.frame) }; it.web.destroy() }; profileGapPane = null
         lockDialPane?.let { runCatching { it.wm.removeView(it.frame) }; it.web.destroy() }; lockDialPane = null
-        removeProfileStrip(); removeWalletBtn(); removeLockSign()
+        removeProfileStrip(); removeWalletBtn()
     }
     /** Delete account (owner): EVERYTHING that comes with Lockedintool on this phone goes - the Pages, notes, money
      *  and wallet history, cards, trading logins, profile, chats, settings - like deleting the app. Nothing outside
@@ -944,8 +932,6 @@ class OverlayService : Service(), StoryBridge.Host {
         // The lock screen dial pad sits UNDER Station 3's windows: Station 3, extended, goes on top of it (owner).
         // Memory (Android kept closing Lockedintool's windows on 4 GB phones): it's only built for people who put the dial
         // pad on the lock screen - turning that on later builds it then (setQuickAccess).
-        // The DEVICE LOCKED sign over the phone's lock screen is REMOVED (#294 - owner, 13 Nov 2026: 'let's remove this ... This
-        // device locked picture'): never added, so syncLockSign does nothing and the phone's own lock screen shows as it is.
         if (lockDialPane == null && QuickAccess.lockDial(this)) lockDialPane = buildLockDial()
         if (walletBtn == null) addWalletBtn()   // the lock screen's Wallet page button: under Station 3's windows
         if (s3Pane == null) { addBarBg(); s3Pane = buildPane(true) }  // the white goes in first, so it sits under Station 3's page
@@ -1643,7 +1629,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // Checked only when windows change (StoryAccessibilityService), and every second only while the panel is down.
     private var panelOver = false
     fun windowsMoved() { ui.removeCallbacks(panelCheck); ui.postDelayed(panelCheck, 120); ui.post { litHomeCheck() }
-        if (lockSign != null) ui.post { if (keyguardLocked()) syncLockDial() } }   // the PIN page / panel coming up: the DEVICE LOCKED sign steps away at once (#274)
+        ui.post { if (keyguardLocked()) syncLockDial() } }   // the PIN page / panel coming up: the lock screen's buttons step away at once
 
     // ---- You stay in the system you switched to (owner, 29 Oct 2026: 'once you switch to lockedintool, even if I swipe
     //      to see opened apps and swipe or close that area you will always end up in lockedintool and you wont see apps at
@@ -1721,7 +1707,6 @@ class OverlayService : Service(), StoryBridge.Host {
         else if (AppMode.appOnly(this) && !pagesUp && !(litAppPkg != null && StoryAccessibilityService.frontPkg.let { it == litAppPkg || it == packageName })) on = false
         if (dash) on = false                  // the Dashboard's Station 3 has no button
         if (panelOver) on = false             // the phone's own panel is pulled down over everything
-        if (lockOptsUp) on = false            // Lockedintool's lock screen is showing its unlock options
         // Station 3 must stay on top everywhere (owner): it can only sit above the keyboard and every app's screen in
         // the accessibility layer. If that layer came back (the system re-connected Lockedintool system actions) while
         // Station 3 was still in the normal layer, move everything up at once.
@@ -1939,8 +1924,7 @@ class OverlayService : Service(), StoryBridge.Host {
             ui.removeCallbacks(aodSwap)
             if (on) ui.postDelayed(aodSwap, 60_000)
             applyAodMask()
-            // The Always On Display ended onto the lock screen (double tap / power): Lockedintool's lock screen (Only system).
-            if (!on) { screenOnAt = System.currentTimeMillis(); ui.removeCallbacks(lockDashRun); ui.postDelayed(lockDashRun, 350) }
+            if (!on) screenOnAt = System.currentTimeMillis()
         }
     }
 
@@ -1980,7 +1964,7 @@ class OverlayService : Service(), StoryBridge.Host {
         removeBarBg()
         for (p in listOfNotNull(s3Pane, pagesPane, dialPane, profilePane, profileGapPane, lockDialPane)) { runCatching { p.wm.removeView(p.frame) }; p.web.destroy() }
         s3Pane = null; pagesPane = null; dialPane = null; profilePane = null; profileGapPane = null; lockDialPane = null
-        removeProfileStrip(); removeWalletBtn(); removeLockSign()
+        removeProfileStrip(); removeWalletBtn()
     }
 
     /** Gets the Pages out of the way (Home, Apps, opening an app). Station 3 is left exactly as it is. */
@@ -2264,7 +2248,6 @@ class OverlayService : Service(), StoryBridge.Host {
             closeStation3Now(); hideLiveWidgets()
             pagesPane?.takeIf { it.shown && !pagesInHome() }?.let { hideOne(it) }
             setInLit(false)
-            runCatching { LockDashActivity.instance?.finish() }
             homePkgCache = null   // the phone's own home screen is the Home again (SystemMode.syncHome) - #237
             LockedintoolApp.open(this, "settings")
         } else {
@@ -2365,17 +2348,7 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile private var s3UnlockWant: String? = null
     private fun s3UnlockAsk(which: String) {
         s3UnlockWant = which
-        // Lockedintool is your lock screen (Only system, or Lockedintool security): the unlock goes through ITS lock
-        // screen's unlock options, never the phone's own lock screen (#273 - owner, 12 Nov 2026: 'When I tap them my
-        // phones lockscreen shows not lockedintools'). Unlocked there = you land in what you tapped.
         AodActivity.instance?.let { a -> runCatching { a.finish(); a.overridePendingTransition(0, 0) } }
-        if (LOCK_DASH && lockScreenOurs() && getSystemService(android.app.KeyguardManager::class.java)?.isDeviceSecure == true) {
-            AodActivity.instance?.let { a -> runCatching { a.finish(); a.overridePendingTransition(0, 0) } }   // the options show on the lock screen, not under the Always On Display
-            val d = LockDashActivity.instance
-            if (d != null && !d.isFinishing) { lockDashFront(); d.optionsFromS3(); return }
-            if (startBg(Intent(this, LockDashActivity::class.java).putExtra(LockDashActivity.EXTRA_OPTS, true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 23)) return
-        }
         if (!startBg(Intent(this, IdentityActivity::class.java).putExtra(IdentityActivity.EXTRA_TITLE, "Unlock your phone")
             .putExtra(IdentityActivity.EXTRA_FOR, "s3").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 21)) s3UnlockWant = null
     }
@@ -2528,12 +2501,11 @@ class OverlayService : Service(), StoryBridge.Host {
             if (!want && p.stale) reload(p)  // new screens were published while it was up: pick them up now it's hidden
         }
         // The Wallet page button (Settings > QUICK ACCESS): on the Always On Display only when its own Always On Display is on.
-        val wallet = walletCan && !lockOptsUp && !lockDialAway && !lockDialPeek && entry != true && !shade && (if (onAod) QuickAccess.walletAod(this) else true)
+        val wallet = walletCan && !lockDialAway && !lockDialPeek && entry != true && !shade && (if (onAod) QuickAccess.walletAod(this) else true)
         showWalletBtn(wallet)
-        val sign = syncLockSign(locked, awake)
         // While it's up, keep checking: the moment the phone unlocks (by any route) it goes.
         // (and while the PIN page is up, it comes back as soon as you drag that away).
-        if (awake && (want || wallet || aodOn || entry == true || shade || sign)) ui.postDelayed(lockWatch, if (shade) 400L else if (sign) 250L else 1000L)
+        if (awake && (want || wallet || aodOn || entry == true || shade)) ui.postDelayed(lockWatch, if (shade) 400L else 1000L)
     }
     override fun setLockDialSize(w: Int, h: Int) { ui.post {
         val p = lockDialPane ?: return@post
@@ -2801,187 +2773,13 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     private var secWaiting = false
     @Volatile private var lockedAtScreenOn = false
-    /** Lockedintool's own lock screen (LockDashActivity) and its unlock options are OFF (#274 - owner, 12 Nov 2026: 'please
-     *  remove the unlock options people will unlock their phones the way they unlock their phones'): the phone's own lock
-     *  screen shows, with only the DEVICE LOCKED tape and words drawn over it (lockSign). The code stays for history. */
-    private val LOCK_DASH = false
-    private var lockSign: View? = null
-    private var lockSignWm: WindowManager? = null
-    private fun addLockSign() {
-        removeLockSign()
-        val v = android.widget.FrameLayout(this).apply {
-            // #293 (owner, 13 Nov 2026, chose 'whole screen, more blur': 'so that this works with every wallpaper'): the lock
-            // screen behind the sign is blurred (the window's blur-behind, set while it shows - syncLockSign) and a little darker.
-            addView(View(this@OverlayService).apply { tag = "lit-sign-dim"; setBackgroundColor(Color.BLACK); alpha = lockSignDim() },
-                android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
-            addView(LockArt(this@OverlayService), android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
-            visibility = View.INVISIBLE
-        }
-        val lp = overlayParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, Gravity.TOP or Gravity.START, 0, 0).also {
-            it.type = layerType
-            // Never touchable: every tap goes straight through to the phone's own lock screen (notifications, swipe up, camera...).
-            it.flags = it.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-            it.alpha = 0f
-        }
-        lockSign = v; lockSignWm = layerAdd(v, lp)
-    }
     private var keyguardListener: Any? = null
-    /** The phone can blur what's behind a window right now (Android 12+, not switched off e.g. by battery saver). */
-    private fun lockBlurOk() = Build.VERSION.SDK_INT >= 31 && runCatching { wm.isCrossWindowBlurEnabled }.getOrDefault(false)
-    /** Without the phone's blur it is only darker - a bit more, so the words still read on any wallpaper. */
-    private fun lockSignDim() = if (lockBlurOk()) 0.35f else 0.55f
-    private fun removeLockSign() { lockSign?.let { runCatching { (lockSignWm ?: layerWm).removeView(it) } }; lockSign = null; lockSignWm = null }
-    /** The DEVICE LOCKED sign shows while the phone is locked with the screen on, where Lockedintool was your lock screen
-     *  (Only system / Lockedintool security) or the Always On Display lock screen is on - and steps away for the phone's own
-     *  PIN page, its pulled-down panel, a call or an app that came up over the lock screen (camera...). */
-    private fun syncLockSign(locked: Boolean, awake: Boolean): Boolean {
-        val v = lockSign ?: return false
-        var want = locked && awake && !sysQuiet() && !callActive && !createActive && AodActivity.instance == null &&
-            (lockScreenOurs() || (QuickAccess.aodLock(this) && AodActivity.enabled(this)))
-        if (want) {
-            val mode = getSystemService(android.media.AudioManager::class.java)?.mode ?: android.media.AudioManager.MODE_NORMAL
-            if (mode != android.media.AudioManager.MODE_NORMAL) want = false
-        }
-        if (want && StoryAccessibilityService.frontAt > screenOnAt && StoryAccessibilityService.frontPkg.let { it != null && it != packageName && it != "com.android.systemui" }) want = false
-        if (want && (StoryAccessibilityService.unlockEntryShowing() == true || StoryAccessibilityService.shadeShowing() == true)) want = false
-        val lp = v.layoutParams as? WindowManager.LayoutParams ?: return want
-        val a = if (want) 1f else 0f
-        // The blur only while the sign shows (an invisible window could still blur the screen behind it).
-        val blur = if (want && lockBlurOk()) (60 * resources.displayMetrics.widthPixels / 1080).coerceAtLeast(20) else 0
-        val blurNow = Build.VERSION.SDK_INT >= 31 && lp.blurBehindRadius != blur
-        if (lp.alpha != a || blurNow) {
-            lp.alpha = a; v.visibility = if (want) View.VISIBLE else View.INVISIBLE
-            if (Build.VERSION.SDK_INT >= 31) {
-                lp.blurBehindRadius = blur
-                lp.flags = if (blur > 0) lp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND else lp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-            }
-            v.findViewWithTag<View>("lit-sign-dim")?.alpha = lockSignDim()
-            runCatching { (lockSignWm ?: layerWm).updateViewLayout(v, lp) }
-        }
-        return want
-    }
-    // The lock-screen Always On Display (#274): the phone's own lock screen kept on, bright (owner: 'please don't dim it').
-    private var aodHold: android.os.PowerManager.WakeLock? = null
-    private fun aodHoldOn() { runCatching {
-        aodHold?.let { if (it.isHeld) it.release() }
-        @Suppress("DEPRECATION")
-        aodHold = getSystemService(android.os.PowerManager::class.java).newWakeLock(
-            android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP, "story:aodlock").apply { setReferenceCounted(false); acquire() }
-    } }
-    private fun aodHoldOff() { runCatching { aodHold?.let { if (it.isHeld) it.release() } }; aodHold = null }
-    // ---- Lockedintool's lock screen (owner, 5 Nov 2026 - Only system): the screen comes on locked -> your Dashboard with
-    //      the phone's own unlock prompt over it (LockDashActivity). Never over the Always On Display, a call, the
-    //      camera or any app that came up over the lock screen; after Back it leaves the phone's own lock screen alone
-    //      until the screen next goes off. ----
     @Volatile private var screenOnAt = 0L
-    @Volatile private var lockDashLeftAt = 0L
-    fun lockDashLeft() { lockDashLeftAt = System.currentTimeMillis() }
-    /** Lockedintool's lock screen was pushed out of sight while the phone is still locked (the Home swipe showed the
-     *  phone's own lock screen): it comes back - unless the camera / a call / any app came up over the lock screen. */
-    fun lockDashAgain() { ui.post {
-        if (!LOCK_DASH) return@post
-        val since = System.currentTimeMillis()
-        // Tried again until it's really back in front (owner's videos, 5 Nov 2026: after a swipe the phone's own lock
-        // screen stayed for seconds - one try at 0.25 s wasn't always let through while the phone's lock screen moved).
-        for (d in longArrayOf(250, 700, 1500)) ui.postDelayed({ runCatching {
-            if (LockDashActivity.instance?.inFront == true) return@runCatching
-            if (!lockScreenOurs() || sysQuiet() || callActive || createActive) return@runCatching
-            if (getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked != true || userPresentAt > screenOffAt) return@runCatching
-            if (!getSystemService(android.os.PowerManager::class.java).isInteractive || aodShowing()) return@runCatching
-            val mode = getSystemService(android.media.AudioManager::class.java)?.mode ?: android.media.AudioManager.MODE_NORMAL
-            if (mode != android.media.AudioManager.MODE_NORMAL) return@runCatching
-            // (an app that just came up over the lock screen - the camera, a call - made this go out of sight: leave it)
-            if (StoryAccessibilityService.frontPkg != packageName && StoryAccessibilityService.frontAt > since - 1500) return@runCatching
-            val i = Intent(this, LockDashActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            val pi = android.app.PendingIntent.getActivity(this, 9, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-            if (Build.VERSION.SDK_INT >= 34) pi.send(android.app.ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle())
-            else pi.send()
-        } }, d)
-    } }
     /** Lockedintool is your lock screen (owner, 5 Nov 2026): on Only system it's your whole phone - home screen, lock
      *  screen, everything; on Second system only when Lockedintool security is your security ('even if you're on second
      *  system ... and you set Lockedintool security, Lockedintool would be now your lock screen'). Phone's security on
      *  Second system = the phone's own lock screen. */
     fun lockScreenOurs() = !sysQuiet() && (SystemMode.on(this) || Security.lit(this))   // never as an app (#237)
-    /** Unlocked on Lockedintool's lock screen: you land on your Home Screen - Lockedintool's Home on Only system, the
-     *  Pages on your Home Screen on Second system (the app you were in stays in Recents). */
-    fun lockDashOpenHome(act: android.app.Activity) {
-        // Unlocked because you tapped one of Station 3's features (#273): you land in what you tapped, not your Home Screen.
-        if (s3UnlockWant != null) { s3UnlockDone("ok"); return }
-        if (SystemMode.on(this)) { runCatching { act.startActivity(Intent(act, LockedintoolHome::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }; return }
-        val p = pagesPane ?: return
-        ui.post { hideLiveWidgets(); warmUp(); showPagesOn(p, "window.storyShow&&window.storyShow(null,false)") { updateBubble(); addBar() } }
-    }
-    /** The phone was just unlocked on Lockedintool's lock screen: that IS Lockedintool's unlock too - straight away, never a
-     *  second prompt (owner, 5 Nov 2026: 'I unlock my phone, then when it's unlocked I need to unlock it again' - the
-     *  phone's own 'unlocked' report came after Lockedintool had already asked). */
-    fun lockDashUnlocked() {
-        userPresentAt = System.currentTimeMillis()
-        secWaitUnlocked(); if (!secIsOpen()) { secOpen = true; secTell() }   // (called on the main thread)
-    }
-    private val lockDashRun = Runnable { lockDashCheck() }
-    /** Screen on, phone locked, Lockedintool's lock screen already up (put there while the screen was off): bring it in
-     *  front of the phone's own lock screen straight away (some phones draw their lock screen over it first). */
-    private fun lockDashFront() { runCatching {
-        if (!LOCK_DASH || LockDashActivity.instance == null || !lockScreenOurs() || callActive || createActive || aodShowing()) return
-        if (getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked != true) return
-        if (StoryAccessibilityService.frontAt > screenOnAt && StoryAccessibilityService.frontPkg != packageName) return
-        val i = Intent(this, LockDashActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-        val pi = android.app.PendingIntent.getActivity(this, 9, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-        if (Build.VERSION.SDK_INT >= 34) pi.send(android.app.ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle())
-        else pi.send()
-    } }
-    /** Lockedintool's lock screen is put up while the screen goes OFF, so when you turn it on it's already there - never
-     *  a glimpse of the phone's own lock screen first (owner, 5 Nov 2026: 'I can still see my lockscreen still'). With
-     *  the Always On Display on, it sits ready underneath it. */
-    /** Lockedintool's lock screen shows its unlock options (owner's video, 5 Nov 2026: tapping near Enter PIN hit Station 3
-     *  in the corner and opened Profile over the locked phone): while they show, Station 3 and the Wallet page button step
-     *  away so nothing covers or competes with the options; they come back when the options go. */
-    @Volatile var lockOptsUp = false
-    fun lockOptions(on: Boolean) { ui.post { if (lockOptsUp == on) return@post; lockOptsUp = on; updateBubble(); syncLockDial() } }
-    fun pagesJs(js: String) { ui.post { pagesPane?.web?.evaluateJavascript(js, null) } }
-    private fun lockDashPrepare() { runCatching {
-        if (!LOCK_DASH) { LockDashActivity.instance?.let { runCatching { it.finish() } }; return }
-        // Already up from before (tapped, then the screen went off): back to the untouched full-screen look, so the
-        // options only ever show after a tap (owner, 5 Nov 2026: 'the one with the tick is only when the screen is tapped').
-        LockDashActivity.instance?.resetLook()
-        if (!lockScreenOurs() || sysQuiet() || callActive || createActive || LockDashActivity.instance != null) return
-        if (getSystemService(android.app.KeyguardManager::class.java)?.isDeviceSecure != true) return
-        val mode = getSystemService(android.media.AudioManager::class.java)?.mode ?: android.media.AudioManager.MODE_NORMAL
-        if (mode != android.media.AudioManager.MODE_NORMAL) return
-        val i = Intent(this, LockDashActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-        val pi = android.app.PendingIntent.getActivity(this, 9, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-        runCatching {
-            if (Build.VERSION.SDK_INT >= 34) pi.send(android.app.ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle())
-            else pi.send()
-        }.onFailure { runCatching { startActivity(i) } }
-    } }
-    private fun lockDashCheck() { runCatching {
-        if (!LOCK_DASH) return   // #274: the phone's own lock screen now, with the DEVICE LOCKED sign over it
-        if (!lockScreenOurs() || sysQuiet() || callActive || createActive) return
-        if (LockDashActivity.instance != null || lockDashLeftAt > screenOffAt) return
-        if (getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked != true || userPresentAt > screenOffAt) return
-        if (!getSystemService(android.os.PowerManager::class.java).isInteractive || aodShowing()) return
-        val mode = getSystemService(android.media.AudioManager::class.java)?.mode ?: android.media.AudioManager.MODE_NORMAL
-        if (mode != android.media.AudioManager.MODE_NORMAL) return   // a call ringing or on
-        // Something came up over the lock screen since the screen came on (the phone's camera, a call screen): leave it.
-        if (StoryAccessibilityService.frontAt > screenOnAt && StoryAccessibilityService.frontPkg != packageName) return
-        // Opened the way Android explicitly allows from the background (the phone quietly blocked a plain start on the
-        // lock screen - owner, 5 Nov 2026: the phone's own lock screen showed instead), the plain way as a second try.
-        val i = Intent(this, LockDashActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-        val pi = android.app.PendingIntent.getActivity(this, 9, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-        runCatching {
-            if (Build.VERSION.SDK_INT >= 34) pi.send(android.app.ActivityOptions.makeBasic().setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle())
-            else pi.send()
-        }.onFailure { runCatching { startActivity(i) } }
-        ui.postDelayed({ if (LockDashActivity.instance == null && lockDashLeftAt <= screenOffAt &&
-            getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true && userPresentAt <= screenOffAt &&
-            getSystemService(android.os.PowerManager::class.java).isInteractive && !aodShowing()) {
-            runCatching { startActivity(i) }
-            ui.postDelayed({ if (LockDashActivity.instance == null && getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true)
-                ProblemLog.record(this, "lockscreen", "Lockedintool's lock screen couldn't open", "lock screen") }, 800)
-        } }, 700)
-    } }
     private var secWaitDone = false
     private var secWaitThen: (() -> Unit)? = null
     private val secWaitRun = Runnable {

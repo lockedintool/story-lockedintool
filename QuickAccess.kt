@@ -32,11 +32,7 @@ object QuickAccess {
     /** Station 3's dial pad button only in "Station 3 with dial pad". */
     fun dialInStation3(c: Context) = mode(c) == "s3dial"
     /** STORY's Always On Display screen runs when anything is meant to show on it. */
-    fun aodScreen(c: Context) = (station3On(c) && s3Aod(c)) || dialAod(c) || walletAod(c) || aodLock(c)
-    /** Settings > Security: the Always On Display shows your Lockedintool lock screen (owner, 5 Nov 2026). */
-    // REMOVED (#294 - owner, 13 Nov 2026: 'No no its not working let's remove this / This device locked picture always on
-    // display thingy' - chose 'The DEVICE LOCKED sign everywhere'): always off; the old 'aod_lock' setting is ignored.
-    @Suppress("UNUSED_PARAMETER") fun aodLock(c: Context) = false
+    fun aodScreen(c: Context) = (station3On(c) && s3Aod(c)) || dialAod(c) || walletAod(c)
 
     fun json(c: Context): String = JSONObject()
         .put("mode", mode(c)).put("where", where(c)).put("s3Aod", s3Aod(c))

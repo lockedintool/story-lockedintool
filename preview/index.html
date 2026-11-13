@@ -2899,9 +2899,13 @@
      have ... on Page Styles and Rows only, not on the normal pages'; then, drawing dots under each row: 'No like this'):
      the same dots as the Pages' own page dots - one per page, the page you're on lit - under each row in Rows and under
      the pages in a Page Style. */
-  .pg-dots{ display:flex; justify-content:center; gap:6px; margin-top:10px; pointer-events:none; }
+  .pg-dots{ display:flex; justify-content:center; gap:8px; margin-top:10px; pointer-events:none; }
+  /* Each dot with its page's number underneath (owner: 'Yes dots, but put numbers underneath'). */
+  .pg-dots .pgd{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:12px; }
   .pg-dots .dot{ width:7px; height:7px; border-radius:50%; background:var(--card-2); }
-  .pg-dots .dot.active{ background:#e8e6e1; }
+  .pg-dots .pgn{ font-size:10px; font-weight:700; line-height:1; color:#8a8a8a; }
+  .pg-dots .pgd.active .dot{ background:#e8e6e1; }
+  .pg-dots .pgd.active .pgn{ color:#e8e6e1; }
   .pswitch-rows-row-wrap{ display:flex; flex-direction:column; flex:1; min-width:0; }
   .pswitch-rows-row-wrap .pg-dots{ margin-top:8px; }
   .pg-dots-style{ margin-top:22px; }
@@ -4786,10 +4790,10 @@ function station3QuickRowHTML(){
 // screen use two different ones so their handlers can behave differently on tap).
 function pgNumHTML(num){ return ''; }
 // Page dots (Page Styles / Rows only): one per page, the page you're on lit.
-function pgDotsHTML(idx, n, cls){ let d = ''; for(let i = 0; i < n; i++) d += `<span class="dot${i === idx ? ' active' : ''}"></span>`;
+function pgDotsHTML(idx, n, cls){ let d = ''; for(let i = 0; i < n; i++) d += `<span class="pgd${i === idx ? ' active' : ''}"><span class="dot"></span><span class="pgn">${i + 1}</span></span>`;
   return `<div class="pg-dots${cls ? ' ' + cls : ''}" data-pgdots>${d}</div>`; }
 function pgCountSet(idx){ document.querySelectorAll('[data-pgdots].pg-dots-style').forEach(el=>{
-  el.querySelectorAll('.dot').forEach((d, i)=>{ const on = i === idx; if(d.classList.contains('active') !== on) d.classList.toggle('active', on); }); }); }
+  el.querySelectorAll('.pgd').forEach((d, i)=>{ const on = i === idx; if(d.classList.contains('active') !== on) d.classList.toggle('active', on); }); }); }
 function pswitchTileHTML(item, navAttr, num){
   return `
     <div class="pswitch-tile" data-${navAttr}="${item.key}">

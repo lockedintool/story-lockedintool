@@ -11477,6 +11477,8 @@ window.storyProfileOnly = function(){
     else if(k === 'rep-act') repAct(b.getAttribute('data-id'), b.getAttribute('data-a'));
     else if(k === 'bfx-act') bfxAct(b.getAttribute('data-id'), b.getAttribute('data-a'));
     else if(k === 'up-p-more'){ const p = UP.person; if(p) litPersonSheet(p, { after: ()=>upOpenPerson(p.id) }); }
+    else if(k === 'upv-more' && UP.view && UP.view.local){ const v = UP.view; upPause();   // #285: your own highlight
+      litSheet({ onClose: ()=>{ if(UP.view === v) upShowItem(); }, items: [{ label: 'Delete highlight', danger:true, fn: ()=>hlDeleteWhole(v.hl) }] }); }
     else if(k === 'upv-more'){ const v = UP.view; if(!v) return; const it = v.items[v.i]; upPause();
       litSheet({ onClose: ()=>{ if(UP.view === v) upShowItem(); }, items: [
         { label: v.status ? 'Report status' : 'Report post', fn: ()=>litReport(v.status ? 'status' : 'post', it.id, { onClose: ()=>{ if(UP.view === v) upShowItem(); } }) },
@@ -11638,8 +11640,8 @@ window.storyProfileOnly = function(){
     else if(k === 'hl-open'){
       const h = profileHighlights().find(x=>x.id === b.getAttribute('data-id')); if(!h || !h.items.length) return;
       const d = profileData(), me = { id:(msgAccount() || {}).id, name:d.name || '', username:d.username || '', photo: profilePhoto() };
-      const items = h.items.slice().reverse().map(x=>({ id:x.id, type: x.kind === 'video' ? 'video' : 'photo', url: PF_PHOTO_BASE + 'post/' + x.id, at: x.at }));
-      upView(me, items, 0, false); if(UP.view) UP.view.local = true; upShowItem();
+      const items = h.items.slice().reverse().map(x=>({ id:x.id, type: x.kind === 'video' ? 'video' : 'photo', url: PF_PHOTO_BASE + 'post/' + x.id, poster: x.kind === 'video' ? PF_PHOTO_BASE + 'postthumb/' + x.id : '', at: x.at }));
+      upView(me, items, 0, false); if(UP.view){ UP.view.local = true; UP.view.hl = h.id; } upShowItem();
     }
     else if(k === 'ed-name') openProfileField('name');
     else if(k === 'ed-username') openProfileField('username');
@@ -12536,20 +12538,67 @@ function upShowItem(){
   if(v.status) upMarkSeen(it.id);
   box.querySelector('.up-v-bars').innerHTML = v.status ? v.items.map((x, i)=>'<span class="up-v-bar' + (i < v.i ? ' done' : '') + '"><i' + (i === v.i ? ' class="run"' : '') + '></i></span>').join('') : '';
   box.querySelector('.up-v-who').innerHTML = upPic(v.user) + '<span class="up-v-name">' + escText(upName(v.user)) + '</span><span class="up-v-time">' + upAgo(it.at) + '</span>';
-  box.querySelector('[data-pf="upv-delete"]').hidden = v.user.id !== meId || !!v.local;
-  box.querySelector('[data-pf="upv-more"]').hidden = v.user.id === meId;
+  box.querySelector('[data-pf="upv-delete"]').hidden = v.user.id !== meId && !v.local;   // #285: your own highlight's videos / pictures can be deleted
+  box.querySelector('[data-pf="upv-more"]').hidden = v.user.id === meId && !v.local;   // #285: ⋮ > Delete highlight
   // Statuses (owner): heart it, comment under it, or message the person.
   box.querySelector('.up-v-bottom').hidden = !v.status;
   if(v.status) upVActs();
   const img = box.querySelector('img'), vid = box.querySelector('video');
   try{ vid.pause(); }catch(e){}
   if(it.type === 'video'){
-    img.hidden = true; img.removeAttribute('src'); vid.hidden = false; vid.src = it.url; vid.loop = !v.status;
-    vid.onended = v.status ? upNext : null; vid.play().catch(()=>{});
+    img.hidden = true; img.removeAttribute('src'); vid.hidden = false; vid.loop = !v.status;
+    if(it.poster) vid.poster = it.poster; else vid.removeAttribute('poster');
+    vid.onended = v.status ? upNext : null; upVideoSrc(vid, it.url);
   } else {
     vid.hidden = true; vid.removeAttribute('src'); try{ vid.load(); }catch(e){} img.hidden = false; img.src = it.url;
     if(v.status){ const bar = box.querySelector('.up-v-bar i.run'); if(bar){ bar.style.transition = 'none'; bar.style.width = '0'; void bar.offsetWidth; bar.style.transition = 'width 5s linear'; bar.style.width = '100%'; } UP.viewT = setTimeout(upNext, 5000); }
   }
+}
+// #285 (owner, 13 Nov 2026: a video in a new highlight showed only a grey play sign): the phone's player can't stream a
+// video the app serves from the phone itself, so a video kept on the phone is read whole and played from memory.
+let upVidBlob = '', upVidTok = 0;
+function upVideoFree(){ if(upVidBlob){ try{ URL.revokeObjectURL(upVidBlob); }catch(e){} upVidBlob = ''; } }
+function upVideoSrc(vid, url){
+  const tok = ++upVidTok; upVideoFree();
+  if(!url.startsWith(PF_PHOTO_BASE)){ vid.src = url; vid.play().catch(()=>{}); return; }
+  vid.removeAttribute('src');
+  fetch(url).then(r=>{ if(!r.ok) throw new Error('file'); return r.blob(); }).then(b=>{
+    if(tok !== upVidTok) return;
+    upVidBlob = URL.createObjectURL(b.type ? b : new Blob([b], { type:'video/mp4' })); vid.src = upVidBlob; vid.play().catch(()=>{});
+  }).catch(()=>{ if(tok === upVidTok) showToast('That video is gone from the phone'); });
+}
+// #285 (owner: 'I can't delete the highlight'; 'if there's only one video in a highlight and it gets deleted it should
+// delete the whole highlight'; 'there's no option to delete the video - add it'): your own highlight's bin deletes what
+// shows (the last one takes the highlight with it), ⋮ > Delete highlight deletes all of it - on the phone and on your
+// profile for everyone (the server's copies, and anything still waiting to upload).
+function hlUnqueue(ids){ const q = upQueue().filter((j, i)=>i === 0 && upFlushing ? true : !(j.kind === 'highlight' && ids.includes(j.localId))); upQueueSave(q); }
+async function hlServerDelete(hid, localIdx, all){
+  try{
+    const p = await msgApi('/v1/profile'); const sh = (p.highlights || []).find(h=>h.id === hid); if(!sh) return;
+    const srv = sh.items.slice().reverse();   // newest first, like the phone's list
+    const del = all ? srv : srv[localIdx] ? [srv[localIdx]] : [];
+    for(const it of del) try{ await msgApi('/v1/uposts/delete', { id: it.id }); }catch(e){}
+  }catch(e){}
+}
+function hlDeleteItem(hid, localId){
+  const hl = profileHighlights(), h = hl.find(x=>x.id === hid); if(!h) return;
+  const idx = h.items.findIndex(x=>x.id === localId); if(idx < 0) return;
+  const it = h.items[idx];
+  if(it.sid) msgApi('/v1/uposts/delete', { id: it.sid }).catch(()=>{}); else hlServerDelete(hid, idx, false);
+  hlUnqueue([localId]);
+  h.items.splice(idx, 1);
+  const gone = !h.items.length; if(gone) hl.splice(hl.indexOf(h), 1);
+  saveHighlights(hl);
+  return gone;
+}
+function hlDeleteWhole(hid){
+  const hl = profileHighlights(), h = hl.find(x=>x.id === hid); if(!h) return;
+  litSheet({ title:'Delete this highlight?', text:'Everything in it is deleted from your profile.', items:[{ label:'Delete highlight', danger:true, fn: ()=>{
+    hlServerDelete(hid, 0, true); hlUnqueue(h.items.map(x=>x.id));
+    hl.splice(hl.indexOf(h), 1); saveHighlights(hl);
+    if(UP.view && UP.view.hl === hid) upCloseView();
+    showToast('Highlight deleted');
+  } }], onClose: ()=>{ if(UP.view && UP.view.hl === hid) upShowItem(); } });
 }
 function upVActs(){
   const el = upEl(), v = UP.view; if(!el || !v) return;
@@ -12641,13 +12690,23 @@ function upCloseView(){
   clearTimeout(UP.viewT); UP.view = null; upMusic('');
   const box = el.querySelector('.up-viewer'), vid = box.querySelector('video');
   const sh = box.querySelector('.up-v-sheet'), ci = sh.querySelector('input'); if(document.activeElement === ci) ci.blur(); sh.hidden = true;
-  try{ vid.pause(); }catch(e){} vid.removeAttribute('src'); try{ vid.load(); }catch(e){}
+  try{ vid.pause(); }catch(e){} vid.removeAttribute('src'); vid.removeAttribute('poster'); try{ vid.load(); }catch(e){} upVidTok++; upVideoFree();
   box.querySelector('img').removeAttribute('src');
   box.hidden = true; upRender(); upRenderPerson();
 }
 async function upDeleteShown(){
   const v = UP.view; if(!v) return;
   const it = v.items[v.i];
+  if(v.local){ upPause();
+    litSheet({ title: it.type === 'video' ? 'Delete this video?' : 'Delete this picture?', text: v.items.length === 1 ? 'It’s the only one in this highlight, so the highlight is deleted too.' : '',
+      onClose: ()=>{ if(UP.view === v) upShowItem(); },
+      items:[{ label:'Delete', danger:true, fn: ()=>{
+        const gone = hlDeleteItem(v.hl, it.id);
+        v.items.splice(v.i, 1);
+        showToast(gone ? 'Highlight deleted' : 'Deleted');
+        if(!v.items.length) upCloseView(); else { v.i = Math.min(v.i, v.items.length - 1); upShowItem(); }
+      } }] });
+    return; }
   try{ await msgApi('/v1/uposts/delete', { id: it.id }); }catch(e){ showToast('No connection right now'); return; }
   v.items.splice(v.i, 1);
   showToast(v.status ? 'Status deleted' : 'Post deleted');
@@ -12761,7 +12820,8 @@ async function upFlush(){
         if(job.type === 'video'){ try{ thumb = await upPutMedia(await upBytes(PF_PHOTO_BASE + 'postthumb/' + job.localId, 720)); }catch(e){} }
         let music = null;
         if(job.music){ try{ const r = await fetch(PF_PHOTO_BASE + 'chatfile/' + job.music.file); if(r.ok) music = { media: await upPutMedia({ bytes: new Uint8Array(await r.arrayBuffer()), mime: job.music.mime }), name: job.music.name }; }catch(e){ if(e.code === 'big') showToast('That song is too big to share (300 MB max)'); } }
-        await msgApi('/v1/uposts/create', { kind: job.kind, type: job.type, media, thumb, music, hl: job.hl, hlname: job.hlname });
+        const made = await msgApi('/v1/uposts/create', { kind: job.kind, type: job.type, media, thumb, music, hl: job.hl, hlname: job.hlname });
+        if(job.kind === 'highlight' && made && made.id){ const hl = profileHighlights(), h = hl.find(x=>x.id === job.hl), x = h && h.items.find(y=>y.id === job.localId); if(x){ x.sid = made.id; saveHighlights(hl); } else msgApi('/v1/uposts/delete', { id: made.id }).catch(()=>{}); }   // deleted on the phone while it was uploading: gone here too   // #285: so deleting it on the phone deletes it on your profile too
         if(job.kind === 'status') showToast('Your status is up');
       }catch(e){
         if(e.code === 'big' || e.message === 'file'){ showToast(e.code === 'big' ? 'That video is too big to share (300 MB max)' : 'That file is gone'); }

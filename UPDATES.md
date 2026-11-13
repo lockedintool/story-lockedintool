@@ -315,3 +315,4 @@ commits, pushed as a new update) - nothing else changes.
 | 306 | 2026-11-13 | Choosing a company's logo is one tap on the picture (no Send button) | b2019f9 |
 | 307 | 2026-11-13 | The picture list (company logos, album, files) shows real square pictures, and '+ More pictures' when the phone only allows some of them | 15efb01 |
 | 308 | 2026-11-13 | Sharper pictures in every picture list (the previews are made almost twice as big) | 237567d |
+| 309 | 2026-11-13 | Business on Subscription always opens Business settings; the company chooser answers the unlock more reliably and reports why if it can't open | (this update) |

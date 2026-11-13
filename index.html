@@ -14951,7 +14951,7 @@ document.addEventListener('click', e=>{
     case 'acct': state.sub.acctView = b.getAttribute('data-v'); break;
     case 'acct-back': state.sub.acctView = null; break;
     case 'acct-ok': { const k = state.sub.acctView; state.sub.acctView = null; localStorage.setItem('story-acct-type', k); spaceTell();
-      if(k === 'business'){ if(!spaceList().length){ showToast('Business - add your companies'); state.current = 'spaces-settings'; } else showToast('Business'); }
+      if(k === 'business'){ state.current = 'spaces-settings'; if(!spaceList().length) showToast('Business - add your companies'); }   // #309: Business always opens Business settings
       else if(litSpace() !== 'personal'){ spaceGo('personal'); return; }
       break; }
   }

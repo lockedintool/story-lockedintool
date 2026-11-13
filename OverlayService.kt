@@ -271,7 +271,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // #292 (owner, 13 Nov 2026: 'my phone was unlocked but it took time to move' - the DEVICE LOCKED sign stayed over
         // the app after unlocking): it used to look once a second; now the phone tells Lockedintool the moment it unlocks.
         if (Build.VERSION.SDK_INT >= 33) runCatching {
-            val l = android.app.KeyguardManager.KeyguardLockedStateListener { locked -> if (!locked) syncLockDial() }
+            val l = android.app.KeyguardManager.KeyguardLockedStateListener { locked -> if (!locked) { syncLockDial(); ui.postDelayed({ spacesAfterUnlock() }, 250) } }
             getSystemService(android.app.KeyguardManager::class.java).addKeyguardLockedStateListener(mainExecutor, l); keyguardListener = l }
         val offFilter = android.content.IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenOff, offFilter, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(screenOff, offFilter)
@@ -2962,10 +2962,19 @@ class OverlayService : Service(), StoryBridge.Host {
     //      shows when the app opens). Lockedintool security's unlock counts the phone's own unlock as always. ----
     override fun spacesOn(on: Boolean) { ui.post { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", on).apply() } }
     private fun spacesWanted() = getSharedPreferences("story", MODE_PRIVATE).getBoolean("spaces_on", false)
+    // #309 (owner, 13 Nov 2026: 'I'm turning off and unlocking my phone and I'm not seeing that screen'): it answers BOTH
+    // the unlock broadcast and the phone's own locked / unlocked listener (once per unlock), and any reason it didn't
+    // open is reported, so the cause shows in the problem report.
+    @Volatile private var spacesShownAt = 0L
     private fun spacesAfterUnlock() {
-        if (!spacesWanted() || sysQuiet() || callActive || createActive || keyguardLocked()) return
-        if (pickerHid.isNotEmpty() || openingPkg != null) return
+        if (!spacesWanted()) return
+        if (spacesShownAt > screenOffAt) return   // already shown for this unlock
+        val why = when {
+            sysQuiet() -> "app mode / widgets"; callActive -> "call"; createActive -> "create"; keyguardLocked() -> "still locked"
+            pickerHid.isNotEmpty() -> "picker"; openingPkg != null -> "opening app"; pagesPane == null -> "no pages"; else -> null }
+        if (why != null) { if (why != "app mode / widgets") ProblemLog.record(this, "spaces", "chooser not shown: " + why, "unlock"); return }
         val p = pagesPane ?: return
+        spacesShownAt = System.currentTimeMillis()
         hideLiveWidgets()
         secGate(p) { showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar() } }
     }

@@ -305,4 +305,4 @@ commits, pushed as a new update) - nothing else changes.
 | 296 | 2026-11-13 | The lock screen's Wallet page button opens the Wallet page straight away, no unlock (fast access); going to anything other than the Wallet still asks for the phone's unlock | 6ad9fff |
 | 297 | 2026-11-13 | On the Always On Display, Station 3's bar shows all its icons again (they vanished into the grey burn-in pattern, only the + was left) | d708626 |
 | 298 | 2026-11-13 | The Wallet opened from the lock screen closes with Back (gesture or button) or a swipe up, back to the lock screen | 2038312 |
-| 299 | 2026-11-13 | From the lock screen's Wallet, going to the Dashboard / another page now shows the phone's unlock (the Wallet covered it - you only felt a vibration), then opens what you asked for | (this update) |
+| 299 | 2026-11-13 | From the lock screen's Wallet, going to the Dashboard / another page now shows the phone's unlock (the Wallet covered it - you only felt a vibration), then opens what you asked for | 1219f8c |

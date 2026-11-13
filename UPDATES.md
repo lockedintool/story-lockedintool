@@ -292,3 +292,4 @@ commits, pushed as a new update) - nothing else changes.
 | 283 | 2026-11-13 | Create's live camera view is sharp - it asks the camera for its sharpest 4:3 picture (up to 1920 x 1440) instead of the phone's small default | 8e628d4 |
 | 284 | 2026-11-13 | Create at the highest possible quality: 4K video where the phone can (else Full HD), pictures at full size in maximum-quality mode and posted exactly as taken, the live view at the camera's highest size; posted videos up to 300 MB | 829ec3e |
 | 285 | 2026-11-13 | Your highlights: the bin deletes the video / picture you're watching (the last one deletes the highlight), ⋮ > Delete highlight deletes it all - on your phone and on your profile; videos in a highlight play (they showed only a grey play sign) | 8ba1933 |
+| 286 | 2026-11-13 | Hold one of your highlights on Profile to delete it (Delete highlight, with Cancel) | 88f2d9a |

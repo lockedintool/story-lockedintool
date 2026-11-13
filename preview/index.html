@@ -4617,7 +4617,13 @@ function litMarkOnPic(area){
 function litApplyColors(){
   const area = document.getElementById('content-area');
   if(!area) return;
-  if(document.querySelector('.lit-auth') || (state.pageStyleOn && state.pageStyleViewOpen) || state.rowsViewOpen){ litRecolorArea(area, null); litBgArea(area, null); return; }
+  if(document.querySelector('.lit-auth')){ litRecolorArea(area, null); litBgArea(area, null); return; }
+  // Page Styles / Rows (#279 - owner, 13 Nov 2026: 'see how my color customization is black, but when I close the page
+  // style it goes back to my customization'): only while they're really on screen (the same test renderScreenContent
+  // uses - a Page Style left open in the background used to switch your colours off on EVERY screen, the Dashboard too),
+  // and then the screen wears the colours and picture of the page you came from, and every page in it its own.
+  const styleUp = PAGES.includes(state.current) && (state.rowsViewOpen || (state.pageStyleOn && state.pageStyleViewOpen));
+  if(styleUp){ litRecolorArea(area, state.current); litBgArea(area, state.current); litPreviewColors(area); return; }
   // Layouts > Pages > Color customization: the screen shows the PAGES' colours ('all pages'), each row / page its own.
   // The background takes 'all pages' only when EVERY page uses the same colours; if a row or a page has its own, the
   // background stays your System theme's and only the options are coloured (owner, 4 Nov 2026: 'if you apply to all
@@ -4639,8 +4645,18 @@ function litApplyColors(){
     return;
   }
   litRecolorArea(area, state.current || 'dashboard');
-  litBgArea(area, (document.querySelector('.lit-auth') || (state.pageStyleOn && state.pageStyleViewOpen) || state.rowsViewOpen || state.current === 'layouts-bg') ? null : (state.current || 'dashboard'));
+  litBgArea(area, state.current === 'layouts-bg' ? null : (state.current || 'dashboard'));
   litMarkOnPic(area);
+}
+// Each page shown inside Page Styles / Rows (the stacks' cards, the Circle's tiles, every strip of the 3D Circle) wears
+// that page's own colours and background picture, exactly like the page itself (#279).
+function litPreviewColors(root){
+  root.querySelectorAll('.mini-preview-frame, .wheel-screen').forEach(el=>{
+    const host = el.closest('[data-vpick], [data-pagestyle-nav], [data-pswitch-nav]');
+    const key = host && (host.getAttribute('data-vpick') || host.getAttribute('data-pagestyle-nav') || host.getAttribute('data-pswitch-nav'));
+    if(!key) return;
+    litRecolorArea(el, key); litBgArea(el, key);
+  });
 }
 // Puts one colour system on an element (its own colours and everything inside it).
 function litSetVars(el, sys){

@@ -307,3 +307,4 @@ commits, pushed as a new update) - nothing else changes.
 | 298 | 2026-11-13 | The Wallet opened from the lock screen closes with Back (gesture or button) or a swipe up, back to the lock screen | 2038312 |
 | 299 | 2026-11-13 | From the lock screen's Wallet, going to the Dashboard / another page now shows the phone's unlock (the Wallet covered it - you only felt a vibration), then opens what you asked for | 1219f8c |
 | 300 | 2026-11-13 | The app's name follows the System switch: 'Lockedintool System' or 'Lockedintool App' - under the phone's app icon and in Lockedintool's Apps list | 0ea3f7c |
+| 301 | 2026-11-13 | Tapping Lockedintool in the Apps list opens it again (on Second system it opened behind the Pages, so nothing seemed to happen) | (this update) |

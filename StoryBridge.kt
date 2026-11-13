@@ -163,7 +163,13 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     fun launchApp(pkg: String) {
         if (SystemMode.refuses(ctx)) return
         // Lockedintool's own app in its Apps list = the setup screen (never back into the app itself).
-        if (pkg == ctx.packageName) { runCatching { ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("setup", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; return }
+        if (pkg == ctx.packageName) {
+            val ok = runCatching { ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("setup", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+            // #301 (owner, 13 Nov 2026: 'on the apps list I couldn't open the app'): on Second system the Pages float over
+            // everything, so the setup screen opened BEHIND them - they step aside for it now, like for any app.
+            if (ok && !AppMode.appOnly(ctx) && !SystemMode.on(ctx)) host.hidePanelFor(ctx.packageName, "Lockedintool")
+            return
+        }
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return
         openFirst(sequenceOf(i))
     }

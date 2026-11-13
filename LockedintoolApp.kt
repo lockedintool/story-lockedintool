@@ -24,13 +24,31 @@ class LockedintoolApp : Activity() {
         window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
         if (android.os.Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
-        setContentView(android.widget.FrameLayout(this).apply { setBackgroundColor(android.graphics.Color.BLACK) })
+        // #289 (owner's video, 13 Nov 2026: about a second of black after tapping the icon): until the live Pages have
+        // drawn inside this window, it shows the exact copy of your Home Screen from last time - never black.
+        val root = android.widget.FrameLayout(this).apply { setBackgroundColor(android.graphics.Color.BLACK) }
+        shot = android.widget.ImageView(this).apply { scaleType = android.widget.ImageView.ScaleType.FIT_START; adjustViewBounds = true }
+        root.addView(shot, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT))
+        setContentView(root)
         current = this
+        showShot()
         page = intent.getStringExtra(EXTRA_PAGE)
         KeepAlive.ensureRunning(this)
     }
     override fun onNewIntent(intent: Intent?) { super.onNewIntent(intent); setIntent(intent); intent?.getStringExtra(EXTRA_PAGE)?.let { page = it } }
-    override fun onResume() { super.onResume(); tries = 0; attach() }
+    private var shot: android.widget.ImageView? = null
+    private fun showShot() { runCatching {
+        if (android.os.Build.VERSION.SDK_INT < 34) return   // only the exact screen copy (Android 14+), never a drawn picture
+        val svc = OverlayService.instance
+        val prefs = getSharedPreferences("story", MODE_PRIVATE)
+        if (svc?.homeShot == null && !prefs.getBoolean("home_shot_exact", false)) return
+        val b = svc?.homeShot ?: android.graphics.BitmapFactory.decodeFile(java.io.File(filesDir, "home_shot.jpg").path) ?: return
+        val top = svc?.homeShot?.let { svc.homeShotTop } ?: prefs.getInt("home_shot_top", 0)
+        val v = shot ?: return
+        (v.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { it.topMargin = top.coerceAtLeast(0); v.layoutParams = it }
+        v.setImageBitmap(b)
+    } }
+    override fun onResume() { super.onResume(); tries = 0; showShot(); attach() }
     private fun attach() {
         window.decorView.post {
             if (isFinishing || isDestroyed) return@post

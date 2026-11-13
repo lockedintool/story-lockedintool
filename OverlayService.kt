@@ -1735,8 +1735,10 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Dashboard's bottom bar flat (owner's video, 5 Nov 2026: 'Can't you just get the right picture') - this copy is
      *  exactly what you saw. One copy each time the Dashboard shows, never on a loop. */
     private val homeShotRun = Runnable { homeShotCopy() }
+    /** #289: the exact copy of your Home Screen is also kept as an app, so opening the app shows it at once (never black). */
+    private fun shotWanted() = lockScreenOurs() || AppMode.appOnly(this)
     private fun homeShotSoon() {
-        if (Build.VERSION.SDK_INT < 34 || !lockScreenOurs()) return
+        if (Build.VERSION.SDK_INT < 34 || !shotWanted()) return
         ui.removeCallbacks(homeShotRun); ui.postDelayed(homeShotRun, 700)
     }
     /** Why the last copy wasn't taken (sent with the problem report when the lock screen has no picture). */
@@ -1744,8 +1746,8 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun homeShotCopy() { if (Build.VERSION.SDK_INT >= 34) runCatching {
         val p = pagesPane ?: run { homeShotWhy = "no pages"; return }
         if (pagesBgWaiting) { homeShotWhy = "picture not drawn yet"; return }   // #281: retaken once it is (bgState)
-        if (!p.shown || !homeUp || !lockScreenOurs() || keyguardLocked() || p.frame.alpha < 1f || p.loading) {
-            homeShotWhy = "skipped shown=${p.shown} home=$homeUp ours=${lockScreenOurs()} locked=${keyguardLocked()} alpha=${p.frame.alpha} loading=${p.loading}"; return }
+        if (!p.shown || !homeUp || !shotWanted() || keyguardLocked() || p.frame.alpha < 1f || p.loading) {
+            homeShotWhy = "skipped shown=${p.shown} home=$homeUp ours=${shotWanted()} locked=${keyguardLocked()} alpha=${p.frame.alpha} loading=${p.loading}"; return }
         val v = p.web; if (v.width <= 0 || v.height <= 0 || !v.isAttachedToWindow) return
         val loc = IntArray(2); p.frame.getLocationOnScreen(loc)
         val req = android.view.PixelCopy.Request.Builder.ofWindow(p.frame).build()

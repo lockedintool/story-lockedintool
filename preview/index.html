@@ -2896,17 +2896,15 @@
     transform-origin:top left; pointer-events:none;
   }
   /* (#278 - owner, 13 Nov 2026: 'add a page indicator that shows the page number you're in and how many pages you
-     have, and each page shows what page number it is - on Page Styles and Rows only, not on the normal pages') */
-  .pg-num{ position:absolute; top:8px; right:8px; z-index:3; min-width:24px; height:24px; padding:0 6px; box-sizing:border-box;
-    border-radius:12px; background:#000; color:#fff; border:1.5px solid #fff; font-size:12px; font-weight:800;
-    display:flex; align-items:center; justify-content:center; pointer-events:none; line-height:1; }
-  .pswitch-vcard .pg-num, .pswitch-vfloat-card .pg-num{ top:10px; right:10px; transform:scale(1.25); transform-origin:top right; }
-  .pg-count{ font-size:12px; font-weight:800; color:#fff; background:#000; border:1.5px solid #fff; border-radius:14px;
-    padding:5px 11px; white-space:nowrap; pointer-events:none; }
-  .wheel3d-num{ position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:11px;
-    background:#000; color:#fff; border:1.5px solid #fff; box-sizing:border-box; font-size:11px; font-weight:800;
-    display:flex; align-items:center; justify-content:center; pointer-events:none; line-height:1;
-    -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+     have ... on Page Styles and Rows only, not on the normal pages'; then, drawing dots under each row: 'No like this'):
+     the same dots as the Pages' own page dots - one per page, the page you're on lit - under each row in Rows and under
+     the pages in a Page Style. */
+  .pg-dots{ display:flex; justify-content:center; gap:6px; margin-top:10px; pointer-events:none; }
+  .pg-dots .dot{ width:7px; height:7px; border-radius:50%; background:var(--card-2); }
+  .pg-dots .dot.active{ background:#e8e6e1; }
+  .pswitch-rows-row-wrap{ display:flex; flex-direction:column; flex:1; min-width:0; }
+  .pswitch-rows-row-wrap .pg-dots{ margin-top:8px; }
+  .pg-dots-style{ margin-top:22px; }
   .pswitch-tile-label{
     position:absolute; left:8px; bottom:8px; z-index:2; font-size:10.5px; font-weight:800;
     color:#fff; background:rgba(0,0,0,0.55); padding:3px 8px; border-radius:8px;
@@ -4786,11 +4784,12 @@ function station3QuickRowHTML(){
 // A single tile: the real live page, shrunk, with a small caption. navAttr picks which
 // data-* attribute the click handler listens for (the Rows modal and the live Page Style
 // screen use two different ones so their handlers can behave differently on tap).
-function pgNumHTML(num){ return num ? `<div class="pg-num">${num}</div>` : ''; }
-// 'Page X of N' (Page Styles / Rows only): which page you're on in the row, and how many pages the row has.
-function pgCountHTML(idx, n){ return `<span class="pg-count" data-pgcount data-n="${n}">Page ${Math.min(n, idx + 1)} of ${n}</span>`; }
-function pgCountSet(idx){ document.querySelectorAll('[data-pgcount]').forEach(el=>{ const n = +el.getAttribute('data-n') || 0;
-  const t = `Page ${Math.max(1, Math.min(n, idx + 1))} of ${n}`; if(el.textContent !== t) el.textContent = t; }); }
+function pgNumHTML(num){ return ''; }
+// Page dots (Page Styles / Rows only): one per page, the page you're on lit.
+function pgDotsHTML(idx, n, cls){ let d = ''; for(let i = 0; i < n; i++) d += `<span class="dot${i === idx ? ' active' : ''}"></span>`;
+  return `<div class="pg-dots${cls ? ' ' + cls : ''}" data-pgdots>${d}</div>`; }
+function pgCountSet(idx){ document.querySelectorAll('[data-pgdots].pg-dots-style').forEach(el=>{
+  el.querySelectorAll('.dot').forEach((d, i)=>{ const on = i === idx; if(d.classList.contains('active') !== on) d.classList.toggle('active', on); }); }); }
 function pswitchTileHTML(item, navAttr, num){
   return `
     <div class="pswitch-tile" data-${navAttr}="${item.key}">
@@ -4959,10 +4958,7 @@ function pswitchWheel3dHTML(navAttr){
               </div>
             `;
           }
-          // The page's number (#278), at the face's top-right corner, on the curve.
-          const numAng = baseAngle + arc/2 - sliceAngle*1.2;
-          const num = `<div class="wheel3d-num" style="transform:rotateY(${numAng.toFixed(2)}deg) translateZ(${(radius + 1).toFixed(2)}px) translateY(${(-h/2 + 18).toFixed(1)}px);">${i + 1}</div>`;
-          return `<div class="curve-page" data-${navAttr}="${item.key}" data-faceangle="${baseAngle}">${strips}${num}${tileLabelHTML(item, navAttr)}</div>`;
+          return `<div class="curve-page" data-${navAttr}="${item.key}" data-faceangle="${baseAngle}">${strips}${tileLabelHTML(item, navAttr)}</div>`;
         }).join('')}
         ${wheelPageDividersHTML(maxTileH, arc, radius)}
       </div>
@@ -5015,8 +5011,11 @@ function pageSwitcherRowsGridHTML(){
     <div class="pswitch-rows-grid">
       ${rowsList().map((items, i)=>`<div class="pswitch-rows-row">
         <div class="pswitch-rows-row-label">Row ${i + 1}</div>
+        <div class="pswitch-rows-row-wrap">
         <div class="pswitch-rows-tiles${items.length > 3 ? ' many' : ''}" style="--cols:${Math.max(3, items.length)};">
           ${items.map((item, k)=>pswitchTileHTML(item, 'pswitch-nav', k + 1)).join('')}
+        </div>
+        ${pgDotsHTML(items.findIndex(it=>it.key === (state.lastPage || state.current)), items.length)}
         </div>
       </div>`).join('')}
     </div>
@@ -5037,8 +5036,7 @@ function rowsContentScreen(){
         <button class="dash-back" data-action="rows-view-close">‹ Back</button>
         <span class="page-title">Rows</span>
       </div>
-      <div class="page-top-right-group">${(()=>{ const cur = state.lastPage || state.current; const r = rowsList().find(items=>items.some(it=>it.key === cur)) || rowsList()[0] || [];
-        return pgCountHTML(Math.max(0, r.findIndex(it=>it.key === cur)), r.length); })()}</div>
+      <div class="page-top-right-group"></div>
     </div>
     ${pageSwitcherRowsGridHTML()}
     </div>
@@ -5063,7 +5061,7 @@ function pageStyleContentScreen(){
   // standalone "Rows" quick-access button is a separate feature, untouched by this.)
   const centered = true;
   const body = centered
-    ? `<div style="flex:1; display:flex; flex-direction:column; justify-content:center;">${pswitchBodyHTML(style, 'pagestyle-nav')}</div>`
+    ? `<div style="flex:1; display:flex; flex-direction:column; justify-content:center;">${pswitchBodyHTML(style, 'pagestyle-nav')}${pgDotsHTML(Math.max(0, PAGE_SWITCH_ITEMS.findIndex(it=>it.key === (state.lastPage || state.current))), PAGE_SWITCH_ITEMS.length, 'pg-dots-style')}</div>`
     : `<div style="margin-top:14px;">${pswitchBodyHTML(style, 'pagestyle-nav')}</div>`;
   return `
     <div class="page-shell" style="display:flex; flex-direction:column; min-height:100%;">
@@ -5071,7 +5069,7 @@ function pageStyleContentScreen(){
       <div class="page-top-left">
         <button class="dash-back" data-action="page-style-close">‹ Back</button>
       </div>
-      <div class="page-top-right-group">${pgCountHTML(Math.max(0, PAGE_SWITCH_ITEMS.findIndex(it=>it.key === (state.lastPage || state.current))), PAGE_SWITCH_ITEMS.length)}</div>
+      <div class="page-top-right-group"></div>
     </div>
     ${body}
     </div>

@@ -4545,6 +4545,7 @@ function litRecolorArea(area, screen){
 // on the phone in IndexedDB 'story-bg' (never uploaded); which scopes have one is in localStorage 'story-bg-set' so it's
 // known at once, and the pictures are loaded into memory at start (LIT_BG), so a screen shows its picture instantly.
 const LIT_BG = {};
+const litBgBlobs = {};
 function litBgSet(){ try{ return JSON.parse(localStorage.getItem('story-bg-set') || '{}') || {}; }catch(e){ return {}; } }
 function litBgDb(){ return new Promise((res, rej)=>{ const r = indexedDB.open('story-bg', 1); r.onupgradeneeded = ()=>r.result.createObjectStore('pics'); r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); }); }
 // The app shows the Pages only once the picture is ready (owner, 5 Nov 2026: 'After unlocking lockedintool my background
@@ -4557,9 +4558,23 @@ async function litBgLoadAll(){
   try{
     const db = await litBgDb();
     await Promise.all(keys.map(k=>new Promise(res=>{ const q = db.transaction('pics').objectStore('pics').get(k);
-      q.onsuccess = ()=>{ if(q.result){ if(LIT_BG[k]) URL.revokeObjectURL(LIT_BG[k]); LIT_BG[k] = URL.createObjectURL(q.result); } res(); }; q.onerror = ()=>res(); })));
-    // Decoded before it's used, so it paints in the very first frame.
-    await Promise.all(Object.values(LIT_BG).map(u=>{ try{ const im = new Image(); im.src = u; return im.decode().catch(()=>{}); }catch(e){ return null; } }));
+      q.onsuccess = ()=>{ if(q.result){ if(LIT_BG[k] && !Object.keys(LIT_BG).some(o=>o !== k && LIT_BG[o] === LIT_BG[k])) URL.revokeObjectURL(LIT_BG[k]); LIT_BG[k] = URL.createObjectURL(q.result); litBgBlobs[k] = q.result; } res(); }; q.onerror = ()=>res(); })));
+    // #291 (owner's video, 13 Nov 2026: 'how the background fill flash' - the Dashboard to Money showed Money's plain colour
+    // first): the same picture chosen for several places (the Dashboard and the Pages...) is ONE picture in memory, so a
+    // screen with the same picture never waits for it again.
+    const bySize = {};
+    for(const k of keys){ const u = LIT_BG[k]; if(!u) continue; const b = litBgBlobs[k]; if(!b) continue; (bySize[b.size] = bySize[b.size] || []).push(k); }
+    for(const ks of Object.values(bySize)){
+      if(ks.length < 2) continue;
+      const bufs = await Promise.all(ks.map(k=>litBgBlobs[k].arrayBuffer().then(a=>new Uint8Array(a)).catch(()=>null)));
+      for(let i = 1; i < ks.length; i++) for(let j = 0; j < i; j++){
+        const a = bufs[i], b = bufs[j]; if(!a || !b || a.length !== b.length) continue;
+        let same = true; for(let n = 0; n < a.length; n += 997){ if(a[n] !== b[n]){ same = false; break; } }
+        if(same && a.every((x, n)=>x === b[n])){ if(LIT_BG[ks[i]] !== LIT_BG[ks[j]]){ URL.revokeObjectURL(LIT_BG[ks[i]]); LIT_BG[ks[i]] = LIT_BG[ks[j]]; } break; }
+      }
+    }
+    // Decoded before it's used, so it paints in the very first frame - and kept (LIT_BG_IMG), so it stays decoded.
+    await Promise.all([...new Set(Object.values(LIT_BG))].map(u=>{ try{ const im = new Image(); im.src = u; LIT_BG_IMG[u] = im; return im.decode().catch(()=>{}); }catch(e){ return null; } }));
     litApplyColors();
     const sc = document.getElementById('sec-cover'); if(sc) secCoverBg(sc);
   }catch(e){}
@@ -4606,8 +4621,8 @@ async function litBgPut(target, blob){
   await new Promise((res, rej)=>{ const t = db.transaction('pics', 'readwrite'); if(blob) t.objectStore('pics').put(blob, target); else t.objectStore('pics').delete(target); t.oncomplete = res; t.onerror = ()=>rej(t.error); });
   const set = litBgSet(); if(blob) set[target] = Date.now(); else delete set[target];
   try{ localStorage.setItem('story-bg-set', JSON.stringify(set)); }catch(e){}
-  if(LIT_BG[target]){ URL.revokeObjectURL(LIT_BG[target]); delete LIT_BG[target]; }
-  if(blob) LIT_BG[target] = URL.createObjectURL(blob);
+  if(LIT_BG[target]){ if(!Object.keys(LIT_BG).some(o=>o !== target && LIT_BG[o] === LIT_BG[target])) URL.revokeObjectURL(LIT_BG[target]); delete LIT_BG[target]; delete litBgBlobs[target]; }
+  if(blob){ LIT_BG[target] = URL.createObjectURL(blob); litBgBlobs[target] = blob; }
 }
 function litBgFor(screen){
   if(!screen) return null;
@@ -4626,15 +4641,23 @@ function litBgArea(area, screen){
   const url = litBgFor(screen);
   if(!url){ if(area.__litbg){ area.classList.remove('lit-has-bg'); area.style.removeProperty('background-image'); area.style.removeProperty('background-size'); area.style.removeProperty('background-position'); area.__litbg = null; } return; }
   if(area.__litbg === url) return;
+  const prev = area.__litbg;
   area.__litbg = url;
   area.classList.add('lit-has-bg');
   // The halo behind words on the picture is your background colour (colour system), else black - white in White theme.
   { const sys = litColorSystemFor(screen); const hb = sys && sys.bg ? litHexRgb(sys.bg) : null;
     const white = !!(window.storyTheme && window.storyTheme() === 'white');
     area.style.setProperty('--lit-halo', hb ? `${hb.r}, ${hb.g}, ${hb.b}` : (white ? '255, 255, 255' : '0, 0, 0')); }
-  area.style.setProperty('background-image', `linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.28)), url("${url}")`, 'important');
+  const layers = u=>`linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.28)), url("${url}")` + (u ? `, url("${u}")` : '');
+  // A different picture than the one this screen had: until it is decoded the one before stays under it, so the screen
+  // never shows its bare colour in between (#291).
+  let im = LIT_BG_IMG[url]; if(!im){ im = new Image(); im.src = url; LIT_BG_IMG[url] = im; }
+  const ready = im.complete && im.naturalWidth > 0;
+  area.style.setProperty('background-image', layers(prev && !ready ? prev : null), 'important');
   area.style.setProperty('background-size', 'cover', 'important');
   area.style.setProperty('background-position', 'center', 'important');
+  if(prev && !ready) Promise.resolve(im.decode ? im.decode() : null).catch(()=>{}).then(()=>requestAnimationFrame(()=>{
+    if(area.__litbg === url) area.style.setProperty('background-image', layers(null), 'important'); }));
 }
 // Words lying straight on the background picture get the halo; words inside anything with its own background don't (#247).
 function litMarkOnPic(area){
@@ -7784,7 +7807,21 @@ function loadLWC(){
   return lwcLoading;
 }
 state.draftSLTP = null;   // { sl, tp } while you're setting SL / TP for your next Buy / Sell
-const TV = { host:null, chart:null, series:null, lines:[], dataKey:'', drag:null };
+const TV = { host:null, chart:null, series:null, lines:[], dataKey:'', drag:null, shot:0 };
+// #291 (owner's video, 13 Nov 2026: 'how the chart will be flashing'): the live chart is the phone's own view laid over the
+// page, so it can't slide with it - the box slid in / out EMPTY and the chart popped in after. The app keeps an exact copy
+// of the chart (story-photo/tvshot) and the box shows it underneath, so the chart slides with the page and the live one
+// takes over in the same place.
+function tvShotUrl(v){ return 'https://appassets.androidplatform.net/story-photo/tvshot?v=' + v; }
+function tvShotStyle(){ return TV.shot ? ` style="background-image:url('${tvShotUrl(TV.shot)}');background-size:100% 100%;background-repeat:no-repeat;"` : ''; }
+window.storyTvShot = function(v){
+  const im = new Image(); im.src = tvShotUrl(v);
+  Promise.resolve(im.decode ? im.decode() : null).then(()=>{
+    if(v < TV.shot) return;
+    TV.shot = v; TV.shotImg = im;   // kept, so it stays decoded
+    document.querySelectorAll('#trading-chart .tv-slot').forEach(el=>{ el.style.backgroundImage = `url('${tvShotUrl(v)}')`; el.style.backgroundSize = '100% 100%'; el.style.backgroundRepeat = 'no-repeat'; });
+  }).catch(()=>{});
+};
 function tvColors(){
   const white = window.storyTheme && window.storyTheme() === 'white';
   return { bg: white ? '#ffffff' : '#000000', text: white ? '#555555' : '#8a8a8a', grid: white ? '#f0f0f0' : '#111111' };
@@ -7920,7 +7957,9 @@ function tvPlace(){
     // With the New Order sheet up the whole chart fits in the space above it (its axes stay visible), not just its top part.
     if(osheet) return tvSend({ show:true, x:lx, y:top, w:lw, h:bottom - top, ct:0, cb:bottom - top, holes:holesN.map(h=>[h[0], h[1] - (top - r.top), h[2], h[3]]),
       r:0, dim: 0, dpr: window.devicePixelRatio || 1 });
-    return tvSend({ show:true, x:lx, y:r.top, w:lw, h:r.height, ct:top - r.top, cb:bottom - r.top, holes:holesN,
+    // snap: the whole box is on screen on the Trading page (not full screen) - the app may take its picture (#291).
+    const snap = !slot.closest('.chart-fullscreen') && top - r.top < 1 && r.bottom - bottom < 1 && !document.querySelector('.modal-overlay, .notes-popover-overlay, .lit-sheet-bg') ? 1 : 0;
+    return tvSend({ show:true, x:lx, y:r.top, w:lw, h:r.height, ct:top - r.top, cb:bottom - r.top, holes:holesN, snap, sx:r.left, sw:r.width,
       r: wide ? 0 : parseFloat(getComputedStyle(own.closest('.tv-card') || own).borderTopLeftRadius) || 0,
       dim: dimN ? parseFloat(getComputedStyle(dimN).opacity) || 0 : 0, dpr: window.devicePixelRatio || 1 });
   }
@@ -8150,7 +8189,7 @@ function tradingPageScreen(){
     ${pageArrows()}
     <div class="chart-wrap" id="trading-chart">
       <div class="row-card tv-card">
-        <div class="tv-slot"></div>
+        <div class="tv-slot"${tvShotStyle()}></div>
       </div>
       <button class="tv-sltp-btn${state.draftSLTP ? ' on' : ''}" data-action="draft-sltp" title="Set stop loss / take profit for your next trade">SL/TP</button>
       <button class="chart-fs-btn" data-action="chart-fullscreen" title="Full screen">⤢</button>

@@ -289,3 +289,4 @@ commits, pushed as a new update) - nothing else changes.
 | 280 | 2026-11-13 | Coming into Lockedintool shows your background picture straight away - never your background colour first while the picture loads | 8639a70 |
 | 281 | 2026-11-13 | Your background picture is waited for EVERY time Lockedintool opens (the app asks the page right then, and waits until the picture is really drawn) - the colour no longer shows first; Only system's Home and the lock screen picture wait for it too | f6c2380 |
 | 282 | 2026-11-13 | Create's camera: pictures at the camera's full size and videos in Full HD - before, pictures and video ran together, which made the phone shrink pictures to about video size | eb3e427 |
+| 283 | 2026-11-13 | Create's live camera view is sharp - it asks the camera for its sharpest 4:3 picture (up to 1920 x 1440) instead of the phone's small default | 8e628d4 |

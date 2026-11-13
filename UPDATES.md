@@ -323,3 +323,4 @@ commits, pushed as a new update) - nothing else changes.
 | 314 | 2026-11-13 | App updates install only when you choose: a notification says one is available, and installing asks twice | 7a6c4ba |
 | 315 | 2026-11-13 | Business settings: each company's buttons always fit on one line | e342c16 |
 | 316 | 2026-11-13 | Settings (owner's phone): Personal / Business as two tiles right under Second system / Only system, switching needs the phone's fingerprint, face or PIN | 9f7d658 |
+| 317 | 2026-11-13 | The company screen also shows when the screen comes back on before the phone locked, and no longer depends on a saved flag | (this) |

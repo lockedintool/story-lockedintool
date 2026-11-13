@@ -96,7 +96,10 @@ class OverlayService : Service(), StoryBridge.Host {
             // Was the lock screen really up when the screen came on? Only then can an unlock be on its way (secPrompt waits for it).
             lockedAtScreenOn = runCatching { getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked }.getOrDefault(false)
             screenOnAt = System.currentTimeMillis()
-            ui.post { syncLockDial(); updateBubble() }; ui.postDelayed({ syncLockDial(); updateBubble() }, 400) }   // on the lock screen the Dashboard band must step out (keyguardLocked)
+            ui.post { syncLockDial(); updateBubble() }; ui.postDelayed({ syncLockDial(); updateBubble() }, 400)   // on the lock screen the Dashboard band must step out (keyguardLocked)
+            // #317: the screen came back on WITHOUT the lock screen (the phone locks a few seconds after the screen goes
+            // off, so a quick off / on never unlocks) - the company chooser shows all the same.
+            if (!lockedAtScreenOn) ui.postDelayed({ spacesAfterUnlock() }, 300) }
     }
     // Always On Display: the moment the screen goes off, switch it straight back on with Station 3
     // showing. Android's display watcher usually reports "off" before the screen-off broadcast does,
@@ -2981,7 +2984,13 @@ class OverlayService : Service(), StoryBridge.Host {
         if (Release.isOwner(this)) showToast("Company screen didn’t open: " + why)   // the owner's phone says why straight away
     }
     private fun spacesAfterUnlock() {
-        if (!spacesWanted()) return
+        // #317: the saved 'companies are on' flag may never have been written - ask the page itself.
+        if (!spacesWanted()) {
+            pagesPane?.web?.evaluateJavascript("(function(){try{return window.litSpacesWanted?String(window.litSpacesWanted()):'none'}catch(e){return 'error'}})()") { r ->
+                if ((r ?: "").trim('"') == "true") { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", true).apply(); spacesAfterUnlock() }
+            }
+            return
+        }
         if (spacesShownAt > screenOffAt) return   // already shown for this unlock
         if (!keyguardLocked()) spacesStale()
         val why = when {

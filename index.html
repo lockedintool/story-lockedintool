@@ -8820,21 +8820,39 @@ function openCardCamera(side){
   }
   wrap.innerHTML = '<video autoplay playsinline muted></video><div class="card-cam-frame"></div><div class="card-cam-hint">' + (side === 'back' ? 'Now the BACK of your card' : 'Fit the FRONT of your card in the frame') + '</div><div class="card-cam-msg" hidden></div><button class="card-cam-x" aria-label="Close">×</button><button class="card-cam-shutter" aria-label="Scan"></button>' + (side === 'back' ? '<button class="card-cam-skip">Nothing on the back</button>' : '');
   const video = wrap.querySelector('video'), frame = wrap.querySelector('.card-cam-frame'), msg = wrap.querySelector('.card-cam-msg');
-  navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1920 }, height:{ ideal:1440 } }, audio:false })
-    .then(s=>{ if(!document.getElementById('card-cam')){ s.getTracks().forEach(t=>t.stop()); return; } wrap._stream = s; video.srcObject = s; })
+  // #320 (owner, 13 Nov 2026: 'the card scan live image quality is bad like bad bad, it can't read at all'): the
+  // sharpest view the camera gives, focusing all the time (tap the picture to focus again), and the scan itself is a
+  // REAL full-resolution photo (ImageCapture.takePhoto), not a frame of the preview.
+  navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:3840 }, height:{ ideal:2880 }, aspectRatio:{ ideal:4/3 } }, audio:false })
+    .then(s=>{ if(!document.getElementById('card-cam')){ s.getTracks().forEach(t=>t.stop()); return; } wrap._stream = s; video.srcObject = s;
+      const tr = s.getVideoTracks()[0];
+      try{ const cap = tr.getCapabilities ? tr.getCapabilities() : {};
+        if(cap.focusMode && cap.focusMode.includes('continuous')) tr.applyConstraints({ advanced:[{ focusMode:'continuous' }] }).catch(()=>{}); }catch(e){}
+      try{ if(window.ImageCapture) wrap._ic = new ImageCapture(tr); }catch(e){}
+      video.addEventListener('click', ()=>{ try{ const cap = tr.getCapabilities ? tr.getCapabilities() : {};
+        if(cap.focusMode && cap.focusMode.includes('single-shot')) tr.applyConstraints({ advanced:[{ focusMode:'single-shot' }] }).then(()=>setTimeout(()=>{ if(cap.focusMode.includes('continuous')) tr.applyConstraints({ advanced:[{ focusMode:'continuous' }] }).catch(()=>{}); }, 1500)).catch(()=>{}); }catch(e){} });
+    })
     .catch(e=>{ msg.hidden = false; msg.textContent = 'Camera problem: ' + (e && (e.message || e.name) || 'it didn’t open'); })
     : (msg.hidden = false, msg.textContent = 'The camera isn’t available here');
   wrap.querySelector('.card-cam-x').addEventListener('click', ()=>{ closeCardCamera(); if(side === 'back') cardScanFinish(); else cardScanBack(); });
   const skip = wrap.querySelector('.card-cam-skip'); if(skip) skip.addEventListener('click', ()=>{ closeCardCamera(); cardScanFinish(); });
-  wrap.querySelector('.card-cam-shutter').addEventListener('click', ()=>{
-    if(!video.videoWidth) return;
+  wrap.querySelector('.card-cam-shutter').addEventListener('click', async ()=>{
+    if(!video.videoWidth || wrap._busy) return;
+    wrap._busy = true;
     // The part of the camera picture inside the frame (the video fills the screen like object-fit: cover).
     const W = wrap.clientWidth, H = wrap.clientHeight, vw = video.videoWidth, vh = video.videoHeight;
     const sc = Math.max(W / vw, H / vh), ox = (W - vw * sc) / 2, oy = (H - vh * sc) / 2;
     const fr = frame.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
     const sx = (fr.left - wr.left - ox) / sc, sy = (fr.top - wr.top - oy) / sc, sw = fr.width / sc, sh = fr.height / sc;
-    const c = document.createElement('canvas'); c.width = 1012; c.height = 638;
-    c.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    let src = video, k = 1;
+    // A real photo at the camera's full size, the same view as the preview (same shape) - else the preview frame.
+    if(wrap._ic){ try{ msg.hidden = false; msg.textContent = 'Hold still…';
+      const bmp = await createImageBitmap(await wrap._ic.takePhoto());
+      if(Math.abs(bmp.width / bmp.height - vw / vh) < 0.03 && bmp.width > vw){ src = bmp; k = bmp.width / vw; } }catch(e){} }
+    const cw = Math.max(1012, Math.min(2024, Math.round(sw * k))), c = document.createElement('canvas');
+    c.width = cw; c.height = Math.round(cw * 638 / 1012);
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(src, sx * k, sy * k, sw * k, sh * k, 0, 0, c.width, c.height);
     closeCardCamera();
     cardPhotoRead(c, side);
   });

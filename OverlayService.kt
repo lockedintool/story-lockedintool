@@ -69,7 +69,7 @@ class OverlayService : Service(), StoryBridge.Host {
         override fun onReceive(c: Context, i: Intent) {
             userPresentAt = System.currentTimeMillis()
             ui.post { secWaitUnlocked(); endLockWallet() }
-            ui.postDelayed({ spacesAfterUnlock() }, 250)   // #302: Business - choose your focus after every unlock
+            ui.postDelayed({ spDiag("unlocked"); spacesAfterUnlock() }, 250)   // #302: Business - choose your focus after every unlock
             widgetLiveEvent(false)  // unlocked onto the home screen: live widgets come back
             if (SystemMode.on(c)) { ui.removeCallbacks(systemCheckRun); ui.postDelayed(systemCheckRun, 500) }  // Lockedintool as your system: unlocked onto another app / the home screen
             AodActivity.instance?.finish()  // unlocked (e.g. fingerprint) while the Always On Display was up
@@ -2983,29 +2983,36 @@ class OverlayService : Service(), StoryBridge.Host {
         ProblemLog.record(this, "spaces", "chooser not shown: " + why, "unlock")
         if (Release.isOwner(this)) showToast("Company screen didn’t open: " + why)   // the owner's phone says why straight away
     }
+    /** #318 TEMPORARY (owner's phone only): says where the company screen stopped after an unlock - remove once fixed. */
+    private fun spDiag(m: String) { if (Release.isOwner(this)) showToast("Company screen: " + m) }
     private fun spacesAfterUnlock() {
         // #317: the saved 'companies are on' flag may never have been written - ask the page itself.
         if (!spacesWanted()) {
-            pagesPane?.web?.evaluateJavascript("(function(){try{return window.litSpacesWanted?String(window.litSpacesWanted()):'none'}catch(e){return 'error'}})()") { r ->
-                if ((r ?: "").trim('"') == "true") { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", true).apply(); spacesAfterUnlock() }
+            val pw = pagesPane?.web
+            if (pw == null) { spDiag("no Pages window"); return }
+            pw.evaluateJavascript("(function(){try{return window.litSpacesWanted?String(window.litSpacesWanted()):'none'}catch(e){return 'error'}})()") { r ->
+                val a = (r ?: "").trim('"')
+                if (a == "true") { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", true).apply(); spacesAfterUnlock() }
+                else spDiag("off - the page says '" + a + "'")
             }
             return
         }
-        if (spacesShownAt > screenOffAt) return   // already shown for this unlock
+        if (spacesShownAt > screenOffAt) { spDiag("already shown for this unlock"); return }
         if (!keyguardLocked()) spacesStale()
         val why = when {
             sysQuiet() -> "app mode / widgets"; callActive -> "call"; createActive -> "create"; keyguardLocked() -> "still locked"
             pickerHid.isNotEmpty() -> "picker"; openingPkg != null -> "opening app"; pagesPane == null -> "no pages"; else -> null }
-        if (why != null) { if (why != "app mode / widgets" && why != "still locked") spacesWhy(why); return }
+        if (why != null) { if (why != "app mode / widgets" && why != "still locked") spacesWhy(why) else spDiag(why); return }
         val p = pagesPane ?: return
         spacesShownAt = System.currentTimeMillis()
         hideLiveWidgets()
         getSharedPreferences("story", MODE_PRIVATE).edit().putLong("spaces_pending", spacesShownAt).apply()
+        spDiag("opening…")
         secGate(p) { showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar()
             // The page answers whether it opened; a page that was (re)loading opens it itself once ready (spacesPending).
             ui.postDelayed({ p.web.evaluateJavascript("(function(){try{return document.getElementById('lit-spaces')?'ok':(window.litSpacesOpen?window.litSpacesOpen():'loading')}catch(e){return 'error '+e.message}})()") { r ->
                 val res = (r ?: "").trim('"')
-                if (res == "ok") spacesDone() else if (res != "loading") spacesWhy("page: " + res)
+                if (res == "ok") { spacesDone(); spDiag("open (shown " + p.shown + ")") } else if (res != "loading") spacesWhy("page: " + res) else spDiag("page still loading")
             } }, 700) } }
     }
     /** As an app: the chooser shows each time the app is opened (after it was left). */

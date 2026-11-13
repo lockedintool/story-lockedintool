@@ -4295,6 +4295,31 @@ function rowIds(){
   const apps = planBasicOnly() ? [] : appPagesStored();
   return [1].concat([...new Set(apps.map(a=>a.row || 1).filter(r=>r > 1))].sort((x, y)=>x - y));
 }
+// Each row's home page (#278 - owner, 13 Nov 2026: 'the homescreen setting in layouts - you didn't add it for all the
+// other rows as well. But the one that your phone will always go to is the one in the first row. The other ones it will
+// go to when in that row'; 'the default homescreen of lockedintool is the wallet page'; other rows default to 'the pages
+// that are underneath the money page'). Row 1's is Layouts > Home Screen (state.homeScreen); other rows' are kept in
+// 'story-row-home' {rowId: key}.
+function rowHomesStored(){ try{ return JSON.parse(localStorage.getItem('story-row-home') || '{}') || {}; }catch(e){ return {}; } }
+function rowHomeSet(id, key){ const h = rowHomesStored(); h[id] = key; try{ localStorage.setItem('story-row-home', JSON.stringify(h)); }catch(e){} }
+// The home page of the row at index ri (0 = Row 1) among its pages, or null (Row 1 with the Dashboard as home).
+function rowHomeKey(ri, items){
+  const rows = rowsList(); items = items || rows[ri] || [];
+  if(!items.length) return null;
+  if(ri === 0) return items.some(it=>it.key === state.homeScreen) ? state.homeScreen : null;
+  const id = rowIds()[ri], h = rowHomesStored()[id];
+  if(h && items.some(it=>it.key === h)) return h;
+  // Default: the page underneath Money (the same place in the row as Money is in Row 1).
+  const col = Math.max(0, (rows[0] || []).findIndex(it=>it.key === 'money'));
+  return items[Math.min(col, items.length - 1)].key;
+}
+// Page Styles and Rows show a row starting from its home page (owner chose 'Home page moves first'): the home page is
+// first and number 1, then the pages after it, going round.
+function orderFromHome(items, home){
+  const i = home ? items.findIndex(it=>it.key === home) : -1;
+  return i <= 0 ? items.slice() : items.slice(i).concat(items.slice(0, i));
+}
+function styleItems(){ return orderFromHome(PAGE_SWITCH_ITEMS, rowHomeKey(curRow - 1, PAGE_SWITCH_ITEMS)); }
 // Layouts > Pages > Page layout (owner): your own order of the pages in each row ('story-row-order' {rowId: [keys]}).
 function rowOrders(){ try{ return JSON.parse(localStorage.getItem('story-row-order') || '{}') || {}; }catch(e){ return {}; } }
 function rowsList(){
@@ -4646,7 +4671,8 @@ function goToRow(n, key){
   if(curRow === 1 && PAGES.includes(state.current)) state.row1Page = state.current;
   curRow = n; syncAppPages();
   Object.keys(NEIGHBORS).forEach(k=>{ if(NEIGHBORS[k].host.parentNode) NEIGHBORS[k].host.remove(); delete NEIGHBORS[k]; });
-  state.current = key && PAGES.includes(key) ? key : n === 1 && PAGES.includes(state.row1Page) ? state.row1Page : PAGES[0];
+  const home = n > 1 ? rowHomeKey(n - 1) : null;
+  state.current = key && PAGES.includes(key) ? key : n === 1 && PAGES.includes(state.row1Page) ? state.row1Page : home && PAGES.includes(home) ? home : PAGES[0];
   state.lastPage = state.current;
   renderDevice();
   return true;
@@ -4819,12 +4845,12 @@ const DECK_MAX = 5;   // (#277) the most pages a Vertical / Horizontal stack sho
 // Where the deck starts: the page you came from in front (the last page for short rows, as before), with a full stack
 // behind it whenever there are enough pages.
 function deckStartPos(n){
-  const cur = PAGE_SWITCH_ITEMS.findIndex(it=>it.key === (state.lastPage || state.current));
+  const cur = styleItems().findIndex(it=>it.key === (state.lastPage || state.current));
   const lo = Math.min(n - 1, DECK_MAX - 1);
   return n <= DECK_MAX ? n - 1 : Math.max(lo, Math.min(n - 1, cur < 0 ? n - 1 : cur));
 }
 function pswitchVStackHTML(horiz){
-  const items = PAGE_SWITCH_ITEMS, n = items.length;
+  const items = styleItems(), n = items.length;
   // The stack follows how your pages are placed in the row (default Money, Wallet, Focus): first at the top / left,
   // last at the bottom / right in front (owner).
   const order = items.slice();
@@ -4851,8 +4877,8 @@ function pswitchCircle2dHTML(navAttr){
   return `
     <div class="pswitch-circle2d" data-circle2d>
       <div class="circle-track-ring"></div>
-      ${PAGE_SWITCH_ITEMS.map((item,i)=>`
-        <div class="pswitch-tile pswitch-circle2d-item" data-${navAttr}="${item.key}" data-baseangle="${90 - (i - Math.floor(PAGE_SWITCH_ITEMS.length / 2)) * 36}">
+      ${styleItems().map((item,i)=>`
+        <div class="pswitch-tile pswitch-circle2d-item" data-${navAttr}="${item.key}" data-baseangle="${90 - (i - Math.floor(styleItems().length / 2)) * 36}">
           ${miniPagePreviewHTML(item.key)}${pgNumHTML(i + 1)}
           ${tileLabelHTML(item, navAttr)}
         </div>
@@ -4928,9 +4954,9 @@ function pswitchWheel3dHTML(navAttr){
   const W = (areaEl && areaEl.clientWidth) || window.innerWidth, H = (areaEl && areaEl.clientHeight) || window.innerHeight;
   const s = WHEEL_TILE_W / W, faceH = Math.round(H * s);
   const preview = {}, tileH = {};
-  PAGE_SWITCH_ITEMS.forEach(item=>{ preview[item.key] = wheelScreenHTML(item.key, W, H, s); tileH[item.key] = faceH; });
+  styleItems().forEach(item=>{ preview[item.key] = wheelScreenHTML(item.key, W, H, s); tileH[item.key] = faceH; });
   // Every face is the screen's shape, so the drum is exactly one screen tall (shrunk).
-  const maxTileH = Math.max(...PAGE_SWITCH_ITEMS.map(item=>tileH[item.key]));
+  const maxTileH = Math.max(...styleItems().map(item=>tileH[item.key]));
   const sceneH = maxTileH + 110; // breathing room so the content/shading isn't clipped
   // Every page of the row gets an equal slot of the drum (3 pages = 120deg each, as always; app pages add slots).
   // (#277 - owner, 13 Nov 2026: 'the more pages I add into the row the more the pages get bigger in the circle'; chose
@@ -4938,7 +4964,7 @@ function pswitchWheel3dHTML(navAttr){
   // is pushed back by exactly how much wider it got, so the page in front is always the same size as with 3 pages
   // (about 3 show at the front, the rest further round). Fewer strips per page as the drum widens (each page curves
   // less), so the phone never has to draw more strips than the 3-page drum (42).
-  const n = PAGE_SWITCH_ITEMS.length, arc = 360 / n;
+  const n = styleItems().length, arc = 360 / n;
   const slices = Math.max(3, Math.min(WHEEL_SLICES, Math.round(arc / (120 / WHEEL_SLICES))));
   const sliceW = WHEEL_TILE_W / slices, sliceAngle = arc / slices;
   const radius = sliceW / (2 * Math.sin((sliceAngle/2) * Math.PI/180));
@@ -4946,7 +4972,7 @@ function pswitchWheel3dHTML(navAttr){
   return `
     <div class="pswitch-wheel3d-scene" data-wheel3d style="height:${sceneH}px;">
       <div class="pswitch-wheel3d-rig" data-wheel3d-rig data-depth="${depth.toFixed(1)}" style="transform:translateZ(${depth.toFixed(1)}px) rotateX(${state.wheelRotX}deg) rotateY(${state.wheelRotY}deg);">
-        ${PAGE_SWITCH_ITEMS.map((item,i)=>{
+        ${styleItems().map((item,i)=>{
           const baseAngle = i*arc;
           const h = tileH[item.key];
           let strips = '';
@@ -4992,7 +5018,7 @@ function wheel3dRimArcHTML(baseAngle, dir, tileHeight, white){
 // the same idea as the rim rings, just running the other direction.
 function wheelPageDividersHTML(totalH, arc, radius){
   let out = '';
-  for(let i=0;i<PAGE_SWITCH_ITEMS.length;i++){
+  for(let i=0;i<styleItems().length;i++){
     const angle = i*arc + arc/2; // the seam between this page and the next
     out += `<div class="wheel3d-vert-divider" style="height:${totalH}px;margin-top:${-totalH/2}px;transform:rotateY(${angle.toFixed(2)}deg) translateZ(${radius.toFixed(2)}px);"></div>`;
   }
@@ -5002,7 +5028,7 @@ function pswitchBodyHTML(style, navAttr){
   if((style==='vertical' || style==='horizontal') && navAttr === 'pagestyle-nav') return pswitchVStackHTML(style === 'horizontal');
   if(style==='circle') return pswitchCircle2dHTML(navAttr);
   if(style==='wheel') return pswitchWheel3dHTML(navAttr);
-  return `<div class="pswitch-${style}">${PAGE_SWITCH_ITEMS.map((item, i)=>pswitchTileHTML(item, navAttr, i + 1)).join('')}</div>`;
+  return `<div class="pswitch-${style}">${styleItems().map((item, i)=>pswitchTileHTML(item, navAttr, i + 1)).join('')}</div>`;
 }
 // Rows is a grid overview of every row the user's pages live in -- not a Page Fast Access
 // style, and independent of whatever one of those 5 is toggled on. Row 1 is always Money,
@@ -5013,7 +5039,7 @@ function pswitchBodyHTML(style, navAttr){
 function pageSwitcherRowsGridHTML(){
   return `
     <div class="pswitch-rows-grid">
-      ${rowsList().map((items, i)=>`<div class="pswitch-rows-row">
+      ${rowsList().map((items, i)=>{ items = orderFromHome(items, rowHomeKey(i, items)); return `<div class="pswitch-rows-row">
         <div class="pswitch-rows-row-label">Row ${i + 1}</div>
         <div class="pswitch-rows-row-wrap">
         <div class="pswitch-rows-tiles${items.length > 3 ? ' many' : ''}" style="--cols:${Math.max(3, items.length)};">
@@ -5021,7 +5047,7 @@ function pageSwitcherRowsGridHTML(){
         </div>
         ${pgDotsHTML(items.findIndex(it=>it.key === (state.lastPage || state.current)), items.length)}
         </div>
-      </div>`).join('')}
+      </div>`; }).join('')}
     </div>
   `;
 }
@@ -5065,7 +5091,7 @@ function pageStyleContentScreen(){
   // standalone "Rows" quick-access button is a separate feature, untouched by this.)
   const centered = true;
   const body = centered
-    ? `<div style="flex:1; display:flex; flex-direction:column; justify-content:center;">${pswitchBodyHTML(style, 'pagestyle-nav')}${pgDotsHTML(Math.max(0, PAGE_SWITCH_ITEMS.findIndex(it=>it.key === (state.lastPage || state.current))), PAGE_SWITCH_ITEMS.length, 'pg-dots-style')}</div>`
+    ? `<div style="flex:1; display:flex; flex-direction:column; justify-content:center;">${pswitchBodyHTML(style, 'pagestyle-nav')}${pgDotsHTML(Math.max(0, styleItems().findIndex(it=>it.key === (state.lastPage || state.current))), styleItems().length, 'pg-dots-style')}</div>`
     : `<div style="margin-top:14px;">${pswitchBodyHTML(style, 'pagestyle-nav')}</div>`;
   return `
     <div class="page-shell" style="display:flex; flex-direction:column; min-height:100%;">
@@ -10044,7 +10070,8 @@ function layoutsHomeScreenScreen(){
     ${topBar('Home Screen', false, '', 'layouts', '', false, true)}
     <div class="section-title">HOME SCREEN</div>
     <div class="note">Pick which screen Lockedintool opens on every time you open it.</div>
-    <div style="margin-top:12px;">
+    <div class="section-title" style="margin-top:12px;">ROW 1</div>
+    <div>
       ${['dashboard','wallet','money','trading'].map(s=>`
         <div class="settings-option${s===state.homeScreen?' selected':''}" data-sethome="${s}">
           <div class="row-left"><div class="row-name">${s==='dashboard'?'Dashboard':PAGE_LABEL[s]}</div></div>
@@ -10052,6 +10079,16 @@ function layoutsHomeScreenScreen(){
         </div>
       `).join('')}
     </div>
+    ${rowsList().slice(1).map((items, k)=>{ const ri = k + 1, id = rowIds()[ri], home = rowHomeKey(ri, items); return `
+    <div class="section-title" style="margin-top:16px;">ROW ${ri + 1}</div>
+    <div class="note">The page you land on when you go to Row ${ri + 1}.</div>
+    <div style="margin-top:8px;">
+      ${items.map(it=>`
+        <div class="settings-option${it.key === home ? ' selected' : ''}" data-setrowhome="${id}" data-key="${it.key}">
+          <div class="row-left"><div class="row-name">${it.label}</div></div>
+          <div class="radio-dot"></div>
+        </div>`).join('')}
+    </div>`; }).join('')}
     </div>
   `;
 }
@@ -17701,6 +17738,9 @@ function attachHandlers(){
     lotInput.addEventListener('change', commit);
     lotInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); lotInput.blur(); } });
   }
+  document.querySelectorAll('[data-setrowhome]').forEach(el=>{
+    el.addEventListener('click', ()=>{ rowHomeSet(el.getAttribute('data-setrowhome'), el.getAttribute('data-key')); renderDevice(); });
+  });
   document.querySelectorAll('[data-sethome]').forEach(el=>{
     el.addEventListener('click', ()=>{ state.homeScreen = el.getAttribute('data-sethome'); renderDevice(); });
   });

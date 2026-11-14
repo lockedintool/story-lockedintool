@@ -6160,8 +6160,8 @@ function dashboardScreen(){
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
-          <div class="sidebar-item" data-dash="camera">CAMERA</div>
-          <div class="sidebar-item" data-dash="gallery">GALLERY</div>
+          ${LIT_NO_APPS ? '' : `<div class="sidebar-item" data-dash="camera">CAMERA</div>
+          <div class="sidebar-item" data-dash="gallery">GALLERY</div>`}
           <div class="sidebar-item" data-dash="alarm">ALARM</div>
           ${planFree() || LIT_NO_APPS ? '' : '<div class="sidebar-item" data-nav="apps">APPS</div>'}
         </div>
@@ -22178,7 +22178,7 @@ const TOUR_PAGES_OK = k=>!planFree() && PAGES.includes(k);
 const TOUR = [
   { s:'dashboard', t:'Welcome to Lockedintool', b:'A quick look around your new phone experience. It takes about a minute, and you can skip it at any time.' },
   { s:'dashboard', sel:'.search-row', t:'Search', b:'Search the web from here. Safe search is always on.' },
-  { s:'dashboard', sel:'.story-sidebar', t:'Your menu', b:LIT_NO_APPS ? 'Notes, Settings, Information, your camera, gallery and alarms.' : 'Notes, Settings, Information, your camera, gallery and alarms, and every app on your phone.' },
+  { s:'dashboard', sel:'.story-sidebar', t:'Your menu', b:LIT_NO_APPS ? 'Notes, Settings, Information and your alarms.' : 'Notes, Settings, Information, your camera, gallery and alarms, and every app on your phone.' },
   { s:'dashboard', sel:'#quotes-card', t:'Your quote', b:'Tap the lock, then hold the card to write a quote of your own.' },
   { s:'dashboard', sel:'.story-bottom', t:'Quick controls', b:'Your phone\u2019s sound output, brightness, music and controls - the real ones, right here.' },
   { s:'dashboard', sel:'#dash-s3', t:'Station 3', b:'Messages, your Profile, Updates, Create (+), Call history and the dial pad.' },

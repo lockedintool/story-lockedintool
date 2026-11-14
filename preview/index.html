@@ -14803,6 +14803,7 @@ function spaceName(id){ if(!id || id === 'personal') return 'Personal'; const c 
 function spaceTell(){ try{ if(NATIVE && window.StoryNative.spacesOn) window.StoryNative.spacesOn(bizOn() && spaceList().length > 0); }catch(e){} }
 // Focus on a company (or Personal): the Pages start again in that space, on its Home Screen.
 function spaceGo(id, noSave){
+  try{ if(NATIVE && window.StoryNative.spacesUp) window.StoryNative.spacesUp(false); }catch(e){}   // #328: chosen - the phone is free again
   spacesClose();
   const want = id && id !== 'personal' && spaceOf(id) ? id : '';
   if((litSpace() === 'personal' ? '' : litSpace()) === want){ if(window.storyShow) window.storyShow(null); return; }
@@ -14825,6 +14826,7 @@ window.litSpacesPrep = function(){
 window.litSpacesOpen = function(){
   if(/[?&](s3|widget)=/.test(location.search) || !bizOn() || !spaceList().length) return 'none';
   if(!document.body){ return 'loading'; }
+  try{ if(NATIVE && window.StoryNative.spacesUp) window.StoryNative.spacesUp(true); }catch(e){}   // #328: can't be skipped until you choose
   const ready = document.getElementById('lit-spaces');
   if(ready && ready.dataset.at && Date.now() - (+ready.dataset.at) < 10 * 60000){ delete ready.dataset.at; try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){} return 'ok'; }
   spacesShow(); try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){}

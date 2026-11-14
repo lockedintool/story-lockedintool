@@ -363,3 +363,4 @@ commits, pushed as a new update) - nothing else changes.
 | 354 | 2026-11-14 | Lockedintool's Recents screen closes at once when you leave it | 31fbc9d |
 | 355 | 2026-11-14 | Lockedintool's Recents screen lists only the apps that are still open | 185f780 |
 | 356 | 2026-11-14 | Temporary silent reports on when Lockedintool's Recents screen goes up (to find why it's late) | 9c5ab23 |
+| 357 | 2026-11-14 | Lockedintool's Recents screen no longer disappears and comes back while the phone's Recents opens | |

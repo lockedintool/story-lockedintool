@@ -1403,7 +1403,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
-        if (recCover != null) { if (recCoverEarly && pkg != homePkg() && pkg != recentsPkg && pkg != packageName) recCoverEarly = false; recCoverCheck() }   // #350 / #353
+        if (recCover != null) { if (pkg != homePkg() && pkg != recentsPkg && pkg != packageName && pkg != "com.android.systemui") recCoverHide() else recCoverCheck() }   // #350 / #353 / #357
         spaceSeen(pkg)   // #336: the app you're in belongs to the company / Personal in focus
         if (pkg != packageName && pkg != "com.android.systemui" && pkg != homePkg() && pkg != recentsPkg) backToLit = false   // #338: you picked an app
         if (spacesHeld() && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
@@ -2130,7 +2130,10 @@ class OverlayService : Service(), StoryBridge.Host {
         if (kind == "cancel" && recCover != null && !recCoverEarly) { recCoverHide(); return@post }
         if (kind == "cancel" && recCover == null && recCoverWanted()) {
             recCoverSrc = "swipe"; recCoverShow(); recCoverEarly = true
-            for (d in longArrayOf(350, 550, 800, 1200)) ui.postDelayed({ recCoverEarly = false; recCoverCheck() }, d)
+            // #357: the phone's Recents takes a while to draw - the screen stays up until it's there (then it's kept) or
+            // until 0.9 s passed without it (the swipe was Home); no gap in between.
+            for (d in longArrayOf(150, 300, 450, 600, 750)) ui.postDelayed({ recCoverCheck() }, d)
+            ui.postDelayed({ recCoverEarly = false; recCoverCheck() }, 900)
         }
         if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
         if (spacesHeld()) { ui.postDelayed({ spacesReshow() }, 350); return@post }   // #328: the company screen stays
@@ -3150,14 +3153,21 @@ class OverlayService : Service(), StoryBridge.Host {
     private var recCoverShownAt = 0L
     /** #353: put up at the start of a swipe - kept until the phone has had time to show its Recents (or not). */
     @Volatile private var recCoverEarly = false
+    @Volatile private var recGoneAt = 0L
     private fun recCoverWanted() = spacesWanted() && !keyguardLocked() && !sysQuiet() && !callActive && !createActive && !spacesHolding() && isInteractive()
     private fun isInteractive() = runCatching { (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive }.getOrDefault(true)
     /** Looks whether the phone's Recents is up and shows / takes away the cover (a few looks: One UI draws Recents inside
      *  the home-screen app, which is only clear a moment later). */
     private fun recCoverCheck() {
         val up = recCoverWanted() && StoryAccessibilityService.recentsAppFront(recentsPkg)
-        if (up) { if (recCover == null) recCoverShow(); recCoverRead() }
-        else if (recCover != null && !recCoverEarly) recCoverHide()
+        if (up) { recGoneAt = 0L; if (recCover == null) recCoverShow(); recCoverEarly = false; recCoverRead() }
+        else if (recCover != null && !recCoverEarly) {
+            // #357: the phone's Recents can drop out of view for a moment while it animates - it must look gone twice,
+            // 0.12 s apart, before Lockedintool's screen goes (no flicker). An app coming to the front ends it at once.
+            val now = SystemClock.uptimeMillis()
+            if (recGoneAt == 0L) { recGoneAt = now; ui.postDelayed({ recCoverCheck() }, 120) }
+            else if (now - recGoneAt >= 110) { recGoneAt = 0L; recCoverHide() }
+        }
     }
     private fun recCoverLook() { for (d in longArrayOf(0, 50, 100, 160, 230, 320, 450, 700)) ui.postDelayed({ recCoverCheck() }, d) }
     /** #350: the launcher's screen changed - a quick look whether it's Recents (only while companies are set up and the

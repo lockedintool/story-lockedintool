@@ -14836,7 +14836,7 @@ function spacesShow(){
   spacesClose();
   const now = list.findIndex(c=>c.id === litSpace());
   spIdx = now >= 0 ? now : Math.min(spIdx, list.length - 1);
-  const el = document.createElement('div'); el.id = 'lit-spaces';   // #325: follows the System theme (Black / White), no picture
+  const el = document.createElement('div'); el.id = 'lit-spaces';   // #325 / #327: follows the System theme (Black / White), no picture
   el.innerHTML = '<div class="sp-name"></div><div class="sp-track"></div>' +
     '<div class="sp-dots">' + list.map((c, i)=>'<span class="sp-dot" data-i="' + i + '"><i></i>' + (i + 1) + '</span>').join('') + '</div>' +
     '<div class="sp-bottom"><button class="sp-personal" data-sp="personal">View Personal account</button>' +

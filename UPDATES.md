@@ -336,3 +336,4 @@ commits, pushed as a new update) - nothing else changes.
 | 327 | 2026-11-14 | Undoes #326: the company screen follows the System theme again (black or white) | 2715ed2 |
 | 328 | 2026-11-14 | The company screen can't be skipped until you choose (bottom button off; it comes back over Home / Recents / apps) and it's drawn before the unlock so it appears faster | a9c012f |
 | 329 | 2026-11-14 | The company screen is already on screen under the lock screen, so every unlock just reveals it - instant even after you've used it | edd1b28 |
+| 330 | 2026-11-14 | The company screen goes up the moment the screen turns off and stays until you choose - no app or home screen shows first, however you unlock | (this) |

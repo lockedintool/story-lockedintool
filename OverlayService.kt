@@ -108,7 +108,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // so whichever comes first wins; the other one is ignored.
     @Volatile private var aodStartedAt = 0L
     private fun onScreenOff() {
-        spacesUpFlag = false; spacesUnwarm()   // #328: a new unlock asks again
+        spacesUpFlag = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
         ContentGuard.clearForNow()   // 'This is a mistake' lets you carry on only until the screen goes off
         val now = System.currentTimeMillis()
         if (now - aodStartedAt < 800) return               // the same screen-off, reported twice
@@ -3011,8 +3011,22 @@ class OverlayService : Service(), StoryBridge.Host {
         }
     }
     private var spacesPreShown = false
+    /** #330 (owner, 14 Nov 2026: 'there's still a delay - I can see the app I was in, even my home screen, before the
+     *  companies screen shows up. And it's supposed to be part of my phone, not something that disappears'): the phone often
+     *  unlocks straight from a dark screen (fingerprint), so 'screen on at the lock screen' never came and nothing was
+     *  ready. Now the chooser is put ON SCREEN the moment the screen goes off - exactly the case the owner found instant (an
+     *  unanswered chooser that simply stayed up) - and it stays until a company / Personal is chosen. With Lockedintool
+     *  security on it only draws hidden (no company names before Lockedintool is unlocked). */
+    private fun spacesArm() {
+        if (sysQuiet() || callActive || createActive) return
+        val p = pagesPane ?: return
+        p.web.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()") { r ->
+            if ((r ?: "").trim('"') != "ok" || p.shown || pagesInHome()) return@evaluateJavascript
+            if (!Security.lit(this)) { setShown(p, true); spacesPreShown = true }
+            else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
+        }
+    }
     private fun spacesUnwarm() {
-        if (spacesPreShown && !spacesUpFlag) { spacesPreShown = false; pagesPane?.takeIf { it.shown }?.let { hideOne(it) } }   // not unlocked: back as it was
         if (!spacesWarm) return
         spacesWarm = false
         val p = pagesPane ?: return

@@ -89,7 +89,7 @@ class OverlayService : Service(), StoryBridge.Host {
             if (!callActive) Updater.installWaiting(applicationContext)    // updates install while nobody's using the phone (owner)
             // New screens reach the Pages when they hide - but someone whose home is the Dashboard may never hide them.
             // The screen going off is also a moment nobody is looking: bring the Pages up to date then.
-            ui.post { pagesPane?.takeIf { it.shown && it.stale && !callActive }?.let { reload(it) } } }
+            ui.post { pagesPane?.takeIf { it.shown && it.stale && !callActive && !spacesHolding() && !spacesWanted() }?.let { reload(it) } } }
     }
     // Screen on: the lock screen may be showing -> the lock screen dial pad (Settings > QUICK ACCESS).
     private val screenOn = object : android.content.BroadcastReceiver() {
@@ -428,7 +428,7 @@ class OverlayService : Service(), StoryBridge.Host {
                     if (p.ver == null && before == null && now - p.loadedAt < 60_000) { p.ver = v; continue }
                     if (p.ver == v) continue
                     // Stuck on the built-in copy (no signal when it loaded) or on older screens: get the current ones.
-                    if (p.shown || (p === profilePane && callActive)) p.stale = true
+                    if (p.shown || (p === profilePane && callActive) || (p === pagesPane && spacesHolding())) p.stale = true
                     else if (p.ver != "local" || now - p.loadedAt > 60_000) reload(p)
                 }
             }
@@ -850,6 +850,8 @@ class OverlayService : Service(), StoryBridge.Host {
                 } else {
                     // The Pages: the room the Dashboard keeps at its bottom for Station 3 (and the bottom line under it).
                     v.evaluateJavascript(dashPadJs(), null)
+                    // #335: a page that (re)loaded while the company screen is up opens it again at once - it never disappears.
+                    if (url.startsWith(REMOTE) || url.startsWith(LOCAL)) ui.post { if (spacesHeld() || (spacesPreShown && paneRef === pagesPane)) v.evaluateJavascript("window.litSpacesOpen&&window.litSpacesOpen()", null) }
                     paneRef?.let { pp -> runCatching { v.postVisualStateCallback(2L, object : WebView.VisualStateCallback() { override fun onComplete(requestId: Long) { ui.post { pagesDrawn(pp) } } }) }
                         .onFailure { pagesDrawn(pp) }; ui.postDelayed({ pagesDrawn(pp) }, 1500) }
                 }
@@ -1813,7 +1815,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // then (never on a timer), so tapping them open is always instant.
         // (The Pages kept inside Lockedintool's Home only reload for new screens - a reload there would show the black Home.)
         val aged = !p.small && System.currentTimeMillis() - p.loadedAt > 5 * 60_000 && !(p === pagesPane && pagesInHome())
-        if ((p.stale || aged) && !(p === profilePane && callActive)) reload(p)
+        if ((p.stale || aged) && !(p === profilePane && callActive) && !(p === pagesPane && spacesHolding())) reload(p)
         // Lockedintool security: you left Lockedintool (the Pages and Station 3's window both closed) - it locks.
         if ((p === pagesPane || p === profilePane) && pagesPane?.shown != true && profilePane?.shown != true && pickerHid.isEmpty()) secLock()
     }
@@ -3044,6 +3046,8 @@ class OverlayService : Service(), StoryBridge.Host {
     /** #334 (owner, 14 Nov 2026: 'Still missing ... Like the home screen or recent apps'): the chooser counts as up from the
      *  moment it was put on screen at screen off - not only once the page said so after the unlock - so the phone's Home /
      *  Recents (or anything) coming up in between never leaves it hidden. */
+    /** #335: the company screen is on screen or waiting for the unlock - the Pages are never reloaded under it (a reload wiped it). */
+    private fun spacesHolding() = spacesUpFlag || spacesPreShown
     private fun spacesHeld() = spacesUpFlag || (spacesPreShown && !keyguardLocked())
     private fun spacesReshow() {
         if (!spacesHeld() || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return

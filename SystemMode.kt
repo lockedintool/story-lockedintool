@@ -20,8 +20,14 @@ object SystemMode {
      *  does act like a app'). After leaving Only system the phone kept Lockedintool as its Home app, so every Home swipe
      *  landed back in Lockedintool. Its Home screen now only exists while Only system is on (the switch on): anywhere else
      *  the phone's own home screen is the Home again, by itself - nothing to pick. */
+    /** #367 (owner, 14 Nov 2026: 'the only should be lockedintools' - chose 'Yes, make it the Home app'): on SECOND SYSTEM
+     *  with companies set up, Lockedintool is the phone's real Home app too - Home always lands on the focus's home
+     *  (Business home / Personal home); the phone's own home screen never shows. Turning companies / the System switch off
+     *  gives the Home back to the phone by itself. */
+    fun spaceHome(c: Context): Boolean = !on(c) && AppMode.systemOn(c) && !WidgetMode.on(c) &&
+        c.getSharedPreferences("story", Context.MODE_PRIVATE).getBoolean("spaces_on", false)
     fun syncHome(c: Context) { runCatching {
-        val want = on(c) && AppMode.systemOn(c)
+        val want = (on(c) && AppMode.systemOn(c)) || spaceHome(c)
         val cn = android.content.ComponentName(c, LockedintoolHome::class.java)
         val st = if (want) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         if (c.packageManager.getComponentEnabledSetting(cn) != st) c.packageManager.setComponentEnabledSetting(cn, st, android.content.pm.PackageManager.DONT_KILL_APP)

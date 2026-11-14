@@ -23,7 +23,7 @@ class LockedintoolHome : Activity() {
      *  swiping up landed back in Lockedintool). Opened any other time (the phone still had it as its Home app), it
      *  switches its Home role off again and hands straight over to the phone's OWN home screen - never imitating it. */
     private fun notOurs(): Boolean {
-        if (SystemMode.on(this) && AppMode.systemOn(this)) return false
+        if ((SystemMode.on(this) && AppMode.systemOn(this)) || SystemMode.spaceHome(this)) return false   // #367: Second system + companies
         SystemMode.syncHome(this)
         ProblemLog.record(this, "home", "Lockedintool's Home opened while not Only system", "home")
         runCatching {
@@ -56,7 +56,7 @@ class LockedintoolHome : Activity() {
             setOnClickListener { OverlayService.instance?.openPages("dashboard") }
         }
         root.addView(shot, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT))
-        root.setOnClickListener { OverlayService.instance?.openPages("dashboard") }
+        root.setOnClickListener { if (SystemMode.spaceHome(this)) OverlayService.instance?.spaceHomeShow() else OverlayService.instance?.openPages("dashboard") }
         setContentView(root)
         current = this
         showShot()
@@ -72,6 +72,7 @@ class LockedintoolHome : Activity() {
         // The Dashboard always shows first - also behind Lockedintool security's unlock prompt (owner, 5 Nov 2026: 'you
         // put a black screen that shows with the security pop up screen first ... At first it will always show the
         // dashboard'). Never black here.
+        if (SystemMode.spaceHome(this)) { shot?.visibility = android.view.View.GONE; return@runCatching }   // #367: never an old Dashboard picture
         shot?.visibility = android.view.View.VISIBLE
         // The latest picture, or the one kept on the phone (Lockedintool was just restarted).
         // (Android 14+: only an exact copy of the screen - an older drawn picture with the squashed bar is never shown.)
@@ -85,12 +86,20 @@ class LockedintoolHome : Activity() {
     } } }
     override fun onNewIntent(intent: Intent?) { super.onNewIntent(intent); setIntent(intent)
         if (notOurs()) return
+        if (SystemMode.spaceHome(this)) { spaceHome(); return }   // #367
         if (OverlayService.instance?.homeShowFast(this) == true) { OverlayService.instance?.phoneScreenShown(); return }
         showHome() }
+    /** #367: Second system with companies - Home = the focus's home, shown as the Pages (the Second system way). */
+    private fun spaceHome() {
+        KeepAlive.ensureRunning(this)
+        val svc = OverlayService.instance
+        if (svc != null) svc.spaceHomeShow() else startForegroundService(Intent(this, OverlayService::class.java))
+    }
     // The Pages go INSIDE this window first (so the phone's floating windows and bubbles sit above the Dashboard - owner,
     // 4 Nov 2026: 'Lockedintool is supposed to be in the back'), once it is really on screen; then the Dashboard. Coming
     // back with the Pages still up (a fingerprint prompt, a picker...) keeps you where you were.
     override fun onResume() { super.onResume()
+        if (SystemMode.spaceHome(this)) { spaceHome(); return }   // #367
         // Back from an app: the Dashboard is already drawn here - it goes live at once (owner: no delay, no lag).
         if (OverlayService.instance?.homeShowFast(this) == true) { OverlayService.instance?.phoneScreenShown(); return }
         window.decorView.post {
@@ -106,6 +115,8 @@ class LockedintoolHome : Activity() {
         // The Dashboard went away while Lockedintool's Home is what you see (black): it comes straight back (owner, 4 Nov
         // 2026: 'everytime i open lockedintool that black screen pops up and I need to swipe the bottom button up').
         if (hasFocus) OverlayService.instance?.homeFocused()
+        // #367: never a bare black Home on Second system - the focus's home comes straight back (nothing was underneath).
+        if (hasFocus && SystemMode.spaceHome(this) && OverlayService.instance?.pagesShownNow() != true) spaceHome()
     }
 
     private fun showHome() {

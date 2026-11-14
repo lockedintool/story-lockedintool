@@ -256,6 +256,11 @@ class OverlayService : Service(), StoryBridge.Host {
         if (AppMove.needed(this)) { gated = true; running = false; stopSelf(); return }
         instance = this
         SystemMode.syncHome(this); homePkgCache = null   // Lockedintool is the phone's Home app only in Only system (#237)
+        // #367: Second system + companies - ask once to be the Home app (Android's own question; never again if declined).
+        if (SystemMode.spaceHome(this) && !getSharedPreferences("story", MODE_PRIVATE).getBoolean("space_home_asked", false)) {
+            getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("space_home_asked", true).apply()
+            ui.postDelayed({ askHomeRole() }, 3000)
+        }
         AppMode.syncLauncher(this)   // the icon's name: Lockedintool System / App (#300)
         getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("enabled", true).apply()
         quietApps(false)  // never leave the phone muted (e.g. STORY was restarted while the Pages were open)
@@ -1694,6 +1699,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // Only the phone's OWN home screen counts: the last app Android brought to the front must be the home-screen app
         // (owner's recording, 29 Oct 2026: Lockedintool opened by itself while they were in another app).
         val home = homePkg() ?: return
+        if (home == packageName) return   // #367: Lockedintool IS the Home app - LockedintoolHome shows the focus's home itself
         if (StoryAccessibilityService.frontPkg != home) return
         // The phone went Home because you swiped the bottom button up (#257): that's switching to Apps - stay there.
         if (!spaceHomeOn() && SystemClock.uptimeMillis() - swipeUpAt < 1500) { if (!StoryAccessibilityService.recentsInFront()) setInLit(false); return }   // #365: with companies, Home = their home
@@ -3031,7 +3037,20 @@ class OverlayService : Service(), StoryBridge.Host {
     //      start there'; 'Tap the company profile or users to direct your focus'; 'System modes only'): with companies on a
     //      Business account, every unlock opens the Pages on the company chooser (Second system and Only system; as an app it
     //      shows when the app opens). Lockedintool security's unlock counts the phone's own unlock as always. ----
-    override fun spacesOn(on: Boolean) { ui.post { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", on).apply() } }
+    override fun spacesOn(on: Boolean) { ui.post {
+        val was = spacesWanted()
+        getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", on).commit()
+        // #367: Second system + companies = Lockedintool is the phone's Home app (asked once with Android's own question).
+        if (was != on) { SystemMode.syncHome(this); homePkgCache = null; if (on && SystemMode.spaceHome(this)) askHomeRole() }
+    } }
+    /** #367: the phone's Home on Second system with companies - the focus's home (Business home / Personal home). */
+    fun spaceHomeShow() { ui.post {
+        phoneScreenShown()
+        if (keyguardLocked() || spacesHolding() || callActive || createActive || pickerHid.isNotEmpty()) return@post
+        setInLit(true); spaceLastSet("")   // you're on the home - choosing this focus again lands here
+        val p = pagesPane
+        if (p?.shown == true) p.web.evaluateJavascript("window.storyShow&&window.storyShow(null,false)", null) else showPanel(station3Only = false)
+    } }
     private fun spacesWanted() = getSharedPreferences("story", MODE_PRIVATE).getBoolean("spaces_on", false)
     /** The chooser was asked for in the last 20 s and hasn't shown yet (the page was loading) - the page opens it once ready. */
     override fun spacesPending(): Boolean = System.currentTimeMillis() - getSharedPreferences("story", MODE_PRIVATE).getLong("spaces_pending", 0L) < 20_000L

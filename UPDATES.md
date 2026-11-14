@@ -341,4 +341,4 @@ commits, pushed as a new update) - nothing else changes.
 | 332 | 2026-11-14 | The company screen's temporary 'Company screen: …' messages and the unlock log are gone - it works now | 0785f94 |
 | 333 | 2026-11-14 | The Wallet page button no longer shows on the company screen - it goes the moment the phone unlocks | efd6137 |
 | 334 | 2026-11-14 | The company screen never goes missing at the unlock - the home screen / Recents can't take its place | c476de6 |
-| 335 | 2026-11-14 | The company screen no longer disappears by itself before you choose | PENDING |
+| 335 | 2026-11-14 | The company screen no longer disappears by itself before you choose | 6cbe544 |

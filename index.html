@@ -14797,7 +14797,7 @@ const SUB_ACCTS = [
 function acctType(){ const v = litLsRaw('story-acct-type'); return v === 'business' || v === 'personal' ? v : ''; }
 function bizOn(){ return acctType() === 'business'; }
 function spaceList(){ try{ const l = JSON.parse(litLsRaw('story-companies') || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
-function spaceSave(l){ try{ localStorage.setItem('story-companies', JSON.stringify(l)); }catch(e){ showToast('Couldn’t save - the phone is out of room'); } spaceTell(); }
+function spaceSave(l){ try{ localStorage.setItem('story-companies', JSON.stringify(l)); }catch(e){ showToast('Couldn’t save - the phone is out of room'); } spaceTell(); try{ l.forEach(c=>spaceBg(c.id)); }catch(e){} }
 function spaceOf(id){ return spaceList().find(c=>c.id === id) || null; }
 function spaceName(id){ if(!id || id === 'personal') return 'Personal'; const c = spaceOf(id); return c ? c.name : 'Personal'; }
 // The app knows whether to show the chooser after an unlock.
@@ -14816,7 +14816,12 @@ function spaceGo(id, noSave){
 const SP_BG = {};
 // #324: one load per company, decoded before it's needed (a second ask while loading waits for the same picture).
 const SP_BGP = {};
-function spaceBg(id){ return SP_BGP[id] || (SP_BGP[id] = spaceBgLoad(id)); }
+function spaceBg(id){
+  const sig = litLsRaw('story-bg-set@' + id) || '';   // a new / removed background picture loads afresh
+  const c = SP_BGP[id]; if(c && c.sig === sig) return c.p;
+  delete SP_BG[id];
+  return (SP_BGP[id] = { sig, p: spaceBgLoad(id) }).p;
+}
 async function spaceBgLoad(id){
   if(id in SP_BG) return SP_BG[id];
   SP_BG[id] = null;
@@ -15174,6 +15179,9 @@ function subAcctScreen(locked){
 setTimeout(()=>{ try{
   if(/[?&](s3|widget)=/.test(location.search)) return;
   spaceTell();
+  // #324 (owner: 'That shouldn't happen even if it's the first time'): every company's picture is loaded and decoded the
+  // moment Lockedintool starts - the very first unlock after an install finds them ready too.
+  try{ if(window.litSpacesWanted()) spaceList().forEach(c=>spaceBg(c.id)); }catch(e){}
   // #312: unlocked while this page was (re)loading - the chooser the app asked for opens now.
   if(litSpace() !== 'personal' && !spaceOf(litSpace())) localStorage.setItem('story-space', '');
   if(sessionStorage.getItem('lit-space-home')){ sessionStorage.removeItem('lit-space-home'); if(window.storyShow) window.storyShow(null); }

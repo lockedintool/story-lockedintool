@@ -697,9 +697,13 @@ class OverlayService : Service(), StoryBridge.Host {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = (14 * dp).toInt(); marginEnd = (14 * dp).toInt() }
         }
         // Apps = straight back to whatever was underneath (the app you were on, untouched, or the home screen).
-        row.addView(word("Apps") { setInLit(false); hidePanel() })
+        // #363 (owner, 14 Nov 2026: 'on the second system ... tap the bottom button and switch to apps which should take you
+        // back to business home'; then 'Business home replaces apps'): with a business in focus the switch reads Business home |
+        // Lockedintool - Business home = its business home; Lockedintool = your Lockedintool.
+        val biz = spacesWanted() && spaceCur() != "personal"
+        row.addView(word(if (biz) "Business home" else "Apps") { if (biz) { setInLit(true); showPanel(station3Only = false, page = "biz-home") } else { setInLit(false); hidePanel() } })
         row.addView(TextView(this).apply { text = "|"; setTextColor(th(Color.parseColor("#66FFFFFF"))); textSize = 18f })
-        row.addView(word("Lockedintool") { setInLit(true); showPanel(station3Only = false) })  // the only way into Lockedintool itself (owner: it says Lockedintool, not Pages)
+        row.addView(word("Lockedintool") { setInLit(true); showPanel(station3Only = false, page = if (biz) "~home" else null) })  // the only way into Lockedintool itself (owner: it says Lockedintool, not Pages)
         picker = row
         // A touch anywhere outside the switch just closes it - nothing is chosen.
         row.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hidePicker(); false }
@@ -1075,7 +1079,7 @@ class OverlayService : Service(), StoryBridge.Host {
 
     /** back = coming back from an app page (its left-edge strip): the Pages return where you were; otherwise opening
      *  Lockedintool lands on your Home Screen (Layouts > Home Screen, owner). */
-    private fun showPanel(station3Only: Boolean, back: Boolean = false) {
+    private fun showPanel(station3Only: Boolean, back: Boolean = false, page: String? = null) {
         if (WidgetMode.on(this)) return   // Only use widgets: only the widgets
         // The app: the Pages open in its own window. Station 3's button on the Pages INSIDE the app opens Station 3 like
         // anywhere else (#254 - owner, 12 Nov 2026: 'The apps and pages station 3 doesn't work. When I tap it nothing is
@@ -1094,7 +1098,7 @@ class OverlayService : Service(), StoryBridge.Host {
             // Station 3 stays open; Pages opens underneath it.
             secGate(pagesPane) {
                 val p = pagesPane ?: return@secGate
-                showPagesOn(p, "window.storyShow&&window.storyShow(null,false," + back + ")") { updateBubble(); addBar() }
+                showPagesOn(p, "window.storyShow&&window.storyShow(" + (page?.let { "'$it'" } ?: "null") + ",false," + back + ")") { updateBubble(); addBar() }
             }
             return
         }

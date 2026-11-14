@@ -211,6 +211,9 @@ export class Hub {
     // files and folders. The bytes are locked on the phone (AES-GCM) before upload; the key travels with the row.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, uid TEXT, name TEXT, mime TEXT, size INTEGER, kind TEXT, folder TEXT, media TEXT, k TEXT, iv TEXT, at INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS filefolders (uid TEXT, name TEXT, at INTEGER, PRIMARY KEY (uid, name))`);
+    // #379 TEAM: the people who work with an account (a company's account) - invited by @username, with a role
+    // (manager: can add / change files; staff: can see and open them). status 'invited' until they accept.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS teams (oid TEXT, mid TEXT, role TEXT, status TEXT, at INTEGER, PRIMARY KEY (oid, mid))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS callrates (uid TEXT, stars INTEGER, note TEXT, video INTEGER, grp INTEGER, secs INTEGER, at INTEGER)`);   // the end-of-call rating (owner) - no names shown
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, uid TEXT, kind TEXT, target TEXT, owner TEXT, reason TEXT, text TEXT, at INTEGER, status TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS ucomments (id TEXT PRIMARY KEY, pid TEXT, uid TEXT, text TEXT, at INTEGER)`);
@@ -308,7 +311,8 @@ export class Hub {
       if (path === '/v1/blocks') return this.blocksOf(me);
       if (path === '/v1/report') return this.report(me, body);
       if (path === '/v1/reports') return this.reportsList(me);
-      if (path.startsWith('/v1/files/')) return this.files(me, path.slice(10), body);
+      if (path.startsWith('/v1/files/')) return this.files(me, path.slice(10), Object.assign({}, body || {}, { __by: me.id }));
+      if (path.startsWith('/v1/team/')) return this.team(me, path.slice(9), body);
       if (path === '/v1/callrate') return this.callRate(me, body);
       if (path === '/v1/callrates') return this.callRates(me);
       if (path === '/v1/blockfix/list') return this.blockFixList(me);
@@ -1169,6 +1173,15 @@ export class Hub {
   // #378 FILES: list / add / update (rename, move) / delete, and folders (an empty folder is kept too).
   files(me, act, b) {
     b = b || {};
+    // #379: a team member works in the account they're in (of = that account): staff see / open, managers also add / change.
+    let owner = me.id, canEdit = true;
+    if (b.of && b.of !== me.id) {
+      const t = this.one("SELECT role FROM teams WHERE oid = ? AND mid = ? AND status = 'member'", String(b.of), me.id);
+      if (!t) return json({ error: 'team' }, 403);
+      owner = String(b.of); canEdit = t.role === 'manager';
+      if (act !== 'list' && !canEdit) return json({ error: 'role' }, 403);
+    }
+    me = Object.assign({}, me, { id: owner });
     const clean = (v, n) => String(v || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n);
     const view = r => ({ id: r.id, name: r.name, mime: r.mime, size: r.size, kind: r.kind, folder: r.folder || '', m: r.media, k: r.k, iv: r.iv, at: r.at });
     if (act === 'list') {
@@ -1176,11 +1189,11 @@ export class Hub {
       const named = this.sql.exec('SELECT name FROM filefolders WHERE uid = ? ORDER BY name', me.id).toArray().map(r => r.name);
       const folders = [...new Set(named.concat(files.map(f => f.folder).filter(Boolean)))].sort((a, c) => a.localeCompare(c));
       const used = this.one('SELECT COALESCE(SUM(size), 0) AS n FROM files WHERE uid = ?', me.id).n;
-      return json({ files, folders, used });
+      return json({ files, folders, used, canEdit });
     }
     if (act === 'add') {
       const media = clean(b.m, 80);
-      if (!media || !this.one('SELECT 1 AS x FROM media WHERE id = ? AND uid = ?', media, me.id)) return json({ error: 'media' }, 400);
+      if (!media || !this.one('SELECT 1 AS x FROM media WHERE id = ? AND (uid = ? OR uid = ?)', media, me.id, b.__by || '')) return json({ error: 'media' }, 400);
       if (this.one('SELECT COUNT(*) AS n FROM files WHERE uid = ?', me.id).n >= 5000) return json({ error: 'full' }, 400);
       const id = 'f' + rand(10), kind = ['photo', 'video', 'audio', 'doc'].includes(b.kind) ? b.kind : 'doc';
       this.sql.exec('INSERT INTO files (id, uid, name, mime, size, kind, folder, media, k, iv, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -1216,7 +1229,49 @@ export class Hub {
     }
     return json({ error: 'unknown' }, 404);
   }
+  // #379 TEAM
+  team(me, act, b) {
+    b = b || {};
+    const card = (u, extra) => Object.assign({ id: u.id, name: u.name || '', username: u.username || '', photo: this.mediaUrl(u.photo) }, extra);
+    if (act === 'list') {
+      const members = this.sql.exec('SELECT t.role, t.status, t.at, u.* FROM teams t JOIN users u ON u.id = t.mid WHERE t.oid = ? ORDER BY t.at', me.id).toArray()
+        .map(r => card(r, { role: r.role, status: r.status }));
+      const mine = this.sql.exec('SELECT t.role, t.status, t.at, u.* FROM teams t JOIN users u ON u.id = t.oid WHERE t.mid = ? ORDER BY t.at', me.id).toArray()
+        .map(r => card(r, { role: r.role, status: r.status }));
+      return json({ members, mine });
+    }
+    const role = b.role === 'manager' ? 'manager' : 'staff';
+    if (act === 'invite') {
+      const un = String(b.username || '').replace(/^@/, '').toLowerCase().trim();
+      const u = un && this.one('SELECT * FROM users WHERE username = ?', un);
+      if (!u) return json({ error: 'nouser' }, 404);
+      if (u.id === me.id) return json({ error: 'self' }, 400);
+      if (this.blocked(me.id, u.id)) return json({ error: 'nouser' }, 404);
+      if (this.one('SELECT COUNT(*) AS n FROM teams WHERE oid = ?', me.id).n >= 200) return json({ error: 'full' }, 400);
+      if (this.one('SELECT 1 AS x FROM teams WHERE oid = ? AND mid = ?', me.id, u.id)) return json({ error: 'already' }, 409);
+      this.sql.exec("INSERT INTO teams (oid, mid, role, status, at) VALUES (?, ?, ?, 'invited', ?)", me.id, u.id, role, Date.now());
+      this.act(u.id, 'team', me.id, me.id, role);
+      this.deliver(u.id, { t: 'fnote', kind: 'team', id: me.id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
+      return json({ ok: true, member: card(u, { role, status: 'invited' }) });
+    }
+    if (act === 'respond') {
+      const oid = String(b.oid || '');
+      const t = this.one("SELECT * FROM teams WHERE oid = ? AND mid = ? AND status = 'invited'", oid, me.id);
+      if (!t) return json({ ok: true });
+      if (b.accept) {
+        this.sql.exec("UPDATE teams SET status = 'member', at = ? WHERE oid = ? AND mid = ?", Date.now(), oid, me.id);
+        this.act(oid, 'teamok', me.id, oid, '');
+        this.deliver(oid, { t: 'fnote', kind: 'teamok', id: me.id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
+      } else this.sql.exec('DELETE FROM teams WHERE oid = ? AND mid = ?', oid, me.id);
+      return json({ ok: true });
+    }
+    if (act === 'role') { this.sql.exec('UPDATE teams SET role = ? WHERE oid = ? AND mid = ?', role, me.id, String(b.mid || '')); return json({ ok: true }); }
+    if (act === 'remove') { this.sql.exec('DELETE FROM teams WHERE oid = ? AND mid = ?', me.id, String(b.mid || '')); return json({ ok: true }); }
+    if (act === 'leave') { this.sql.exec('DELETE FROM teams WHERE oid = ? AND mid = ?', String(b.oid || ''), me.id); return json({ ok: true }); }
+    return json({ error: 'unknown' }, 404);
+  }
   deleteUser(uid, why = 'deleted') {
+    this.sql.exec('DELETE FROM teams WHERE oid = ? OR mid = ?', uid, uid);   // #379
     // #378: the account's files go with it
     for (const f of this.sql.exec('SELECT media FROM files WHERE uid = ?', uid).toArray()) this.mediaDel('id = ?', f.media);
     this.sql.exec('DELETE FROM files WHERE uid = ?', uid); this.sql.exec('DELETE FROM filefolders WHERE uid = ?', uid);

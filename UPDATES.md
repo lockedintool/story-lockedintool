@@ -348,4 +348,4 @@ commits, pushed as a new update) - nothing else changes.
 | 339 | 2026-11-14 | Choosing a company / Personal takes you exactly where you were (an app, Lockedintool or the phone's home screen), and the company screen is ready before every unlock (no gap) | 0630612 |
 | 340 | 2026-11-14 | 'Back where you were' per company works the same as an app too; only on Only system the home screen is Lockedintool | c436222 |
 | 341 | 2026-11-14 | The company screen stays up until you're really back where you were (no Lockedintool page in between), and it's ready at unlock even when you were in Lockedintool | f2e29d9 |
-| 342 | 2026-11-14 | No flashes before the company screen, and choosing Personal takes you back into the app you were in (not Lockedintool) | PENDING |
+| 342 | 2026-11-14 | No flashes before the company screen, and choosing Personal takes you back into the app you were in (not Lockedintool) | 6b8cfed |

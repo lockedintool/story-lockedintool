@@ -46,7 +46,7 @@
     'story-color-systems':1,'story-bg-set':1,'story-cards':1,'story-card-active':1,'story-trade-accounts':1,'story-trade-active':1,
     'story-trade-last':1,'story-page-sections':1,'story-wallet-hide':1,'story-wallet-nw':1,'story-money-all':1,'story-networth':1,
     'story-money-range':1,'story-spend-limit':1,'story-memberships':1,'story-quote':1,'story-tf-favs':1,'story-tap-pays':1,
-    'story-pay-favs':1,'story-album':1};
+    'story-pay-favs':1,'story-album':1,'story-biz-apps':1};
   /* #321 (owner, 13 Nov 2026: 'I only have one lockedintool account and it's for lockedintool - I don't have my personal
      account and for the other business'; chose 'Each its own account', 'same plan'): each space is its OWN Lockedintool
      account too - its sign-in, keys, profile, messages, calls, followers, privacy... (AK) are kept per space. The space
@@ -1476,6 +1476,32 @@
   .sp-logo-pick{ width:84px; height:84px; margin-top:8px; border-radius:18px; border:1px dashed #555555; background:#000000; color:#888888; font-size:30px; overflow:hidden; padding:0; }
   .sp-logo-pick img{ width:100%; height:100%; object-fit:cover; display:block; }
   .sp-album{ display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; }
+  /* #360 the business home */
+  .bz-home{ display:flex; flex-direction:column; min-height:100%; }
+  .bz-hd{ display:flex; align-items:center; gap:12px; padding:6px 2px 4px; }
+  .bz-logo{ width:46px; height:46px; border-radius:12px; overflow:hidden; background:#1c1c1c; border:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; flex:none; }
+  .bz-logo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .bz-logo b{ font-size:20px; color:#fff; }
+  .bz-hn{ min-width:0; flex:1; }
+  .bz-tag{ font-size:11px; color:#888; letter-spacing:1.2px; }
+  .bz-name{ font-size:22px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bz-sw{ flex:none; font-size:12px; color:#ddd; background:transparent; border:1px solid #444; border-radius:16px; padding:7px 12px; }
+  .bz-today{ margin-top:12px; background:#111; border:1px solid #2a2a2a; border-radius:16px; padding:12px 14px; display:flex; justify-content:space-between; gap:10px; }
+  .bz-t1{ font-size:14px; color:#fff; } .bz-t2{ font-size:11px; color:#888; margin-top:2px; } .bz-tr{ text-align:right; } .bz-t3{ font-size:18px; font-weight:800; color:#fff; }
+  .bz-sec{ font-size:11px; color:#888; letter-spacing:1.2px; margin:18px 2px 10px; }
+  .bz-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px 8px; }
+  .bz-app{ display:flex; flex-direction:column; align-items:center; gap:6px; background:transparent; border:0; padding:0; color:#ddd; min-width:0; }
+  .bz-ic{ width:54px; height:54px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; }
+  .bz-tool{ background:#1c1c1c; border:1px solid #333; color:#fff; }
+  .bz-add{ border:1.5px dashed #555; color:#888; background:transparent; }
+  .bz-nm{ font-size:11px; color:#ddd; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bz-personal{ margin-top:auto; width:100%; font-size:13px; color:#ddd; background:transparent; border:1px solid #333; border-radius:22px; padding:11px; }
+  .bz-home .bz-personal{ margin-top:22px; }
+  .bz-sheet{ padding-bottom:56px !important; }
+  .bz-sh-t{ font-size:17px; font-weight:700; color:#fff; } .bz-sh-s{ font-size:12px; color:#999; margin-top:4px; }
+  .bz-in{ width:100%; box-sizing:border-box; margin-top:10px; background:#111; border:1px solid #333; border-radius:12px; color:#fff; padding:11px 12px; font-size:14px; }
+  .bz-row{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:13px; color:#ddd; }
+  .bz-row button{ background:transparent; border:1px solid #444; color:#ddd; border-radius:12px; padding:5px 10px; font-size:12px; }
   .sp-photo{ aspect-ratio:1; padding:0; border:0; background:#111111; border-radius:6px; overflow:hidden; }
   .sp-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
   .sub-accts{ margin-top:-2px; }
@@ -11099,7 +11125,7 @@ window.storyWidget = function(page){
 window.storyShow = function(page, station3, back){
   state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null;
   // Opening Lockedintool = your Home Screen (Layouts > Home Screen, owner); back from an app page = where you were.
-  state.current = page || (back ? state.current : '') || state.homeScreen || 'wallet';
+  state.current = page || (back ? state.current : '') || (bizHere() ? 'biz-home' : '') || state.homeScreen || 'wallet';   // #360: a business lands on its business home
   if(['money','wallet','trading'].includes(state.current)) state.lastPage = state.current;
   state.station3Open = !!station3;
   renderDevice();
@@ -15049,6 +15075,110 @@ function spMoveTemplate(){
 // ---- A company's photo album (Gallery in a company): pictures you add, kept by Lockedintool for that company ----
 function albumIds(){ try{ const l = JSON.parse(localStorage.getItem('story-album') || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
 function albumSave(l){ localStorage.setItem('story-album', JSON.stringify(l)); }
+// ---- #360 THE BUSINESS HOME (owner, 14 Nov 2026: 'Let's create a whole different experience on business - they shouldn't
+//      show the phone's home screen but have a specific place for the business designed to run business'; approved the
+//      preview: 'Yes build the business home'). A business in focus lands here, never on the phone's home screen. Its apps
+//      are the services' own web versions, opened inside Lockedintool in THAT business's own browser profile (its own
+//      logins - StoryNative.bizOpen -> BizWebActivity); Personal keeps the phone's real apps. ----
+function bizHere(){ return bizOn() && litSpace() !== 'personal' && !!spaceOf(litSpace()); }
+const BIZ_EMAILS = [
+  { name:'Gmail', url:'https://mail.google.com/' }, { name:'Outlook / Hotmail', url:'https://outlook.live.com/mail/' },
+  { name:'Yahoo Mail', url:'https://mail.yahoo.com/' }, { name:'iCloud Mail', url:'https://www.icloud.com/mail' },
+  { name:'Zoho Mail', url:'https://mail.zoho.com/' }
+];
+const BIZ_APPS = [
+  { id:'email', name:'Email', bg:'#ffffff', fg:'#ea4335', g:'M' },
+  { id:'instagram', name:'Instagram', bg:'linear-gradient(45deg,#f9a03f,#d62976,#962fbf)', fg:'#ffffff', g:'IG', url:'https://www.instagram.com/' },
+  { id:'facebook', name:'Facebook', bg:'#1877f2', fg:'#ffffff', g:'f', url:'https://m.facebook.com/' },
+  { id:'tiktok', name:'TikTok', bg:'#111111', fg:'#ffffff', g:'♪', url:'https://www.tiktok.com/' },
+  { id:'linkedin', name:'LinkedIn', bg:'#0a66c2', fg:'#ffffff', g:'in', url:'https://www.linkedin.com/' },
+  { id:'x', name:'X', bg:'#111111', fg:'#ffffff', g:'X', url:'https://x.com/' },
+  { id:'whatsapp', name:'WhatsApp', bg:'#25d366', fg:'#ffffff', g:'W', url:'https://web.whatsapp.com/' }
+];
+function bizData(){ try{ const d = JSON.parse(localStorage.getItem('story-biz-apps') || '{}'); return d && typeof d === 'object' ? d : {}; }catch(e){ return {}; } }
+function bizSave(d){ try{ localStorage.setItem('story-biz-apps', JSON.stringify(d)); }catch(e){ showToast('Couldn’t save - the phone is out of room'); } }
+function bizOpenUrl(url, name){
+  if(NATIVE && window.StoryNative.bizOpen){ window.StoryNative.bizOpen(url, name || ''); return; }
+  try{ window.open(url, '_blank'); }catch(e){}
+}
+function bizTodayHTML(){
+  let inn = 0, out = 0, cur = 'ZAR', msgs = 0;
+  try{ cur = moneyMainCur(); const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    moneyView().filter(t=>t.ts >= d0.getTime() && t.cur === cur).forEach(t=>{ if(t.amt > 0) inn += t.amt; else out += -t.amt; }); }catch(e){}
+  try{ msgs = (JSON.parse(localStorage.getItem('story-activity') || '{}') || {}).msgs || 0; }catch(e){}
+  return `<div class="bz-today"><div><div class="bz-t1">Today</div><div class="bz-t2">${escText(spaceName(litSpace()))}’s money</div></div>
+    <div class="bz-tr"><div class="bz-t3">${fmtCur(inn - out, cur, true)}</div><div class="bz-t2">${msgs ? msgs + ' new message' + (msgs === 1 ? '' : 's') : 'No new messages'}</div></div></div>`;
+}
+function bizTile(a){
+  return `<button class="bz-app" data-bz="${a.extra ? 'extra' : 'app'}" data-id="${escText(a.id)}"><span class="bz-ic" data-keep-color style="background:${a.bg};color:${a.fg}">${escText(a.g)}</span><span class="bz-nm">${escText(a.name)}</span></button>`;
+}
+function bizHomeScreen(){
+  const c = spaceOf(litSpace()) || { name:'Business' }, d = bizData();
+  const extras = (d.extra || []).map((x, i)=>({ id:String(i), name:x.name, bg:'#1c1c1c', fg:'#ffffff', g:(x.name || '?').charAt(0).toUpperCase(), extra:true }));
+  const tool = (act, ico, nm)=>`<button class="bz-app" data-bz="${act}"><span class="bz-ic bz-tool">${ico}</span><span class="bz-nm">${nm}</span></button>`;
+  return `
+    <div class="page-shell bz-home">
+      <div class="bz-hd"><span class="bz-logo">${c.logo ? `<img alt="" src="${c.logo}">` : `<b>${escText((c.name || '?').charAt(0).toUpperCase())}</b>`}</span>
+        <div class="bz-hn"><div class="bz-tag">BUSINESS</div><div class="bz-name">${escText(c.name)}</div></div>
+        <button class="bz-sw" data-bz="switch">Switch focus</button></div>
+      ${bizTodayHTML()}
+      <div class="bz-sec">${escText(c.name).toUpperCase()}’S APPS · ITS OWN LOGINS</div>
+      <div class="bz-grid">${BIZ_APPS.map(bizTile).join('')}${extras.map(bizTile).join('')}<button class="bz-app" data-bz="add"><span class="bz-ic bz-add">+</span><span class="bz-nm">Add</span></button></div>
+      <div class="bz-sec">LOCKEDINTOOL</div>
+      <div class="bz-grid">
+        ${tool('messages', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', 'Messages')}
+        ${tool('money', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 'Money')}
+        ${tool('notes', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>', 'Notes')}
+        ${tool('album', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>', 'Album')}
+        ${tool('dashboard', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>', 'Dashboard')}
+      </div>
+      <button class="bz-personal" data-bz="personal">View Personal account</button>
+      ${state.bzEmailPick ? `<div class="modal-overlay"><div class="modal-sheet bz-sheet">
+        <div class="bz-sh-t">${escText(c.name)}’s email</div><div class="bz-sh-s">Choose where ${escText(c.name)}’s email is. You sign in once - only ${escText(c.name)} sees it.</div>
+        ${BIZ_EMAILS.map((m, i)=>`<button class="btn-wide" style="margin-top:8px;" data-bz="email-pick" data-id="${i}">${escText(m.name)}</button>`).join('')}
+        <input id="bz-email-url" class="bz-in" placeholder="Other - its web address (mail.example.com)" autocomplete="off">
+        <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-bz="sheet-close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-bz="email-other">Use this address</button></div>
+      </div></div>` : ''}
+      ${state.bzAdd ? `<div class="modal-overlay"><div class="modal-sheet bz-sheet">
+        <div class="bz-sh-t">Add an app to ${escText(c.name)}</div><div class="bz-sh-s">Any service with a website - it opens inside Lockedintool with ${escText(c.name)}’s own login.</div>
+        <input id="bz-add-name" class="bz-in" placeholder="Name (for example Shopify)" autocomplete="off">
+        <input id="bz-add-url" class="bz-in" placeholder="Web address (for example shopify.com)" autocomplete="off">
+        ${(d.extra || []).length ? `<div class="bz-sh-s" style="margin-top:12px;">Added</div>` + (d.extra || []).map((x, i)=>`<div class="bz-row"><span>${escText(x.name)}</span><button data-bz="extra-remove" data-id="${i}">Remove</button></div>`).join('') : ''}
+        ${d.email ? `<div class="bz-row"><span>Email: ${escText(d.email.replace(/^https?:\/\//, '').replace(/\/.*$/, ''))}</span><button data-bz="email-reset">Change</button></div>` : ''}
+        <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-bz="sheet-close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-bz="add-save">Add</button></div>
+      </div></div>` : ''}
+    </div>`;
+}
+function bizUrl(v){ v = String(v || '').trim(); if(!v) return ''; if(!/^https?:\/\//i.test(v)) v = 'https://' + v; try{ const u = new URL(v); return /\./.test(u.hostname) ? u.href : ''; }catch(e){ return ''; } }
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-bz]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-bz'), id = b.getAttribute('data-id'), d = bizData(), nm = spaceName(litSpace());
+  switch(a){
+    case 'app': { const ap = BIZ_APPS.find(x=>x.id === id); if(!ap) return;
+      if(ap.id === 'email'){ if(d.email){ bizOpenUrl(d.email, nm + ' · Email'); return; } state.bzEmailPick = true; break; }
+      bizOpenUrl(ap.url, nm + ' · ' + ap.name); return; }
+    case 'extra': { const x = (d.extra || [])[+id]; if(x) bizOpenUrl(x.url, nm + ' · ' + x.name); return; }
+    case 'email-pick': { const m = BIZ_EMAILS[+id]; if(!m) return; d.email = m.url; bizSave(d); state.bzEmailPick = false; renderDevice(); bizOpenUrl(m.url, nm + ' · Email'); return; }
+    case 'email-other': { const u = bizUrl((document.getElementById('bz-email-url') || {}).value); if(!u){ showToast('Type the email’s web address'); return; } d.email = u; bizSave(d); state.bzEmailPick = false; renderDevice(); bizOpenUrl(u, nm + ' · Email'); return; }
+    case 'email-reset': delete d.email; bizSave(d); state.bzAdd = false; state.bzEmailPick = true; break;
+    case 'add': state.bzAdd = true; break;
+    case 'add-save': { const n = ((document.getElementById('bz-add-name') || {}).value || '').trim(), u = bizUrl((document.getElementById('bz-add-url') || {}).value);
+      if(!n || !u){ showToast('Type its name and web address'); return; }
+      d.extra = (d.extra || []).concat([{ name:n.slice(0, 30), url:u }]); bizSave(d); state.bzAdd = false; showToast(n + ' added to ' + nm); break; }
+    case 'extra-remove': d.extra = (d.extra || []).filter((x, i)=>i !== +id); bizSave(d); break;
+    case 'sheet-close': state.bzAdd = false; state.bzEmailPick = false; break;
+    case 'switch': spacesShow(); return;
+    case 'personal': spaceGo('personal'); return;
+    case 'messages': if(NATIVE && window.StoryNative.toggleMessages) window.StoryNative.toggleMessages(); else showToast('Messages works in the Lockedintool app'); return;
+    case 'money': state.current = 'money'; break;
+    case 'notes': state.current = 'notes'; break;
+    case 'album': state.current = 'space-album'; break;
+    case 'dashboard': state.current = 'dashboard'; break;
+    default: return;
+  }
+  renderDevice();
+}, true);
 function spaceAlbumScreen(){
   const ids = albumIds();
   return `
@@ -16888,6 +17018,7 @@ function renderScreenContent(){
     case 'apps': return appsScreen();
     case 'spaces-settings': return spacesSettingsScreen();
     case 'space-album': return spaceAlbumScreen();
+    case 'biz-home': return bizHomeScreen();
   }
 }
 

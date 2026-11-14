@@ -1503,6 +1503,13 @@
   .mt-st{ color:#ddd !important; } .mt-join{ flex:0 0 auto; background:#30d158; color:#000; border:0; border-radius:14px; padding:7px 14px; font-weight:700; font-size:13px; }
   .mt-two{ display:flex; gap:8px; } .mt-two .bz-in{ flex:1 1 0; min-width:0; }
   .mt-notes{ min-height:70px; resize:none; font-family:inherit; } .mt-notes-v{ font-size:13px; white-space:pre-wrap; margin:8px 0; color:#ddd; }
+  .sh-row{ display:flex; align-items:center; gap:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+  .sh-pic{ width:52px; height:52px; flex:0 0 52px; border-radius:10px; background:#1a1a1a; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#ddd; } .sh-pic img{ width:100%; height:100%; object-fit:cover; }
+  .sh-photos{ display:flex; gap:8px; overflow-x:auto; padding:4px 0; scrollbar-width:none; } .sh-photos::-webkit-scrollbar{ display:none; }
+  .sh-ph{ position:relative; width:72px; height:72px; flex:0 0 72px; border-radius:10px; overflow:hidden; background:#1a1a1a; } .sh-ph img{ width:100%; height:100%; object-fit:cover; }
+  .sh-ph button{ position:absolute; top:3px; right:3px; width:22px; height:22px; border-radius:11px; border:0; background:rgba(0,0,0,0.7); color:#fff; font-size:15px; line-height:20px; padding:0; }
+  .sh-ph-add{ border:1px dashed #444; color:#ddd; font-size:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; } .sh-ph-add small{ font-size:10px; color:#9a9a9a; }
+  .sh-cur{ flex:0 0 76px !important; text-transform:uppercase; text-align:center; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
@@ -2683,6 +2690,16 @@
   #story-profile .up-p-pic .msg-pic svg{ width:38px; height:38px; }
   #story-profile .up-p-about{ font-size:14px; line-height:1.45; margin-bottom:10px; }
   #story-profile .up-p-hls{ margin:0 0 12px; }
+  #story-profile .up-shop-t{ font-size:11px; letter-spacing:0.08em; color:var(--pf-sub, #9a9a9a); margin:4px 0 6px; font-weight:700; }
+  #story-profile .up-shop{ display:flex; gap:8px; overflow-x:auto; margin:0 0 14px; scrollbar-width:none; } #story-profile .up-shop::-webkit-scrollbar{ display:none; }
+  #story-profile .up-shop-c{ flex:0 0 118px; background:transparent; border:1px solid rgba(128,128,128,0.35); border-radius:12px; padding:0 0 8px; overflow:hidden; text-align:left; color:inherit; display:flex; flex-direction:column; }
+  #story-profile .up-shop-c img, #story-profile .up-shop-np{ width:100%; height:100px; object-fit:cover; display:flex; align-items:center; justify-content:center; background:rgba(128,128,128,0.15); font-size:28px; }
+  #story-profile .up-shop-c b{ font-size:12px; margin:6px 8px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #story-profile .up-shop-c small{ font-size:11px; margin:2px 8px 0; opacity:0.75; }
+  .up-prod{ position:fixed; inset:0; z-index:60; background:var(--pf-bg, #000); color:var(--pf-fg, #fff); overflow-y:auto; padding-bottom:70px; }
+  .up-prod-ph{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; } .up-prod-ph::-webkit-scrollbar{ display:none; }
+  .up-prod-ph img{ flex:0 0 100%; width:100%; aspect-ratio:1; object-fit:cover; scroll-snap-align:center; }
+  .up-prod-b{ padding:14px 16px; } .up-prod-t{ font-size:20px; font-weight:700; } .up-prod-p{ font-size:16px; margin-top:4px; opacity:0.9; }
+  .up-prod-a{ font-size:14px; white-space:pre-wrap; margin-top:12px; line-height:1.45; } .up-prod-buy{ width:100%; margin-top:16px; } .up-prod-n{ font-size:11px; opacity:0.6; margin-top:10px; }
   #story-profile .up-p-bio{ border:1px solid var(--pf-hair); border-radius:14px; padding:12px 14px; font-size:14px; line-height:1.5; white-space:pre-wrap; margin-bottom:12px; }
   #story-profile .up-p-btns{ display:flex; gap:10px; margin:4px 0 16px; }
   #story-profile .up-follow-lg{ flex:1; padding:11px 0; font-size:14px; }
@@ -6188,6 +6205,7 @@ function dashboardScreen(){
           <div class="sidebar-item" data-nav="files">FILES</div>
           <div class="sidebar-item" data-nav="staff">TEAM</div>
           <div class="sidebar-item" data-nav="meetings">MEETINGS</div>
+          <div class="sidebar-item" data-nav="shop">SHOP</div>
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
@@ -11896,6 +11914,9 @@ window.storyProfileOnly = function(){
     else if(k === 'up-person-back') upClosePerson();
     else if(k === 'up-p-status'){ const p = UP.person; if(p && (p.statuses || []).length) upView(p, p.statuses, 0, true); }
     else if(k === 'up-hl'){ const p = UP.person, h = p && (p.highlights || [])[+b.getAttribute('data-i')]; if(h) upView(p, h.items, 0, false); }
+    else if(k === 'up-product'){ const p = UP.person, x = p && (p.shop || [])[+b.getAttribute('data-i')]; if(x) upProductOpen(p, x); }   // #381
+    else if(k === 'up-product-close'){ const v = document.querySelector('.up-prod'); if(v) v.remove(); }
+    else if(k === 'up-product-msg'){ const v = document.querySelector('.up-prod'); if(v) v.remove(); upMessage(UP.person); }
     else if(k === 'up-post'){ const p = UP.person; if(!p) return; const x = (p.postList || [])[+b.getAttribute('data-i')]; if(!x) return;
       const single = (p.postList || []).filter(y=>!y.title && !y.text && (y.items || []).length === 1);
       if(single.includes(x)) upView(p, single, single.indexOf(x), false);
@@ -12819,6 +12840,18 @@ async function upOpenPerson(id){
   try{ const r = await msgApi('/v1/profile?id=' + encodeURIComponent(id)); if(UP.person && UP.person.id === id){ UP.person = r; upRenderPerson(); } }
   catch(e){ if(UP.person && UP.person.id === id){ UP.person.loading = false; UP.person.error = true; upRenderPerson(); } }
 }
+// #381: a product from someone's shop - its pictures (swipe), price, description and Message to buy.
+function upProductOpen(p, x){
+  document.querySelectorAll('.up-prod').forEach(v=>v.remove());
+  const v = document.createElement('div'); v.className = 'up-prod';
+  v.innerHTML = '<div class="pf-ed-head"><button class="pf-ed-back" data-pf="up-product-close" aria-label="Back">‹</button><div class="pf-ed-title">' + escText(upName(p)) + '’s shop</div></div>' +
+    (x.photos.length ? '<div class="up-prod-ph">' + x.photos.map(u=>'<img alt="" loading="lazy" src="' + escText(u) + '">').join('') + '</div>' : '') +
+    '<div class="up-prod-b"><div class="up-prod-t">' + escText(x.title) + '</div><div class="up-prod-p">' + escText(shPrice(x)) + '</div>' +
+    (x.about ? '<div class="up-prod-a">' + escText(x.about) + '</div>' : '') +
+    (p.canMsg === false ? '<div class="up-p-note">This seller isn’t taking messages right now.</div>' : '<button class="up-follow up-follow-lg up-prod-buy" data-pf="up-product-msg">Message to buy</button>') +
+    '<div class="up-prod-n">Paying inside Lockedintool comes once its payment partner is connected - agree the payment with the seller in your chat.</div></div>';
+  (document.getElementById('story-profile') || document.body).appendChild(v);
+}
 function upClosePerson(){
   const el = upEl(); if(!el) return;
   UP.person = null; el.querySelector('.pf-person').hidden = true; el.querySelector('.pf-updates').hidden = false; upRender();
@@ -12850,6 +12883,7 @@ function upRenderPerson(){
     ((p.highlights || []).length ? '<div class="pf-hls up-p-hls">' + p.highlights.map((h, i)=>'<button class="pf-hl" data-pf="up-hl" data-i="' + i + '"><span class="pf-hl-c"><img alt="" loading="lazy" src="' + escText(h.cover || '') + '"></span><span class="pf-hl-n">' + escText(h.name) + '</span></button>').join('') + '</div>' : '') +
     (isMe ? '' : '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing || p.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : p.requested ? 'Requested' : 'Follow') + '</button>' +
       (p.canMsg === false ? '' : '<button class="up-follow up-follow-lg" data-pf="up-message">Message</button>') + '</div>') +
+    ((p.shop || []).length ? '<div class="up-shop-t">SHOP · ' + p.shop.length + '</div><div class="up-shop">' + p.shop.map((x, i)=>'<button class="up-shop-c" data-pf="up-product" data-i="' + i + '">' + (x.photos[0] ? '<img alt="" loading="lazy" src="' + escText(x.photos[0]) + '">' : '<span class="up-shop-np">' + escText((x.title || '?').charAt(0).toUpperCase()) + '</span>') + '<b>' + escText(x.title) + '</b><small>' + escText(shPrice(x)) + '</small></button>').join('') + '</div>' : '') +
     (p.loading ? '<div class="up-p-note">Loading…</div>' : p.error ? '<div class="up-p-note">No connection right now</div>'
       : posts.length ? '<div class="up-grid">' + posts.map((x, i)=>!(x.items || [{}]).length || x.type === 'text'
         ? '<button class="up-cell up-cell-t" data-pf="up-post" data-i="' + i + '">' + escText((x.title || x.text || '').slice(0, 90)) + '</button>'
@@ -17137,6 +17171,7 @@ function renderScreenContent(){
     case 'files': return filesScreen();
     case 'staff': return staffScreen();
     case 'meetings': return meetingsScreen();
+    case 'shop': return shopScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -22099,6 +22134,83 @@ document.addEventListener('click', e=>{
   }
   renderDevice();
 }, true);
+// ---- #381 SELLING (owner, 14 Nov 2026: 'Anyone there is either a company or someone selling something'; the take-over plan):
+// your shop - products / services with pictures, a price and a description. It shows on your profile (Updates) for everyone
+// who can see it; they tap Message to buy. Paying inside Lockedintool waits for a payment partner (said on the screen).
+const SH = { list:[], loaded:false, loading:false, err:'', sheet:null };
+function shPrice(x){ try{ return x.price ? fmtCur(x.price / 100, x.cur || 'USD', false) : 'Ask for the price'; }catch(e){ return (x.cur || '') + ' ' + (x.price / 100).toFixed(2); } }
+function shLoad(){
+  if(SH.loading || !msgAccount()) return; SH.loading = true;
+  msgApi('/v1/shop/mine').then(r=>{ SH.list = r.products || []; SH.loaded = true; SH.err = ''; })
+    .catch(e=>{ SH.err = e.code === 'signin' ? 'signin' : 'net'; })
+    .finally(()=>{ SH.loading = false; if(state.current === 'shop' && !SH.sheet) renderDevice(); });
+}
+function shopScreen(){
+  if(!SH.loaded && !SH.loading && !SH.err) setTimeout(shLoad, 0);
+  const sh = SH.sheet;
+  const card = x=>`<div class="row-card sh-row${x.active ? '' : ' mt-off'}" data-sh="edit" data-id="${escText(x.id)}">
+      <span class="sh-pic">${x.photos[0] ? `<img alt="" loading="lazy" src="${escText(x.photos[0])}">` : `<b>${escText((x.title || '?').charAt(0).toUpperCase())}</b>`}</span>
+      <span class="fl-tx"><b>${escText(x.title)}</b><small>${escText(shPrice(x))}${x.active ? '' : ' · hidden'}</small></span></div>`;
+  const ed = sh && sh.t === 'edit' ? sh : null;
+  const sheetHTML = !sh ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${
+    ed ? `<div class="fl-sh-t">${ed.id ? 'Edit' : 'Add to your shop'}</div>
+      <div class="sh-photos">${ed.photos.map((u, i)=>`<span class="sh-ph"><img alt="" src="${escText(u)}"><button data-sh="ph-del" data-i="${i}" aria-label="Remove">×</button></span>`).join('')}${ed.photos.length < 8 ? `<button class="sh-ph sh-ph-add" data-sh="ph-add">${ed.uploading ? '…' : '+'}<small>${ed.uploading ? 'Adding' : 'Pictures'}</small></button>` : ''}</div>
+      <input id="sh-title" class="bz-in" placeholder="What are you selling?" autocomplete="off" value="${escText(ed.title || '').replace(/"/g, '&quot;')}">
+      <div class="mt-two"><input id="sh-price" class="bz-in" inputmode="decimal" placeholder="Price (0 = ask me)" value="${ed.price ? (ed.price / 100).toFixed(2) : ''}"><input id="sh-cur" class="bz-in sh-cur" maxlength="3" autocapitalize="characters" value="${escText(ed.cur || 'USD')}"></div>
+      <textarea id="sh-about" class="bz-in mt-notes" placeholder="Describe it - size, colour, how it’s delivered…">${escText(ed.about || '')}</textarea>
+      <button class="btn-wide${ed.active ? ' fl-cur' : ''}" data-sh="active">${ed.active ? '✓ Showing in your shop' : 'Hidden from your shop'}</button>
+      ${ed.id ? `<button class="btn-wide fl-del" data-sh="del">Delete</button>` : ''}
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-sh="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-sh="save">Save</button></div>`
+    : sh.t === 'del' ? `<div class="fl-sh-t">Delete “${escText(sh.title)}”?</div><div class="fl-sh-s">It’s removed from your shop for good.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-sh="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-sh="del-yes" data-id="${escText(sh.id)}">Delete</button></div>` : ''
+  }</div></div>`;
+  return `
+    <div class="page-shell fl-page">
+    ${topBar('Shop', false)}
+    <div class="fl-head"><div class="fl-sum">${SH.loaded ? SH.list.filter(x=>x.active).length + ' showing in your shop' : SH.err === 'signin' ? 'Log in to open your shop' : SH.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>
+      <div class="fl-note">Your shop shows on your profile for everyone who can see it - they tap Message to buy. Paying inside Lockedintool comes once its payment partner is connected.</div></div>
+    <button class="btn-wide btn-primary fl-add" data-sh="new">+ Add a product or service</button>
+    ${SH.list.length ? SH.list.map(card).join('') : SH.loaded ? '<div class="fl-empty">Nothing in your shop yet.</div>' : ''}
+    ${sheetHTML}
+    </div>`;
+}
+function shKeep(){ const g = i=>(document.getElementById(i) || {}).value; const e = SH.sheet; if(!e || e.t !== 'edit') return;
+  if(g('sh-title') !== undefined){ e.title = g('sh-title'); e.priceTxt = g('sh-price'); e.cur = (g('sh-cur') || 'USD').toUpperCase(); e.about = g('sh-about'); } }
+function shPutBack(){ const e = SH.sheet; if(!e || e.priceTxt === undefined) return; setTimeout(()=>{ const i = document.getElementById('sh-price'); if(i) i.value = e.priceTxt; }, 0); }
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-sh]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-sh'), id = b.getAttribute('data-id');
+  switch(a){
+    case 'new': if(!msgAccount()){ showToast('Log in to open your shop'); return; }
+      SH.sheet = { t:'edit', id:'', title:'', price:0, cur: (typeof moneyMainCur === 'function' && moneyMainCur()) || 'USD', about:'', photos:[], media:[], active:true }; break;
+    case 'edit': { const x = SH.list.find(p=>p.id === id); if(!x) return; SH.sheet = Object.assign({ t:'edit' }, JSON.parse(JSON.stringify(x))); break; }
+    case 'active': shKeep(); SH.sheet.active = !SH.sheet.active; renderDevice(); shPutBack(); return;
+    case 'ph-del': { shKeep(); const i = +b.getAttribute('data-i'); SH.sheet.photos.splice(i, 1); SH.sheet.media.splice(i, 1); renderDevice(); shPutBack(); return; }
+    case 'ph-add': { if(SH.sheet.uploading) return; shKeep(); const ed = SH.sheet;
+      litGrid('photo', async files=>{
+        ed.uploading = true; if(SH.sheet === ed){ renderDevice(); shPutBack(); }
+        for(const f of files.slice(0, 8 - ed.media.length)){
+          try{ const bytes = await f.get(); const m = await upPutMedia({ bytes, mime:'image/jpeg' }); ed.media.push(m); ed.photos.push(MSG_API + '/v1/media/' + m); }catch(err){ showToast('Couldn’t add a picture - try again'); }
+        }
+        ed.uploading = false; if(SH.sheet === ed){ shKeep(); renderDevice(); shPutBack(); }
+      }); return; }
+    case 'save': { shKeep(); const ed = SH.sheet; if(ed.uploading){ showToast('Wait for the pictures to finish'); return; }
+      if(!(ed.title || '').trim()){ showToast('Say what you’re selling'); return; }
+      const price = Math.round(parseFloat(String(ed.priceTxt !== undefined ? ed.priceTxt : (ed.price / 100)).replace(',', '.')) * 100) || 0;
+      if(!/^[A-Z]{3}$/.test(ed.cur || '')){ showToast('The currency is 3 letters, like USD or ZAR'); return; }
+      SH.sheet = null; renderDevice();
+      msgApi('/v1/shop/save', { id: ed.id || undefined, title: ed.title.trim(), price, cur: ed.cur, about: ed.about || '', photos: ed.media, active: ed.active })
+        .then(r=>{ if(r.product){ const i = SH.list.findIndex(x=>x.id === r.product.id); if(i >= 0) SH.list[i] = r.product; else SH.list.unshift(r.product); } showToast(ed.id ? 'Saved' : 'Added to your shop'); if(state.current === 'shop') renderDevice(); })
+        .catch(()=>showToast('Couldn’t save it - try again'));
+      return; }
+    case 'del': SH.sheet = { t:'del', id: SH.sheet.id, title: SH.sheet.title }; break;
+    case 'del-yes': SH.list = SH.list.filter(x=>x.id !== id); SH.sheet = null; msgApi('/v1/shop/delete', { id }).catch(()=>{ showToast('Couldn’t delete it'); shLoad(); }); break;
+    case 'close': SH.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
+}, true);
 async function flUploadOne(f){
   FL.busy++; if(state.current === 'files') renderDevice();
   try{
@@ -23100,7 +23212,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

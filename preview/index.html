@@ -1477,6 +1477,9 @@
   .sp-logo-pick img{ width:100%; height:100%; object-fit:cover; display:block; }
   .sp-album{ display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; }
   /* #360 the business home */
+  .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
+  .bz-swpop{ position:absolute; left:0; top:calc(100% + 6px); z-index:61; white-space:nowrap; display:flex; background:#000; border-radius:14px; border:1px solid #303030; padding:4px 6px; box-shadow:0 4px 18px rgba(0,0,0,.45); }
+  .bz-swpop button{ background:none; border:0; color:#fff; font-size:16px; font-weight:600; padding:10px 14px; }
   .bz-home{ display:flex; flex-direction:column; min-height:100%; }
   .bz-hd{ display:flex; align-items:center; gap:12px; padding:6px 2px 4px; }
   .bz-logo{ width:46px; height:46px; border-radius:12px; overflow:hidden; background:#1c1c1c; border:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; flex:none; }
@@ -6080,7 +6083,11 @@ function topBar(label, withDots, extraRight, backTarget, titleExtra, hideBack, a
   const badge = state.current===state.homeScreen ? homeBadge() : '';
   const backBtn = hideBack
     ? `<button class="dash-back" style="visibility:hidden;pointer-events:none;padding-top:8px;padding-bottom:8px;" aria-hidden="true">‹ Back</button>`
-    : `<button class="dash-back" data-nav="${target}">${backLabel}</button>`;
+    : (target === 'dashboard' && !arrowOnly && bizBack2())
+      // #363 (owner, 14 Nov 2026: 'the dashboard button just becomes a blank button with a back arrow. That will show the two
+      // buttons' - Only system, a business in focus): the same button, its word hidden (same size), opens Business home | Dashboard.
+      ? `<span style="position:relative;display:inline-block;"><button class="dash-back" data-bz="back2" aria-label="Back">‹<span style="visibility:hidden"> Dashboard</span></button>${state.bzBack2 ? bizBack2Pop() : ''}</span>`
+      : `<button class="dash-back" data-nav="${target}">${backLabel}</button>`;
   return `
     <div class="page-top">
       <div class="page-top-left">
@@ -11127,6 +11134,7 @@ window.storyWidget = function(page){
 window.storyShow = function(page, station3, back){
   state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null;
   // Opening Lockedintool = your Home Screen (Layouts > Home Screen, owner); back from an app page = where you were.
+  if(page === '~home') page = state.homeScreen || 'wallet';   // #363: Lockedintool on the bottom switch in a business = your Home Screen
   state.current = page || (back ? state.current : '') || (bizHere() ? 'biz-home' : '') || state.homeScreen || 'wallet';   // #360: a business lands on its business home
   if(['money','wallet','trading'].includes(state.current)) state.lastPage = state.current;
   state.station3Open = !!station3;
@@ -15151,6 +15159,11 @@ function bizHomeScreen(){
       </div></div>` : ''}
     </div>`;
 }
+// #363: on Only system there's no bottom switch, so in a business the pages' ‹ offers both ways back.
+function bizBack2(){ try{ return bizHere() && sysOn(); }catch(e){ return false; } }
+function bizBack2Pop(){
+  return `<div class="bz-swpop-bg" data-bz="back2-close"></div><div class="bz-swpop"><button data-bz="back2-biz">Business home</button><button data-bz="back2-dash">Dashboard</button></div>`;
+}
 function bizUrl(v){ v = String(v || '').trim(); if(!v) return ''; if(!/^https?:\/\//i.test(v)) v = 'https://' + v; try{ const u = new URL(v); return /\./.test(u.hostname) ? u.href : ''; }catch(e){ return ''; } }
 document.addEventListener('click', e=>{
   const b = e.target.closest && e.target.closest('[data-bz]'); if(!b) return;
@@ -15177,6 +15190,10 @@ document.addEventListener('click', e=>{
     case 'notes': state.current = 'notes'; break;
     case 'album': state.current = 'space-album'; break;
     case 'dashboard': state.current = 'dashboard'; break;
+    case 'back2': state.bzBack2 = true; break;
+    case 'back2-close': if(e.target !== b) return; state.bzBack2 = false; break;   // only a tap on the space around it (#305)
+    case 'back2-biz': state.bzBack2 = false; state.current = 'biz-home'; break;
+    case 'back2-dash': state.bzBack2 = false; state.current = 'dashboard'; break;
     default: return;
   }
   renderDevice();

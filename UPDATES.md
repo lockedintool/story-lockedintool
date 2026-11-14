@@ -371,3 +371,4 @@ commits, pushed as a new update) - nothing else changes.
 | 362 | 2026-11-14 | The business home now shows: with a business in focus Lockedintool opens on that business's home (it used to open on your Home Screen page). | 7ff3245 |
 | 363 | 2026-11-14 | Getting back to the business home: on Second system the bottom switch reads Business home \| Lockedintool while a business is in focus; on Only system the pages' ‹ button shows Business home \| Dashboard. | 4426454 |
 | 364 | 2026-11-14 | Personal home + the home screen: with companies set up, Personal gets its own home (your phone's apps + Lockedintool's tools), and on Second system the focus's home (Business home / Personal home) shows wherever the phone's own home screen would. | 5589e45 |
+| 365 | 2026-11-14 | The bottom switch's 'Lockedintool' no longer breaks onto two lines next to 'Business home' / 'Personal home'. |  |

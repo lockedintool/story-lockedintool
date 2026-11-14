@@ -693,8 +693,8 @@ class OverlayService : Service(), StoryBridge.Host {
         // Only the word itself is its button (owner's recording, 29 Oct 2026: a tap beside the switch opened Lockedintool):
         // the space around the words is margin, not part of them - the switch looks exactly the same.
         fun word(t: String, onTap: () -> Unit) = TextView(this).apply {
-            text = t; setTextColor(th(Color.WHITE)); textSize = 18f; setOnClickListener { hidePicker(); onTap() }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginStart = (14 * dp).toInt(); marginEnd = (14 * dp).toInt() }
+            text = t; setTextColor(th(Color.WHITE)); textSize = 18f; maxLines = 1; isSingleLine = true; setOnClickListener { hidePicker(); onTap() }   // #365: never wraps ("Lockedinto / ol")
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { val m = if (spacesWanted()) 9 else 14; marginStart = (m * dp).toInt(); marginEnd = (m * dp).toInt() }   // #365: room for "Business home"
         }
         // Apps = straight back to whatever was underneath (the app you were on, untouched, or the home screen).
         // #363 (owner, 14 Nov 2026: 'on the second system ... tap the bottom button and switch to apps which should take you

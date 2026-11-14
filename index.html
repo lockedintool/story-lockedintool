@@ -9832,8 +9832,10 @@ function subscriptionScreen(){
   // The page looks EXACTLY as a customer sees it (owner, 4 Nov 2026: 'make my subscription page be clean, show exactly
   // how it will show to a customer') - the official account gets no extra buttons or words here.
   const soon = !PLANS_ON_SALE;   // FREE-ONLY launch (owner): Basic & Premium show "Coming soon", not for sale yet
-  const status = s.officialPlan ? 'Your plan: Premium · ' + subOptName(s.mode)
-    : active ? 'Your plan: ' + (s.plan === 'premium' ? 'Premium' : 'Basic') + ' · ' + subOptName(s.mode) + ' · paid until ' + until
+  // #372 (owner, 14 Nov 2026: 'remove them - just Basic and Premium'): in the app-only test a plan names no system.
+  const sysNm = m=>LIT_APP_ONLY ? '' : ' · ' + subOptName(m);
+  const status = s.officialPlan ? 'Your plan: Premium' + sysNm(s.mode)
+    : active ? 'Your plan: ' + (s.plan === 'premium' ? 'Premium' : 'Basic') + sysNm(s.mode) + ' · paid until ' + until
     : !s.connected ? 'Subscriptions open once LOCKED IN TOOL’s payments are set up.'
     : soon ? 'Free: the Dashboard is yours. Basic & Premium are coming soon.'
     : locked ? 'Free: the Dashboard. Choose a plan for the Pages.' : 'Choose a plan to use LOCKED IN TOOL.';
@@ -9845,13 +9847,13 @@ function subscriptionScreen(){
     <div class="page-shell sub-page">
     ${topBar('Subscription', false, '', 'settings', '', false)}
     <div class="sub-head">LOCKED IN TOOL</div>
-    <div class="sub-opts">${SUB_OPTIONS.map(o=>`<button class="sub-opt${mode === o.key ? ' on' : ''}" data-action="sub-opt" data-v="${o.key}"><span class="sub-opt-mark">${mode === o.key ? '✓' : ''}</span>${o.name}${o.note ? `<span class="sub-opt-note">${o.note}</span>` : ''}<span class="sub-opt-tip"><b>${o.name}</b>${o.short}</span></button>`).join('')}</div>
+    ${LIT_APP_ONLY ? '' : `<div class="sub-opts">${SUB_OPTIONS.map(o=>`<button class="sub-opt${mode === o.key ? ' on' : ''}" data-action="sub-opt" data-v="${o.key}"><span class="sub-opt-mark">${mode === o.key ? '✓' : ''}</span>${o.name}${o.note ? `<span class="sub-opt-note">${o.note}</span>` : ''}<span class="sub-opt-tip"><b>${o.name}</b>${o.short}</span></button>`).join('')}</div>`}
     ${subAcctRowHTML()}
     <div class="sub-status">${escText(status)}</div>
     ${active && !s.officialPlan ? `<button class="sub-end-btn" data-action="sub-endask">Cancel plan</button>` : ''}
     ${w ? `<div class="row-card pay-wait">
       <div class="pay-wait-amt">${escText(w.name)}</div>
-      <div class="pay-wait-who">${subOptName(w.mode)} · $${w.usd}/month${(w.provider === 'stitch' || w.provider === 'payfast') && w.zar ? ' · R' + Number(w.zar).toFixed(2) : ''}</div>
+      <div class="pay-wait-who">${LIT_APP_ONLY ? '' : subOptName(w.mode) + ' · '}$${w.usd}/month${(w.provider === 'stitch' || w.provider === 'payfast') && w.zar ? ' · R' + Number(w.zar).toFixed(2) : ''}</div>
       <div class="pay-wait-status">${w.status === 'paid' ? 'Paid - your plan is on.' : w.status === 'pending' ? (w.provider === 'stitch' ? 'Approve it in your bank’s page that opened. This updates by itself.' : 'Pay on the payment page that opened. This updates by itself.') : w.status === 'cancelled' ? 'Cancelled in your bank' : 'Not approved in time - nothing was paid'}</div>
       ${w.status === 'pending' ? `<button class="btn-wide" data-action="sub-reopen">${w.provider === 'stitch' ? 'Open my bank’s page again' : 'Open the payment page again'}</button>
       <button class="btn-wide" data-action="sub-cancel"${state.sub.busy ? ' disabled' : ''}>Cancel - nothing is paid</button>` : `<button class="btn-wide btn-primary" data-action="sub-done">Done</button>`}
@@ -9939,7 +9941,7 @@ const SUB_OPTIONS = [
 ];
 function subOptName(k){ const o = SUB_OPTIONS.find(x=>x.key === k); return o ? o.name : SUB_OPTIONS[0].name; }
 // Nothing is chosen until you pick an option (owner: a pre-chosen one was confusing) - except Only system while it's on.
-function subMode(){ if(sysModeState().on) return 'only'; return state.sub.mode || null; }
+function subMode(){ if(typeof LIT_APP_ONLY !== 'undefined' && LIT_APP_ONLY) return 'second'; if(sysModeState().on) return 'only'; return state.sub.mode || null; }   // #372: app only - no system to choose
 function subOptionScreen(locked){
   const o = SUB_OPTIONS.find(x=>x.key === state.sub.optView) || SUB_OPTIONS[0];
   return `
@@ -11037,7 +11039,7 @@ function settingsHubScreen(){
 // anymore').
 function subSettingsHTML(){
   const s = subState() || {};
-  const now = s.active ? (s.plan === 'premium' ? 'Premium' : 'Basic') + ' · ' + subOptName(s.mode) : 'Free';
+  const now = s.active ? (s.plan === 'premium' ? 'Premium' : 'Basic') + (LIT_APP_ONLY ? '' : ' · ' + subOptName(s.mode)) : 'Free';
   return `<div class="section-title">SUBSCRIPTIONS</div>
     <div class="set2-card">
       <div class="set2-row set2-link" data-nav="subscription"><div class="set2-text"><div class="set2-name">LOCKED IN TOOL plans</div><div class="set2-sub">Your plan: ${escText(now)}</div></div><span class="chev-right">›</span></div>

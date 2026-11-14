@@ -378,3 +378,4 @@ commits, pushed as a new update) - nothing else changes.
 | 369 | 2026-11-14 | The company's home / Personal home is simply called Apps (Only system's ‹ now shows Apps \| Dashboard). | 8d1c9f3 |
 | 370 | 2026-11-14 | The app-only test: Lockedintool is only an app (no Second / Only system, no System switch, no bottom button of its own); everything works inside the app. Everything before is kept in the vault branch vault-2026-11-14. | c444ed9 |
 | 371 | 2026-11-14 | No setup screen: the Lockedintool icon always opens the app itself, like any normal app. | c444ed9 |
+| 372 | 2026-11-14 | Subscription in the app-only test: no Second system / Only system choice - just Basic and Premium. |  |

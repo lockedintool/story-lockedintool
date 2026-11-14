@@ -347,3 +347,4 @@ commits, pushed as a new update) - nothing else changes.
 | 338 | 2026-11-14 | Closing the phone's recent apps (or Close all) after opening them from Lockedintool goes back to Lockedintool, like any app | 6d8b97d |
 | 339 | 2026-11-14 | Choosing a company / Personal takes you exactly where you were (an app, Lockedintool or the phone's home screen), and the company screen is ready before every unlock (no gap) | 0630612 |
 | 340 | 2026-11-14 | 'Back where you were' per company works the same as an app too; only on Only system the home screen is Lockedintool | c436222 |
+| 341 | 2026-11-14 | The company screen stays up until you're really back where you were (no Lockedintool page in between), and it's ready at unlock even when you were in Lockedintool | PENDING |

@@ -1819,6 +1819,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // again changes nothing on screen (no re-layout, no resize, no jump).
         if (!p.small) p.web.evaluateJavascript("window.storyReset&&window.storyReset()", null)
         setShown(p, false)
+        if (p === pagesPane) spaceHidden()   // #341
         if (p === profilePane) { p.web.evaluateJavascript("window.storyProfileReset&&window.storyProfileReset()", null); profileGapPane?.takeIf { it.stale }?.let { reload(it) } }
         // New screens were published: pick them up in the background. Station 3 / the dial pad only reload
         // then (never on a timer), so tapping them open is always instant.
@@ -3048,8 +3049,11 @@ class OverlayService : Service(), StoryBridge.Host {
             val res = (r ?: "").trim('"')
             if (res != "ok" && !p.shown && !pagesInHome() && !spacesWarm) runCatching { p.web.onPause() }
             spLog("screen off: chooser " + res + (if (p.shown) ", Pages already up" else "") + (if (pagesInHome()) ", in Home" else "") + (if (Security.lit(this)) ", Lockedintool security" else ""))
-            if (res != "ok" || p.shown || pagesInHome()) return@evaluateJavascript
-            if (!Security.lit(this)) { setShown(p, true); spacesPreShown = true }
+            if (res != "ok") return@evaluateJavascript
+            // #341: the Pages already up (you were in Lockedintool) or kept in the Home get the chooser on top too - you never
+            // unlock onto a Lockedintool page first ('I still start on lockedintool').
+            if (p.shown || pagesInHome()) { spacesPreShown = true; return@evaluateJavascript }
+            if (!Security.lit(this)) { spacesPreShown = true; setShown(p, true) }
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
@@ -3097,31 +3101,40 @@ class OverlayService : Service(), StoryBridge.Host {
     /** Choosing a company / Personal: back into the app you were in there (true), else the Pages show it as before (false). */
     override fun spaceSwitch(id: String): Boolean {
         val want = id.ifEmpty { "personal" }
+        val same = spaceCur() == want
         spPrefs().edit().putString("space_cur", want).apply()
         val last = spPrefs().getString("space_last_$want", "") ?: ""
         if (last == "~lit" || last == packageName) return false
-        // #339 (owner, 14 Nov 2026: 'I still start on lockedintool idk why'): you weren't in Lockedintool there - the
-        // phone's own home screen, as the phone works (Only system / the app: Lockedintool IS where you land).
+        // #339 / #340: not in Lockedintool there - the phone's own home screen (Only system: Lockedintool IS the home).
+        val target: String; val open: Intent
         if (last.isEmpty()) {
-            // #340 (owner, 14 Nov 2026: 'this applies to all lockedintool systems, account and app - just the Only system
-            // lockedintool is the user's complete home screen'): only Only system lands in Lockedintool here.
             if (SystemMode.on(this) && !AppMode.appOnly(this)) return false
-            val h = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            ui.post {
-                spacesUpFlag = false; spacesPreShown = false
-                if (runCatching { startActivity(h) }.isFailure) return@post
-                hidePanelFor(homePkg(), "your home screen")
-            }
-            return true
+            target = homePkg() ?: return false
+            open = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        } else {
+            target = last
+            open = packageManager.getLaunchIntentForPackage(last) ?: return false
         }
-        val i = packageManager.getLaunchIntentForPackage(last) ?: return false
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // #341 (owner, 14 Nov 2026: 'the two problems still not fixed' - 'I still start on lockedintool'): the chooser
+        // stays on screen until you're really there, then the Pages go - no Lockedintool page in between. What's already
+        // in front under the chooser (very often the app / home screen you were in) just shows at once.
+        spaceAfterHide = if (same) "close" else "reload"
         ui.post {
             spacesUpFlag = false; spacesPreShown = false
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (runCatching { startActivity(i) }.isFailure) return@post
-            hidePanelFor(last, "your app in this company")
+            if (StoryAccessibilityService.frontPkg == target) { pagesPane?.takeIf { it.shown }?.let { hideOne(it) } ?: spaceHidden(); return@post }
+            if (runCatching { startActivity(open) }.isFailure) { spaceAfterHide = null; pagesPane?.web?.evaluateJavascript("window.litSpacesClose&&window.litSpacesClose()", null); return@post }
+            hidePanelFor(target, "where you were in this company")
         }
         return true
+    }
+    /** #341: what the Pages do once they're out of sight after a company / Personal was chosen. */
+    @Volatile private var spaceAfterHide: String? = null
+    private fun spaceHidden() {
+        val w = spaceAfterHide ?: return
+        spaceAfterHide = null
+        val p = pagesPane ?: return
+        p.web.evaluateJavascript(if (w == "reload") "window.litSpaceCommit&&window.litSpaceCommit()" else "window.litSpacesClose&&window.litSpacesClose()", null)
     }
     /** #335: the company screen is on screen or waiting for the unlock - the Pages are never reloaded under it (a reload wiped it). */
     private fun spacesHolding() = spacesUpFlag || spacesPreShown

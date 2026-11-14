@@ -151,7 +151,15 @@ class MainActivity : Activity() {
             col.addView(title("Owner - your private version: you always get the newest version first.", 15f).apply { setTextColor(Color.parseColor("#FFE8B23D")); setPadding(0, pad, 0, pad / 2) })
             col.addView(btn("Publish live update") { askPin("Publish live update", "Everything you see on this phone now goes to everyone.") { pin -> publish(pin, "publish") } })
             col.addView(btn("Undo last update") { askPin("Undo last update", "Everyone goes back to the screens from before the last update.") { pin -> publish(pin, "undo") } })
-            col.addView(btn("Leave owner mode") { Release.setOwner(this, false); channelChanged() })
+            // #343 (owner, 14 Nov 2026: 'Idk what i pressed' - the phone landed on 'This copy of Lockedintool can't be used'):
+            // leaving owner mode locks this phone until the PIN is entered again, so it asks first.
+            col.addView(btn("Leave owner mode") {
+                android.app.AlertDialog.Builder(this).setTitle("Leave owner mode?")
+                    .setMessage("Lockedintool will stop working on this phone until you tap the build line 7 times and enter your PIN again.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Leave owner mode") { _, _ -> Release.setOwner(this, false); channelChanged() }
+                    .setCancelable(false).show()
+            })
         }
         addBuildLine(col, pad)
         setContentView(ScrollView(this).apply { setBackgroundColor(StoryTheme.swap(this@MainActivity, Color.BLACK)); addView(col) })

@@ -213,6 +213,10 @@ export class Hub {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS filefolders (uid TEXT, name TEXT, at INTEGER, PRIMARY KEY (uid, name))`);
     // #379 TEAM: the people who work with an account (a company's account) - invited by @username, with a role
     // (manager: can add / change files; staff: can see and open them). status 'invited' until they accept.
+    // #380 MEETINGS: a meeting has a time, a length, notes and the people invited; it gets its own private group (its chat +
+    // its call), so everyone invited sees it in Messages and joins the call from there or from Meetings.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS meetings (id TEXT PRIMARY KEY, oid TEXT, title TEXT, at INTEGER, mins INTEGER, notes TEXT, gid TEXT, created INTEGER, cancelled INTEGER DEFAULT 0)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS meetpeople (mid TEXT, uid TEXT, status TEXT, PRIMARY KEY (mid, uid))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS teams (oid TEXT, mid TEXT, role TEXT, status TEXT, at INTEGER, PRIMARY KEY (oid, mid))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS callrates (uid TEXT, stars INTEGER, note TEXT, video INTEGER, grp INTEGER, secs INTEGER, at INTEGER)`);   // the end-of-call rating (owner) - no names shown
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, uid TEXT, kind TEXT, target TEXT, owner TEXT, reason TEXT, text TEXT, at INTEGER, status TEXT)`);
@@ -313,6 +317,7 @@ export class Hub {
       if (path === '/v1/reports') return this.reportsList(me);
       if (path.startsWith('/v1/files/')) return this.files(me, path.slice(10), Object.assign({}, body || {}, { __by: me.id }));
       if (path.startsWith('/v1/team/')) return this.team(me, path.slice(9), body);
+      if (path.startsWith('/v1/meet/')) return this.meet(me, path.slice(9), body);
       if (path === '/v1/callrate') return this.callRate(me, body);
       if (path === '/v1/callrates') return this.callRates(me);
       if (path === '/v1/blockfix/list') return this.blockFixList(me);
@@ -1229,6 +1234,76 @@ export class Hub {
     }
     return json({ error: 'unknown' }, 404);
   }
+  // #380 MEETINGS
+  async meet(me, act, b) {
+    b = b || {};
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, n);
+    const person = id => { const u = this.one('SELECT id, name, username, photo FROM users WHERE id = ?', id); return u ? { id: u.id, name: u.name || '', username: u.username || '', photo: this.mediaUrl(u.photo) } : null; };
+    const view = m => {
+      const people = this.sql.exec('SELECT uid, status FROM meetpeople WHERE mid = ?', m.id).toArray().map(r => Object.assign(person(r.uid) || { id: r.uid, name: '', username: '' }, { status: r.status }));
+      const mine = people.find(p => p.id === me.id);
+      return { id: m.id, title: m.title, at: m.at, mins: m.mins, notes: m.notes || '', gid: m.gid, cancelled: !!m.cancelled, host: person(m.oid), isHost: m.oid === me.id, status: mine ? mine.status : 'host', people };
+    };
+    if (act === 'list') {
+      const since = Date.now() - 30 * 86400000;
+      const rows = this.sql.exec('SELECT DISTINCT m.* FROM meetings m LEFT JOIN meetpeople p ON p.mid = m.id WHERE (m.oid = ? OR p.uid = ?) AND m.at > ? ORDER BY m.at LIMIT 300', me.id, me.id, since).toArray();
+      return json({ meetings: rows.map(view) });
+    }
+    if (act === 'create') {
+      const title = clean(b.title, 80), at = +b.at || 0, mins = Math.min(600, Math.max(5, +b.mins || 30));
+      if (!title) return json({ error: 'title' }, 400);
+      if (!at || at < Date.now() - 3600000) return json({ error: 'time' }, 400);
+      if (this.one('SELECT COUNT(*) AS n FROM meetings WHERE oid = ? AND at > ?', me.id, Date.now()).n >= 200) return json({ error: 'full' }, 400);
+      const ids = new Set();
+      if (b.team) for (const r of this.sql.exec("SELECT mid FROM teams WHERE oid = ? AND status = 'member'", me.id).toArray()) ids.add(r.mid);
+      const missing = [];
+      for (const raw of (Array.isArray(b.usernames) ? b.usernames : []).slice(0, 50)) {
+        const un = String(raw || '').replace(/^@/, '').toLowerCase().trim(); if (!un) continue;
+        const u = this.one('SELECT id FROM users WHERE username = ?', un);
+        if (!u || this.blocked(me.id, u.id)) missing.push(un); else if (u.id !== me.id) ids.add(u.id);
+      }
+      if (missing.length) return json({ error: 'nouser', missing }, 404);
+      const list = [...ids].slice(0, 255);
+      // its own private group: the meeting's chat and its call (group calls)
+      const gr = await (await this.groups(me, 'create', { name: title.slice(0, 60), type: 'private', about: 'Meeting', members: list })).json();
+      const id = 'mt' + rand(9);
+      this.sql.exec('INSERT INTO meetings (id, oid, title, at, mins, notes, gid, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', id, me.id, title, at, mins, clean(b.notes, 1000), gr.id || '', Date.now());
+      for (const uid of list) {
+        this.sql.exec("INSERT OR IGNORE INTO meetpeople (mid, uid, status) VALUES (?, ?, 'invited')", id, uid);
+        this.act(uid, 'meet', me.id, id, title);
+        this.deliver(uid, { t: 'fnote', kind: 'meet', id, from: me.id, name: me.name || '', username: me.username || '', title, at, when: at });
+      }
+      return json({ ok: true, meeting: view(this.one('SELECT * FROM meetings WHERE id = ?', id)) });
+    }
+    const m = this.one('SELECT * FROM meetings WHERE id = ?', clean(b.id, 40));
+    if (!m) return json({ error: 'gone' }, 404);
+    if (act === 'respond') {
+      if (!this.one('SELECT 1 AS x FROM meetpeople WHERE mid = ? AND uid = ?', m.id, me.id)) return json({ error: 'gone' }, 404);
+      const st = b.yes ? 'yes' : 'no';
+      this.sql.exec('UPDATE meetpeople SET status = ? WHERE mid = ? AND uid = ?', st, m.id, me.id);
+      this.act(m.oid, st === 'yes' ? 'meetyes' : 'meetno', me.id, m.id, m.title);
+      return json({ ok: true });
+    }
+    if (m.oid !== me.id) return json({ error: 'host' }, 403);
+    if (act === 'cancel') {
+      this.sql.exec('UPDATE meetings SET cancelled = 1 WHERE id = ?', m.id);
+      for (const r of this.sql.exec('SELECT uid FROM meetpeople WHERE mid = ?', m.id).toArray()) {
+        this.act(r.uid, 'meetoff', me.id, m.id, m.title);
+        this.deliver(r.uid, { t: 'fnote', kind: 'meetoff', id: m.id, from: me.id, name: me.name || '', username: me.username || '', title: m.title, at: Date.now() });
+      }
+      return json({ ok: true });
+    }
+    if (act === 'update') {
+      const at = +b.at || m.at, mins = Math.min(600, Math.max(5, +b.mins || m.mins));
+      this.sql.exec('UPDATE meetings SET title = ?, at = ?, mins = ?, notes = ? WHERE id = ?', clean(b.title, 80) || m.title, at, mins, b.notes !== undefined ? clean(b.notes, 1000) : m.notes, m.id);
+      if (at !== m.at) for (const r of this.sql.exec('SELECT uid FROM meetpeople WHERE mid = ?', m.id).toArray()) {
+        this.act(r.uid, 'meetmove', me.id, m.id, m.title);
+        this.deliver(r.uid, { t: 'fnote', kind: 'meetmove', id: m.id, from: me.id, name: me.name || '', username: me.username || '', title: m.title, at: Date.now(), when: at });
+      }
+      return json({ ok: true, meeting: view(this.one('SELECT * FROM meetings WHERE id = ?', m.id)) });
+    }
+    return json({ error: 'unknown' }, 404);
+  }
   // #379 TEAM
   team(me, act, b) {
     b = b || {};
@@ -1272,6 +1347,8 @@ export class Hub {
   }
   deleteUser(uid, why = 'deleted') {
     this.sql.exec('DELETE FROM teams WHERE oid = ? OR mid = ?', uid, uid);   // #379
+    for (const m of this.sql.exec('SELECT id FROM meetings WHERE oid = ?', uid).toArray()) this.sql.exec('DELETE FROM meetpeople WHERE mid = ?', m.id);   // #380
+    this.sql.exec('DELETE FROM meetings WHERE oid = ?', uid); this.sql.exec('DELETE FROM meetpeople WHERE uid = ?', uid);
     // #378: the account's files go with it
     for (const f of this.sql.exec('SELECT media FROM files WHERE uid = ?', uid).toArray()) this.mediaDel('id = ?', f.media);
     this.sql.exec('DELETE FROM files WHERE uid = ?', uid); this.sql.exec('DELETE FROM filefolders WHERE uid = ?', uid);

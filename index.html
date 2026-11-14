@@ -1490,13 +1490,19 @@
   .fl-tx{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; } .fl-tx b{ font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .fl-tx small{ font-size:11px; color:#9a9a9a; margin-top:2px; }
   .fl-more{ background:transparent; border:0; color:#ddd; font-size:20px; padding:4px 8px; margin:-4px -6px -4px 0; }
   .fl-empty{ font-size:13px; color:#9a9a9a; text-align:center; padding:30px 10px; line-height:1.5; }
-  .fl-sheet{ max-height:80%; overflow-y:auto; } .fl-sheet .btn-wide{ margin-top:8px; } .fl-sh-t{ font-size:16px; font-weight:700; margin-bottom:6px; word-break:break-word; } .fl-sh-s{ font-size:12px; color:#9a9a9a; margin-top:6px; }
+  .fl-sheet{ max-height:80%; overflow-y:auto; padding-bottom:56px !important; } .fl-sheet .btn-wide{ margin-top:8px; } .fl-sh-t{ font-size:16px; font-weight:700; margin-bottom:6px; word-break:break-word; } .fl-sh-s{ font-size:12px; color:#9a9a9a; margin-top:6px; }
   .tm-row{ display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:8px; }
   .tm-pic{ width:38px; height:38px; flex:0 0 38px; border-radius:50%; background:#1a1a1a; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#ddd; }
   .tm-pic img{ width:100%; height:100%; object-fit:cover; }
   .tm-row{ flex-wrap:wrap; } .tm-btns{ display:flex; gap:6px; flex:1 0 100%; justify-content:flex-end; margin-top:-2px; } .tm-btns button{ border-radius:14px; padding:6px 11px; font-size:12px; font-weight:600; border:1px solid #333; background:transparent; color:#ddd; }
   .tm-btns .tm-yes{ background:#fff; color:#000; border-color:#fff; }
   .tm-roles{ display:flex; gap:8px; margin-top:10px; }
+  .mt-row{ display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:8px; cursor:pointer; } .mt-off{ opacity:0.55; }
+  .mt-day{ width:42px; flex:0 0 42px; height:44px; border-radius:10px; background:#1a1a1a; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ddd; line-height:1.05; }
+  .mt-day b{ font-size:17px; } .mt-day small{ font-size:10px; text-transform:uppercase; color:#9a9a9a; }
+  .mt-st{ color:#ddd !important; } .mt-join{ flex:0 0 auto; background:#30d158; color:#000; border:0; border-radius:14px; padding:7px 14px; font-weight:700; font-size:13px; }
+  .mt-two{ display:flex; gap:8px; } .mt-two .bz-in{ flex:1 1 0; min-width:0; }
+  .mt-notes{ min-height:70px; resize:none; font-family:inherit; } .mt-notes-v{ font-size:13px; white-space:pre-wrap; margin:8px 0; color:#ddd; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
@@ -6181,6 +6187,7 @@ function dashboardScreen(){
           <div class="sidebar-item" data-nav="notes">NOTES</div>
           <div class="sidebar-item" data-nav="files">FILES</div>
           <div class="sidebar-item" data-nav="staff">TEAM</div>
+          <div class="sidebar-item" data-nav="meetings">MEETINGS</div>
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
@@ -12517,6 +12524,11 @@ function actLine(a){
   if(k === 'accepted') return 'accepted your follow request';
   if(k === 'team') return 'added you to their team' + (t ? ' as ' + (t === 'manager' ? 'a manager' : 'staff') : '') + ' - open TEAM in the Dashboard menu to accept';   // #379
   if(k === 'teamok') return 'joined your team';
+  if(k === 'meet') return 'invited you to a meeting: “' + escText(t) + '” - open MEETINGS in the Dashboard menu';   // #380
+  if(k === 'meetyes') return 'is going to “' + escText(t) + '”';
+  if(k === 'meetno') return 'can’t make “' + escText(t) + '”';
+  if(k === 'meetoff') return 'cancelled “' + escText(t) + '”';
+  if(k === 'meetmove') return 'moved “' + escText(t) + '” to a new time';
   if(k === 'like') return t === 'status' ? 'liked your status' : 'liked your post';
   if(k === 'share') return 'shared your post';
   if(k === 'comment'){ const st = t.indexOf('s:') === 0; return 'commented on your ' + (st ? 'status' : 'post') + ': “' + escText(st ? t.slice(2) : t) + '”'; }
@@ -13472,7 +13484,7 @@ function msgConnect(){
   clearTimeout(msgWsTimer);
   let ws; try{ ws = new WebSocket(MSG_API.replace(/^http/, 'ws') + '/v1/ws?token=' + encodeURIComponent(a.token)); }catch(e){ return msgRetry(); }
   msgWs = ws;
-  ws.onopen = ()=>{ msgWsOpen = true; msgWsTry = 0; clearInterval(msgPing); msgPing = setInterval(()=>{ try{ ws.send('{"t":"ping"}'); }catch(e){} }, 25000); msgFlush(); msgSyncProfile(); msgSyncGroups(); upFlush(); upReminderTidy(); upReminder(); litWelcomePrice(); upLoad(); actRefreshSoon(); callIce(); };
+  ws.onopen = ()=>{ msgWsOpen = true; msgWsTry = 0; clearInterval(msgPing); msgPing = setInterval(()=>{ try{ ws.send('{"t":"ping"}'); }catch(e){} }, 25000); msgFlush(); msgSyncProfile(); msgSyncGroups(); upFlush(); upReminderTidy(); upReminder(); mtRemindAll(); litWelcomePrice(); upLoad(); actRefreshSoon(); callIce(); };
   ws.onmessage = e=>{ let m; try{ m = JSON.parse(e.data); }catch(err){ return; } msgOnServer(m).catch(()=>{}); };
   ws.onclose = e=>{ msgWsOpen = false; clearInterval(msgPing); if(e && (e.code === 4001 || e.code === 4003)){ msgWs = null; litAccountGone(e.code === 4003 ? 'banned' : 'deleted'); return; }
     if(e && e.code === 4002){ msgWs = null; showToast('You logged in on another phone'); litSignedOut(); return; }
@@ -13560,6 +13572,14 @@ async function msgOnServer(m){
     if(m.seq) msgSend({ t:'ack', seq:m.seq });
     if(m.kind === 'live') return;   // owner: Live is removed from Lockedintool
     const who = m.name || (m.username ? '@' + m.username : 'Someone');
+    if(m.kind === 'meet' || m.kind === 'meetoff' || m.kind === 'meetmove'){   // #380 Meetings
+      const when = m.when ? ' - ' + mtWhen(m.when) : '';
+      if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(m.title || 'Meeting', m.kind === 'meet' ? who + ' invited you' + when : m.kind === 'meetoff' ? who + ' cancelled the meeting' : who + ' moved the meeting' + when); }catch(e){}
+      try{ localStorage.setItem('story-meet-ping', String(Date.now())); }catch(e){}
+      if(m.seq) msgSend({ t:'ack', seq:m.seq });
+      setTimeout(mtRemindAll, 1500);
+      return;
+    }
     if(m.kind === 'team' || m.kind === 'teamok'){   // #379 Team
       if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(who, m.kind === 'team' ? who + ' added you to their team - open TEAM in the Dashboard menu to accept' : who + ' joined your team'); }catch(e){}
       try{ localStorage.setItem('story-team-ping', String(Date.now())); }catch(e){}
@@ -17116,6 +17136,7 @@ function renderScreenContent(){
     case 'space-album': return spaceAlbumScreen();
     case 'files': return filesScreen();
     case 'staff': return staffScreen();
+    case 'meetings': return meetingsScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -21910,7 +21931,7 @@ function tmLoad(){
   if(TM.loading || !msgAccount()) return; TM.loading = true;
   msgApi('/v1/team/list').then(r=>{ TM.members = r.members || []; TM.mine = r.mine || []; TM.loaded = true; TM.err = ''; })
     .catch(e=>{ TM.err = e.code === 'signin' ? 'signin' : 'net'; })
-    .finally(()=>{ TM.loading = false; if(state.current === 'staff' || state.current === 'files') renderDevice(); });
+    .finally(()=>{ TM.loading = false; if(state.current === 'staff' || state.current === 'files' || (state.current === 'meetings' && !MT.sheet)) renderDevice(); });
 }
 window.addEventListener('storage', e=>{ if(e.key === 'story-team-ping'){ TM.loaded = false; if(state.current === 'staff') tmLoad(); } });
 function tmPic(u){ return u.photo ? `<img alt="" src="${escText(u.photo)}">` : `<b>${escText(((u.name || u.username || '?').trim().charAt(0) || '?').toUpperCase())}</b>`; }
@@ -21975,6 +21996,108 @@ document.addEventListener('click', e=>{
   }
   renderDevice();
   if(TM.sheet && TM.sheet.t === 'add') setTimeout(()=>{ const i = document.getElementById('tm-in'); if(i){ i.focus(); try{ if(NATIVE && window.StoryNative.setTyping) window.StoryNative.setTyping(true); }catch(err){} } }, 0);
+}, true);
+// ---- #380 MEETINGS (owner, 14 Nov 2026: 'run a full business inside lockedintool: business meetings, photos, store files'):
+// schedule a meeting (title, day, time, length, notes), invite your team and / or anyone by @username; they're told, answer
+// Going / Can't go, and everyone joins the meeting's call (its own private group - the group call, up to 8 people). Reminders
+// come 10 minutes before and when it starts, from Lockedintool's connection (the app keeps it running).
+const MT = { list:[], loaded:false, loading:false, err:'', sheet:null };
+function mtWhen(t){ const d = new Date(t), n = new Date(), tm = d.toTimeString().slice(0, 5);
+  const day = d.toDateString() === n.toDateString() ? 'Today' : d.toDateString() === new Date(n.getTime() + 86400000).toDateString() ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short' });
+  return day + ' ' + tm; }
+function mtLoad(){
+  if(MT.loading || !msgAccount()) return; MT.loading = true;
+  msgApi('/v1/meet/list').then(r=>{ MT.list = r.meetings || []; MT.loaded = true; MT.err = ''; })
+    .catch(e=>{ MT.err = e.code === 'signin' ? 'signin' : 'net'; })
+    .finally(()=>{ MT.loading = false; if(state.current === 'meetings') renderDevice(); });
+}
+window.addEventListener('storage', e=>{ if(e.key === 'story-meet-ping'){ MT.loaded = false; if(state.current === 'meetings') mtLoad(); } });
+const MT_TIMERS = {};
+async function mtRemindAll(){
+  if(!MSG_ENGINE || !msgAccount()) return;
+  let list = []; try{ list = (await msgApi('/v1/meet/list')).meetings || []; }catch(e){ return; }
+  Object.keys(MT_TIMERS).forEach(k=>{ clearTimeout(MT_TIMERS[k]); delete MT_TIMERS[k]; });
+  const now = Date.now();
+  list.filter(m=>!m.cancelled && m.status !== 'no' && m.at > now && m.at - now < 2 * 86400000).forEach(m=>{
+    const ping = (msg)=>{ if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(m.title, msg); }catch(e){} };
+    if(m.at - now > 10 * 60000) MT_TIMERS[m.id + 'a'] = setTimeout(()=>ping('Starts in 10 minutes - join from MEETINGS'), m.at - now - 10 * 60000);
+    MT_TIMERS[m.id + 'b'] = setTimeout(()=>ping('Starting now - join from MEETINGS'), m.at - now);
+  });
+}
+function mtStatus(m){ return m.cancelled ? 'Cancelled' : m.isHost ? 'You’re hosting' : m.status === 'yes' ? 'Going' : m.status === 'no' ? 'Can’t go' : 'Invited'; }
+function meetingsScreen(){
+  if(!MT.loaded && !MT.loading && !MT.err) setTimeout(mtLoad, 0);
+  if(!TM.loaded && !TM.loading && msgAccount()) setTimeout(tmLoad, 0);   // for 'Invite my whole team'
+  const now = Date.now(), sh = MT.sheet, mo = sh && sh.id ? MT.list.find(x=>x.id === sh.id) : null;
+  const live = m=>!m.cancelled && now >= m.at - 15 * 60000 && now <= m.at + m.mins * 60000;
+  const card = m=>`<div class="row-card mt-row${m.cancelled ? ' mt-off' : ''}" data-mt="open" data-id="${escText(m.id)}">
+      <span class="mt-day"><b>${new Date(m.at).getDate()}</b><small>${escText(new Date(m.at).toLocaleDateString(undefined, { month:'short' }))}</small></span>
+      <span class="fl-tx"><b>${escText(m.title)}</b><small>${escText(mtWhen(m.at) + ' · ' + m.mins + ' min' + (m.isHost ? '' : ' · ' + (m.host ? (m.host.name || '@' + m.host.username) : '')))}</small><small class="mt-st">${escText(mtStatus(m))}${live(m) ? ' · now' : ''}</small></span>
+      ${live(m) ? `<button class="mt-join" data-mt="join" data-id="${escText(m.id)}">Join</button>` : ''}</div>`;
+  const up = MT.list.filter(m=>m.at + m.mins * 60000 >= now).sort((a, b)=>a.at - b.at), past = MT.list.filter(m=>m.at + m.mins * 60000 < now).sort((a, b)=>b.at - a.at);
+  const d0 = new Date(Date.now() + 3600000); const pad = n=>String(n).padStart(2, '0');
+  const sheetHTML = !sh ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${
+    sh.t === 'new' ? `<div class="fl-sh-t">New meeting</div>
+      <input id="mt-title" class="bz-in" placeholder="Title (for example Weekly sales)" autocomplete="off">
+      <div class="mt-two"><input id="mt-date" class="bz-in" type="date" value="${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}"><input id="mt-time" class="bz-in" type="time" value="${pad(d0.getHours())}:00"></div>
+      <div class="fl-sh-s">How long</div><div class="tm-roles">${[15, 30, 60, 90].map(n=>`<button class="fl-chip${(sh.mins || 30) === n ? ' on' : ''}" data-mt="mins" data-v="${n}">${n < 60 ? n + ' min' : Math.floor(n / 60) + ' h' + (n % 60 ? ' ' + (n % 60) : '')}</button>`).join('')}</div>
+      ${TM.members.some(x=>x.status === 'member') ? `<button class="btn-wide${sh.team ? ' fl-cur' : ''}" data-mt="team">${sh.team ? '✓ ' : ''}Invite my whole team</button>` : ''}
+      <input id="mt-people" class="bz-in" placeholder="Invite people: @username, @username" autocomplete="off" autocapitalize="off">
+      <textarea id="mt-notes" class="bz-in mt-notes" placeholder="Notes or agenda (optional)"></textarea>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-mt="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-mt="create">Create</button></div>`
+    : sh.t === 'view' && mo ? `<div class="fl-sh-t">${escText(mo.title)}</div>
+      <div class="fl-sh-s">${escText(mtWhen(mo.at) + ' · ' + mo.mins + ' min · ' + mtStatus(mo))}${mo.host && !mo.isHost ? escText(' · hosted by ' + (mo.host.name || '@' + mo.host.username)) : ''}</div>
+      ${mo.notes ? `<div class="mt-notes-v">${escText(mo.notes)}</div>` : ''}
+      <div class="fl-sh-s">${mo.people.length ? 'Invited: ' + mo.people.map(p=>escText((p.name || '@' + p.username) + (p.status === 'yes' ? ' ✓' : p.status === 'no' ? ' ✕' : ''))).join(', ') : 'No one else invited yet'}</div>
+      ${mo.cancelled ? '' : `<button class="btn-wide btn-primary" data-mt="join" data-id="${escText(mo.id)}">Join the call</button>`}
+      ${!mo.cancelled && !mo.isHost ? `<div class="confirm-btn-row" style="margin-top:8px;"><button class="btn-wide${mo.status === 'no' ? ' fl-cur' : ''}" style="margin-top:0;" data-mt="no" data-id="${escText(mo.id)}">Can’t go</button><button class="btn-wide${mo.status === 'yes' ? ' fl-cur' : ''}" style="margin-top:0;" data-mt="yes" data-id="${escText(mo.id)}">Going</button></div>` : ''}
+      ${!mo.cancelled && mo.isHost ? `<button class="btn-wide fl-del" data-mt="cancel" data-id="${escText(mo.id)}">Cancel meeting</button>` : ''}
+      <button class="btn-wide" data-mt="close">Close</button>`
+    : sh.t === 'cancel' && mo ? `<div class="fl-sh-t">Cancel “${escText(mo.title)}”?</div><div class="fl-sh-s">Everyone invited is told.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-mt="close">Keep it</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-mt="cancel-yes" data-id="${escText(mo.id)}">Cancel meeting</button></div>` : ''
+  }</div></div>`;
+  return `
+    <div class="page-shell fl-page">
+    ${topBar('Meetings', false)}
+    <div class="fl-head"><div class="fl-sum">${MT.loaded ? (up.length ? up.length + ' coming up' : 'Nothing coming up') : MT.err === 'signin' ? 'Log in to plan meetings' : MT.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>
+      <div class="fl-note">Plan a meeting, invite your team or anyone on Lockedintool, and meet on a call - up to 8 people. Everyone is reminded 10 minutes before.</div></div>
+    <button class="btn-wide btn-primary fl-add" data-mt="new">+ New meeting</button>
+    ${up.length ? '<div class="section-title">COMING UP</div>' + up.map(card).join('') : MT.loaded ? '<div class="fl-empty">No meetings planned.</div>' : ''}
+    ${past.length ? '<div class="section-title">LAST 30 DAYS</div>' + past.map(card).join('') : ''}
+    ${sheetHTML}
+    </div>`;
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-mt]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-mt'), id = b.getAttribute('data-id'), m = id ? MT.list.find(x=>x.id === id) : null;
+  const keep = ()=>{ const g = i=>(document.getElementById(i) || {}).value; return { title:g('mt-title'), date:g('mt-date'), time:g('mt-time'), people:g('mt-people'), notes:g('mt-notes') }; };
+  const putBack = v=>{ setTimeout(()=>{ for(const [i, k] of [['mt-title','title'],['mt-date','date'],['mt-time','time'],['mt-people','people'],['mt-notes','notes']]){ const el = document.getElementById(i); if(el && v[k] !== undefined) el.value = v[k]; } }, 0); };
+  switch(a){
+    case 'new': if(!msgAccount()){ showToast('Log in to plan meetings'); return; } MT.sheet = { t:'new', mins:30, team:false }; break;
+    case 'mins': { const v = keep(); MT.sheet.mins = +b.getAttribute('data-v'); renderDevice(); putBack(v); return; }
+    case 'team': { const v = keep(); MT.sheet.team = !MT.sheet.team; renderDevice(); putBack(v); return; }
+    case 'create': { const v = keep(); if(!(v.title || '').trim()){ showToast('Give the meeting a title'); return; }
+      const at = new Date((v.date || '') + 'T' + (v.time || '00:00')).getTime(); if(!at){ showToast('Choose the day and time'); return; }
+      if(at < Date.now() - 60000){ showToast('Choose a time that hasn’t passed'); return; }
+      const usernames = String(v.people || '').split(/[\s,;]+/).map(x=>x.replace(/^@/, '').trim()).filter(Boolean);
+      if(!usernames.length && !MT.sheet.team){ showToast('Invite someone - your team or an @username'); return; }
+      const body = { title:v.title.trim(), at, mins: MT.sheet.mins || 30, notes:v.notes || '', usernames, team: !!MT.sheet.team };
+      MT.sheet = null; renderDevice();
+      msgApi('/v1/meet/create', body).then(r=>{ if(r.meeting) MT.list.push(r.meeting); showToast('Meeting planned - everyone invited is told'); if(state.current === 'meetings') renderDevice(); try{ localStorage.setItem('story-meet-ping', String(Date.now())); }catch(err){} })
+        .catch(err=>showToast(err.code === 'nouser' ? 'No one on Lockedintool is called @' + ((err.info && err.info.missing) || []).join(', @') : err.code === 'time' ? 'Choose a time that hasn’t passed' : 'Couldn’t plan the meeting - try again'));
+      return; }
+    case 'open': MT.sheet = { t:'view', id }; break;
+    case 'yes': case 'no': if(!m) return; m.status = a; msgApi('/v1/meet/respond', { id, yes: a === 'yes' }).catch(()=>{ showToast('Couldn’t answer - try again'); mtLoad(); }); break;
+    case 'join': if(!m || !m.gid) return; MT.sheet = null;
+      try{ localStorage.setItem(GCALL_REQ, JSON.stringify({ gid: m.gid, name: m.title, video:true, join:false, at: Date.now() })); }catch(err){}
+      showToast('Joining “' + m.title + '”…'); break;
+    case 'cancel': MT.sheet = { t:'cancel', id }; break;
+    case 'cancel-yes': if(!m) return; m.cancelled = true; MT.sheet = null; msgApi('/v1/meet/cancel', { id }).then(()=>{ try{ localStorage.setItem('story-meet-ping', String(Date.now())); }catch(err){} }).catch(()=>{ showToast('Couldn’t cancel it - try again'); mtLoad(); }); break;
+    case 'close': MT.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
 }, true);
 async function flUploadOne(f){
   FL.busy++; if(state.current === 'files') renderDevice();
@@ -22977,7 +23100,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

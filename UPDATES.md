@@ -375,3 +375,4 @@ commits, pushed as a new update) - nothing else changes.
 | 366 | 2026-11-14 | One home: with companies set up, the company's home (or Personal home) is Lockedintool's only home. The bottom switch is Apps \| Lockedintool again, and Lockedintool opens that home. | 5db3d13 |
 | 367 | 2026-11-14 | Lockedintool becomes the phone's real Home app on Second system when companies are set up (Android asks once), so Home always lands on your company's home / Personal home and the phone's own home screen no longer shows. | fd7f6ee |
 | 368 | 2026-11-14 | The bottom switch with companies: Apps opens the company's home (or Personal home), Lockedintool opens your normal Lockedintool. | a4c0329 |
+| 369 | 2026-11-14 | The company's home / Personal home is simply called Apps (Only system's ‹ now shows Apps \| Dashboard). |  |

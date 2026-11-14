@@ -1447,8 +1447,7 @@
   .cardrv-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   /* Business accounts - the company chooser and companies (#302) */
   #lit-spaces{ position:fixed; inset:0; z-index:999996; background:#000000; color:#ffffff; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
-  #lit-spaces .sp-bg{ position:absolute; inset:0; background-size:cover; background-position:center; }
-  #lit-spaces .sp-name{ position:absolute; left:16px; right:16px; top:15%; text-align:center; font-size:26px; font-weight:900; text-shadow:0 0 0.75px #000, 0 0 1.5px #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #lit-spaces .sp-name{ position:absolute; left:16px; right:16px; top:15%; text-align:center; font-size:26px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #lit-spaces .sp-track{ position:absolute; left:0; right:0; top:calc(15% + 52px); height:min(44vh, 76vw); }
   #lit-spaces .sp-card{ position:absolute; left:0; top:0; height:100%; padding:0; border:0; background:none; color:inherit; font:inherit; display:flex; flex-direction:column; transform-origin:center; }
   #lit-spaces .sp-card-l{ display:none; }
@@ -1464,7 +1463,7 @@
   #lit-spaces .sp-bottom{ position:absolute; left:16px; right:16px; bottom:calc(var(--lit-bottom, 48px) + 56px); display:flex; gap:12px; }
   #lit-spaces .sp-personal{ flex:1; padding:15px 10px; border-radius:16px; border:1px solid #ffffff; background:#000000; color:#ffffff; font:inherit; font-size:15px; font-weight:900; }
   #lit-spaces .sp-gear{ flex:0 0 54px; border-radius:16px; border:1px solid #ffffff; background:#000000; color:#ffffff; display:flex; align-items:center; justify-content:center; }
-  #lit-spaces .sp-hint{ position:absolute; left:0; right:0; bottom:calc(var(--lit-bottom, 48px) + 22px); text-align:center; font-size:11px; color:#9a9a9a; text-shadow:0 0 0.75px #000; }
+  #lit-spaces .sp-hint{ position:absolute; left:0; right:0; bottom:calc(var(--lit-bottom, 48px) + 22px); text-align:center; font-size:11px; color:#9a9a9a; }
   .sp-row-logo{ width:40px; height:40px; border-radius:10px; overflow:hidden; background:#0d0d0d; border:1px solid #2a2a2a; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; margin-right:10px; }
   .sp-row-logo img{ width:100%; height:100%; object-fit:cover; } .sp-row-logo b{ font-size:18px; }
   /* #315 (owner, 13 Nov 2026: 'Yes put them on one line'): a company's buttons always fit ONE line, even with both arrows. */
@@ -14797,7 +14796,7 @@ const SUB_ACCTS = [
 function acctType(){ const v = litLsRaw('story-acct-type'); return v === 'business' || v === 'personal' ? v : ''; }
 function bizOn(){ return acctType() === 'business'; }
 function spaceList(){ try{ const l = JSON.parse(litLsRaw('story-companies') || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
-function spaceSave(l){ try{ localStorage.setItem('story-companies', JSON.stringify(l)); }catch(e){ showToast('Couldn’t save - the phone is out of room'); } spaceTell(); try{ l.forEach(c=>spaceBg(c.id)); }catch(e){} }
+function spaceSave(l){ try{ localStorage.setItem('story-companies', JSON.stringify(l)); }catch(e){ showToast('Couldn’t save - the phone is out of room'); } spaceTell(); }
 function spaceOf(id){ return spaceList().find(c=>c.id === id) || null; }
 function spaceName(id){ if(!id || id === 'personal') return 'Personal'; const c = spaceOf(id); return c ? c.name : 'Personal'; }
 // The app knows whether to show the chooser after an unlock.
@@ -14812,37 +14811,14 @@ function spaceGo(id, noSave){
   try{ sessionStorage.setItem('lit-space-home', '1'); }catch(e){}
   location.reload();
 }
-// A company's own picture: its Dashboard's background, else its Pages' (all pages); none = black.
-const SP_BG = {};
-// #324: one load per company, decoded before it's needed (a second ask while loading waits for the same picture).
-const SP_BGP = {};
-function spaceBg(id){
-  const sig = litLsRaw('story-bg-set@' + id) || '';   // a new / removed background picture loads afresh
-  const c = SP_BGP[id]; if(c && c.sig === sig) return c.p;
-  delete SP_BG[id];
-  return (SP_BGP[id] = { sig, p: spaceBgLoad(id) }).p;
-}
-async function spaceBgLoad(id){
-  if(id in SP_BG) return SP_BG[id];
-  SP_BG[id] = null;
-  try{
-    let set = {}; try{ set = JSON.parse(litLsRaw('story-bg-set@' + id) || '{}') || {}; }catch(e){}
-    const k = set.dashboard ? 'dashboard' : set.all ? 'all' : null; if(!k) return null;
-    const db = await litBgDb();
-    const blob = await new Promise(res=>{ const q = db.transaction('pics').objectStore('pics').get(k + '@' + id); q.onsuccess = ()=>res(q.result || null); q.onerror = ()=>res(null); });
-    if(blob){ SP_BG[id] = URL.createObjectURL(blob); const im = new Image(); im.src = SP_BG[id]; try{ await im.decode(); }catch(e){} (window.LIT_SP_IMG = window.LIT_SP_IMG || []).push(im); }
-  }catch(e){}
-  return SP_BG[id];
-}
 // ---- The chooser (after every unlock on Second / Only system; when the app opens as an app) ----
 let spIdx = 0;
 window.litSpacesWanted = function(){ return bizOn() && spaceList().length > 0; };   // #317: the app asks before every chooser
 // #324 (owner, 14 Nov 2026: 'it's showing but it's not fast, idk why it needs to load'): while the phone is still on the
-// lock screen the app asks the page to get the chooser READY (pictures loaded and decoded, the chooser built) - so at the
+// lock screen the app asks the page to get the chooser READY (built in the hidden Pages) - so at the
 // unlock it only has to show.
 window.litSpacesPrep = function(){
   if(/[?&](s3|widget)=/.test(location.search) || !window.litSpacesWanted()) return 'none';
-  spaceList().forEach(c=>spaceBg(c.id));
   spacesShow(); const el = document.getElementById('lit-spaces'); if(el) el.dataset.at = String(Date.now());
   return 'ok';
 };
@@ -14860,8 +14836,8 @@ function spacesShow(){
   spacesClose();
   const now = list.findIndex(c=>c.id === litSpace());
   spIdx = now >= 0 ? now : Math.min(spIdx, list.length - 1);
-  const el = document.createElement('div'); el.id = 'lit-spaces'; el.setAttribute('data-keep-color', '');
-  el.innerHTML = '<div class="sp-bg"></div><div class="sp-name"></div><div class="sp-track"></div>' +
+  const el = document.createElement('div'); el.id = 'lit-spaces';   // #325: follows the System theme (Black / White), no picture
+  el.innerHTML = '<div class="sp-name"></div><div class="sp-track"></div>' +
     '<div class="sp-dots">' + list.map((c, i)=>'<span class="sp-dot" data-i="' + i + '"><i></i>' + (i + 1) + '</span>').join('') + '</div>' +
     '<div class="sp-bottom"><button class="sp-personal" data-sp="personal">View Personal account</button>' +
     '<button class="sp-gear" data-sp="settings" aria-label="Business settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>' +
@@ -14882,9 +14858,6 @@ function spacesShow(){
     const c = list[spIdx];
     el.querySelector('.sp-name').textContent = c.name;
     el.querySelectorAll('.sp-dot').forEach((d, i)=>d.classList.toggle('on', i === spIdx));
-    const bg = el.querySelector('.sp-bg'); bg.style.backgroundImage = '';
-    const want = spIdx;
-    spaceBg(c.id).then(u=>{ if(want === spIdx && u) bg.style.backgroundImage = 'linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url("' + u + '")'; });
     dx = 0; place();
   };
   // Swipe (the cards follow the finger; no animation), tap the middle one to focus.
@@ -15179,9 +15152,6 @@ function subAcctScreen(locked){
 setTimeout(()=>{ try{
   if(/[?&](s3|widget)=/.test(location.search)) return;
   spaceTell();
-  // #324 (owner: 'That shouldn't happen even if it's the first time'): every company's picture is loaded and decoded the
-  // moment Lockedintool starts - the very first unlock after an install finds them ready too.
-  try{ if(window.litSpacesWanted()) spaceList().forEach(c=>spaceBg(c.id)); }catch(e){}
   // #312: unlocked while this page was (re)loading - the chooser the app asked for opens now.
   if(litSpace() !== 'personal' && !spaceOf(litSpace())) localStorage.setItem('story-space', '');
   if(sessionStorage.getItem('lit-space-home')){ sessionStorage.removeItem('lit-space-home'); if(window.storyShow) window.storyShow(null); }

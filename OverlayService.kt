@@ -3299,6 +3299,13 @@ class OverlayService : Service(), StoryBridge.Host {
         recCoverHide()
         runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
+    /** #360: opens a business's web app in its own browser profile; the Pages step aside for it like for any app. */
+    override fun bizOpen(url: String, title: String) { ui.post {
+        val sp = spaceCur(); if (sp == "personal") return@post
+        val i = Intent(this, BizWebActivity::class.java).putExtra(BizWebActivity.EXTRA_URL, url).putExtra(BizWebActivity.EXTRA_TITLE, title)
+            .putExtra(BizWebActivity.EXTRA_SPACE, sp).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (runCatching { startActivity(i) }.isSuccess) hidePanelFor(packageName, "a business app")
+    } }
     /** Choosing a company / Personal: back into the app you were in there (true), else the Pages show it as before (false). */
     override fun spaceSwitch(id: String): Boolean {
         val want = id.ifEmpty { "personal" }
@@ -3310,6 +3317,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val target: String; val open: Intent
         if (last.isEmpty()) {
             if (SystemMode.on(this) && !AppMode.appOnly(this)) return false
+            if (want != "personal") return false   // #360: a business's 'home' is its own business home, never the phone's
             target = homePkg() ?: return false
             open = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         } else {

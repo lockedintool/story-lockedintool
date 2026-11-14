@@ -143,6 +143,14 @@
 
         <!-- Delete account: the phone's own fingerprint / face / PIN check (see-through). -->
         <!-- #345: the plain screen under the company screen, so the unlock never shows the app you were in first. -->
+        <!-- #360: a business's own web apps (Email, Instagram...) with that business's own logins -->
+        <activity
+            android:name=".BizWebActivity"
+            android:exported="false"
+            android:taskAffinity="com.story.launcher.biz"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Story.Home" />
         <activity
             android:name=".SpacesCover"
             android:exported="false"

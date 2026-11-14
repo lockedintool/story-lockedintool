@@ -74,6 +74,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun spacesTrace(): String
         fun spacesUp(on: Boolean)
         fun spaceSwitch(id: String): Boolean
+        fun bizOpen(url: String, title: String)
         fun spaceApps(): String
         fun spaceAppForget(pkg: String)
         fun createKeep(): String
@@ -884,6 +885,9 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     fun spaceNow(id: String) { if (pages) ctx.getSharedPreferences("story", android.content.Context.MODE_PRIVATE).edit().putString("space_cur", id.ifEmpty { "personal" }.take(60)).apply() }
     @JavascriptInterface
     fun spaceSwitch(id: String): Boolean = pages && host.spaceSwitch(id)
+    /** #360: a business's web app (Email, Instagram...) in that business's own browser profile. */
+    @JavascriptInterface
+    fun bizOpen(url: String, title: String) { if (pages && (url.startsWith("https://") || url.startsWith("http://"))) host.bizOpen(url.take(2000), title.take(60)) }
     @JavascriptInterface
     fun spaceApps(): String = if (pages) host.spaceApps() else "[]"
     @JavascriptInterface

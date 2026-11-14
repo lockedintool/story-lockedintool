@@ -366,3 +366,4 @@ commits, pushed as a new update) - nothing else changes.
 | 357 | 2026-11-14 | Lockedintool's Recents screen no longer disappears and comes back while the phone's Recents opens | ba15d2d |
 | 358 | 2026-11-14 | Lockedintool's Recents screen: × and Close all really close the apps | 7ed0d48 |
 | 359 | 2026-11-14 | Swiping Home is clean again: Lockedintool's Recents screen goes up only once the phone's Recents is open | c9aebeb |
+| 360 | 2026-11-14 | The business home: each business lands on its own home with its own email / social apps (own logins) and Lockedintool's tools | |

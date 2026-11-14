@@ -342,4 +342,4 @@ commits, pushed as a new update) - nothing else changes.
 | 333 | 2026-11-14 | The Wallet page button no longer shows on the company screen - it goes the moment the phone unlocks | efd6137 |
 | 334 | 2026-11-14 | The company screen never goes missing at the unlock - the home screen / Recents can't take its place | c476de6 |
 | 335 | 2026-11-14 | The company screen no longer disappears by itself before you choose | 6cbe544 |
-| 336 | 2026-11-14 | Each company / Personal keeps its own opened apps: choosing it takes you back into the app you were in there, and Apps shows only what you opened there | PENDING |
+| 336 | 2026-11-14 | Each company / Personal keeps its own opened apps: choosing it takes you back into the app you were in there, and Apps shows only what you opened there | 96c84ba |

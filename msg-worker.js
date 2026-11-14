@@ -189,6 +189,7 @@ export class Hub {
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN items TEXT`); } catch (e) {}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN music TEXT`); } catch (e) {}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN hl TEXT`); } catch (e) {}       // highlights: which highlight (its id on the phone)
+    try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN lk TEXT`); } catch (e) {}       // #388 a Lock In challenge posted to a status: {kind, stake, cur}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN hlname TEXT`); } catch (e) {}   // a song from your phone with the post / status: {media, name}
     this.sql.exec(`CREATE INDEX IF NOT EXISTS uposts_feed ON uposts(kind, at)`);
     // Hearts and comments on statuses (owner).
@@ -226,6 +227,7 @@ export class Hub {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS custsales (id TEXT PRIMARY KEY, cid TEXT, uid TEXT, what TEXT, amount INTEGER, cur TEXT, at INTEGER)`);
     // #383 LOCK IN (the game): games between two people who follow each other, and the game wallet (only inside Lock In).
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkgames (id TEXT PRIMARY KEY, kind TEXT, a TEXT, b TEXT, status TEXT, stake INTEGER DEFAULT 0, cur TEXT, seed INTEGER, state TEXT, sa INTEGER, sb INTEGER, turn TEXT, winner TEXT, at INTEGER, done_at INTEGER)`);
+    try { this.sql.exec(`ALTER TABLE lkgames ADD COLUMN src TEXT`); } catch (e) {}   // #388 the status a game was accepted from
     // #384 RACKS: Lock In points earned by playing and winning (not money); best single-player scores per game.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkracks (uid TEXT PRIMARY KEY, racks INTEGER DEFAULT 0, best TEXT, day TEXT, dayn INTEGER DEFAULT 0)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkwallet (uid TEXT, cur TEXT, bal INTEGER DEFAULT 0, held INTEGER DEFAULT 0, PRIMARY KEY (uid, cur))`);
@@ -558,6 +560,7 @@ export class Hub {
     const mu = this.postMusic(p);
     const v = { id: p.id, kind: p.kind, type: items[0] ? items[0].type : 'text', url: items[0] ? items[0].url : '', thumb: items[0] ? items[0].thumb : '', at: p.at, title: p.title || '', text: p.text || '', items,
       music: mu.media ? { url: this.mediaUrl(mu.media), name: mu.name || '' } : null };
+    if (p.lk) { try { v.lk = JSON.parse(p.lk); } catch (e) {} }   // #388
     if (p.kind === 'status' || me) Object.assign(v, {
       hearts: this.one('SELECT COUNT(*) AS n FROM ulikes WHERE pid = ?', p.id).n,
       hearted: !!(me && this.one('SELECT 1 AS x FROM ulikes WHERE pid = ? AND uid = ?', p.id, me.id)),
@@ -658,6 +661,9 @@ export class Hub {
       this.sql.exec('INSERT INTO uposts (id, uid, kind, type, media, thumb, at, title, text, items, music) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         id, me.id, kind, first.type || 'text', first.media || null, first.thumb || null, Date.now(), title || null, text || null, items.length ? JSON.stringify(items) : null, music);
       if (hl) this.sql.exec('UPDATE uposts SET hl = ?, hlname = ? WHERE id = ?', hl, String(b.hlname || '').trim().slice(0, 40) || 'Highlight', id);
+      if (kind === 'status' && b.lk && ['reaction', 'quiz', 'memory', 'ttt', 'c4'].includes(String(b.lk.kind))) {   // #388
+        this.sql.exec('UPDATE uposts SET lk = ? WHERE id = ?', JSON.stringify({ kind: String(b.lk.kind), stake: Math.max(0, Math.min(1e9, Math.round(+b.lk.stake || 0))), cur: String(b.lk.cur || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD' }), id);
+      }
       this.notifyFollowers(me, kind, id);
       this.dropOldStatuses();
       return json(this.postView(this.one('SELECT * FROM uposts WHERE id = ?', id), me));
@@ -1321,7 +1327,30 @@ export class Hub {
       const got = this.lkEarn(me.id, n, true);
       return json({ ok: true, earned: got, racks: this.lkRacks(me.id), best, newBest });
     }
-    if (act === 'wallet') return json({ error: 'partner' }, 400);   // adding money needs Lockedintool's payment partner (not connected yet)
+    if (act === 'wallet') return json({ error: 'partner' }, 400);
+    if (act === 'open') {   // #388: accept a challenge someone posted to their status - anyone who can see the status may play
+      const p = this.one("SELECT * FROM uposts WHERE id = ? AND kind = 'status' AND lk IS NOT NULL", String(b.pid || ''));
+      const u = p && this.one('SELECT * FROM users WHERE id = ?', p.uid);
+      if (!p || !u || u.deactivated || !this.canSeeStatus(me, u)) return json({ error: 'gone' }, 404);
+      if (u.id === me.id) return json({ error: 'self' }, 400);
+      const was = this.one('SELECT * FROM lkgames WHERE src = ? AND b = ?', p.id, me.id);
+      if (was) return json({ ok: true, game: view(was) });
+      let lk = {}; try { lk = JSON.parse(p.lk); } catch (e) {}
+      if (!KINDS[lk.kind]) return json({ error: 'kind' }, 400);
+      const stake = lk.stake || 0, cur = lk.cur || 'USD';
+      if (stake > 0) {
+        if (this.lkWallet(me.id, cur).bal < stake) return json({ error: 'funds' }, 400);
+        if (this.lkWallet(u.id, cur).bal < stake) return json({ error: 'theirfunds' }, 400);
+        this.lkMove(me.id, cur, -stake, stake); this.lkMove(u.id, cur, -stake, stake);
+      }
+      const id = 'lk' + rand(9), seed = Math.floor(Math.random() * 2147483647);
+      const st = lk.kind === 'ttt' ? { board: '.........' } : lk.kind === 'c4' ? { board: '.'.repeat(42) } : null;
+      this.sql.exec("INSERT INTO lkgames (id, kind, a, b, status, stake, cur, seed, state, at, turn, src) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)",
+        id, lk.kind, u.id, me.id, stake, cur, seed, st ? JSON.stringify(st) : null, Date.now(), KINDS[lk.kind] === 'turn' ? u.id : null, p.id);
+      this.act(u.id, 'lkyes', me.id, id, lk.kind);
+      this.deliver(u.id, { t: 'fnote', kind: 'lkyes', id, from: me.id, name: me.name || '', username: me.username || '', game: lk.kind, at: Date.now() });
+      return json({ ok: true, game: view(this.one('SELECT * FROM lkgames WHERE id = ?', id)) });
+    }   // adding money needs Lockedintool's payment partner (not connected yet)
     if (act === 'challenge') {
       const kind = String(b.kind || ''); if (!KINDS[kind]) return json({ error: 'kind' }, 400);
       const u = this.one('SELECT * FROM users WHERE id = ?', String(b.to || ''));

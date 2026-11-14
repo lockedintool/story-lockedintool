@@ -22755,6 +22755,7 @@ function notePageSwipeGo(idx){
 // become more visible' - shrunk to fit they came out at half size).
 const SCROLL_PAGES = new Set(['personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
+let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;
 const FIT_MAX_SCALE = 1.35;
 // Each page's fitted zoom is remembered (per page and screen size), so drawing a page again --
@@ -22876,6 +22877,12 @@ function fitPageToScreen(area, el, pageKey){
     if(!unsure){
       const mm = measure(), lim = limitNow();
       if(mm.bottom > lim + 2){ delete FIT_CACHE[key]; return fitPageToScreen(area, el, pageKey); }
+      // #377 (owner, 14 Nov 2026, a Trading page screenshot: 'The bottom gap on the trading page is way too big - can it be the
+      // same as the money page's one'): a remembered size made while the page was taller left an empty strip at the bottom.
+      // Each time you COME TO a page (never while you're on it - live changes still never zoom it) a gap over 3% of the
+      // screen is filled again, like Money.
+      const came = LAST_FIT_PAGE !== page; LAST_FIT_PAGE = page;
+      if(came && NATIVE && lim - mm.bottom > (lim - mm.top) * 0.03 && cached.zoom < FIT_MAX_SCALE - 0.01){ delete FIT_CACHE[key]; return fitPageToScreen(area, el, pageKey); }
     }
     return;
   }

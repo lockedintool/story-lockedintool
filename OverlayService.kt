@@ -1657,7 +1657,11 @@ class OverlayService : Service(), StoryBridge.Host {
     // app opened in Lockedintool), the Pages come back on your Home Screen. The phone's Recents, apps and gestures are
     // untouched - Lockedintool only shows itself where the phone's bare home screen would be.
     private var inLitCache: Boolean? = null
-    private fun inLit(): Boolean = inLitCache ?: getSharedPreferences("story", MODE_PRIVATE).getBoolean("in_lit", false).also { inLitCache = it }
+    // #337 (owner, 14 Nov 2026: 'the only thing that disturbs it is the rule ... once on lockedintool should stay on
+    // lockedintool unless switched. I think the phone should work how it works'; chose 'Remove it everywhere'): the
+    // 'stay in Lockedintool' rule is gone - the phone's Home / closing Recents show the phone's own home screen as normal.
+    @Suppress("UNUSED") private fun inLitOld(): Boolean = inLitCache ?: getSharedPreferences("story", MODE_PRIVATE).getBoolean("in_lit", false).also { inLitCache = it }
+    private fun inLit(): Boolean = false
     private fun setInLit(on: Boolean) { if (inLit() != on) { inLitCache = on; getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("in_lit", on).apply() } }
     private fun litHomeCheck() {
         if (!inLit() || pagesPane == null || pagesPane?.shown == true || keyguardLocked() || sysQuiet() || SystemMode.on(this)) return

@@ -343,3 +343,4 @@ commits, pushed as a new update) - nothing else changes.
 | 334 | 2026-11-14 | The company screen never goes missing at the unlock - the home screen / Recents can't take its place | c476de6 |
 | 335 | 2026-11-14 | The company screen no longer disappears by itself before you choose | 6cbe544 |
 | 336 | 2026-11-14 | Each company / Personal keeps its own opened apps: choosing it takes you back into the app you were in there, and Apps shows only what you opened there | 96c84ba |
+| 337 | 2026-11-14 | The 'stay in Lockedintool' rule is removed - Home and closing recent apps show the phone's own home screen, as the phone works | PENDING |

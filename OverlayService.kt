@@ -101,7 +101,7 @@ class OverlayService : Service(), StoryBridge.Host {
             // off, so a quick off / on never unlocks) - the company chooser shows all the same.
             spLog("screen on (lock screen up: $lockedAtScreenOn)")
             if (!lockedAtScreenOn) ui.postDelayed({ spacesAfterUnlock() }, 300)
-            else unlockWatchStart() }
+            else { unlockWatchStart(); spacesPrep() } }
     }
     // Always On Display: the moment the screen goes off, switch it straight back on with Station 3
     // showing. Android's display watcher usually reports "off" before the screen-off broadcast does,
@@ -2984,9 +2984,14 @@ class OverlayService : Service(), StoryBridge.Host {
         if (screenOffAt > unlockWatchAt) return
         val km = getSystemService(android.app.KeyguardManager::class.java)
         // every 0.3 s for the first 2 minutes, then every 1.5 s while the screen stays on (e.g. the Always On Display)
-        if (km?.isKeyguardLocked == true) { ui.postDelayed(this, if (now - unlockWatchAt < 120_000L) 300 else 1500); return }
-        if (userPresentAt < unlockWatchAt) { spLog("unlocked (seen by Lockedintool)"); runCatching { unlocked.onReceive(this@OverlayService, Intent(Intent.ACTION_USER_PRESENT)) } }
+        if (km?.isKeyguardLocked == true) { ui.postDelayed(this, if (now - unlockWatchAt < 120_000L) 100 else 1500); return }
+        if (userPresentAt < unlockWatchAt) { spLog("unlocked (seen by Lockedintool)"); runCatching { unlocked.onReceive(this@OverlayService, Intent(Intent.ACTION_USER_PRESENT)) }; spacesAfterUnlock() }
     } }
+    /** #324: the chooser is made ready while the phone is still locked, so the unlock only has to show it. */
+    private fun spacesPrep() {
+        if (sysQuiet() || callActive) return
+        pagesPane?.web?.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()", null)
+    }
     private fun unlockWatchStart() { unlockWatchAt = System.currentTimeMillis(); ui.removeCallbacks(unlockWatch); ui.postDelayed(unlockWatch, 300) }
     @Volatile private var spacesShownAt = 0L
     @Volatile private var sysAsideAt = 0L

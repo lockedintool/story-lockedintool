@@ -2912,6 +2912,7 @@
   #story-profile .up-v-name{ font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #story-profile .up-v-time{ font-size:12px; opacity:0.7; flex-shrink:0; }
   #story-profile .up-v-btn{ width:38px; height:38px; border:none; border-radius:50%; background:rgba(0,0,0,0.35); color:#fff; font-size:24px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
+  #story-profile .up-v-lk.full{ background:#2c2c2e !important; color:#fff !important; }
   #story-profile .up-v-lk{ position:absolute; left:14px; right:14px; bottom:72px; z-index:2; height:46px; border:0; background:#ffd60a !important; color:#000 !important; font-size:15px; font-weight:800; border-radius:23px; padding:0 16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #story-profile .up-v-bottom{ position:absolute; left:14px; right:14px; bottom:18px; display:flex; align-items:center; gap:10px; z-index:2; }
   #story-profile .up-v-act{ display:flex; align-items:center; gap:6px; height:42px; padding:0 14px; border-radius:21px; border:1.5px solid rgba(255,255,255,0.7); background:rgba(0,0,0,0.45); color:#fff; font-size:14px; font-weight:700; font-family:inherit; }
@@ -12026,8 +12027,9 @@ window.storyProfileOnly = function(){
     else if(k === 'upv-message'){ const v = UP.view; if(v) upMessage(v.user); }
     else if(k === 'upv-lk'){ const v = UP.view, it = v && v.items[v.i]; if(!it || !it.lk) return;   // #388
       if(it.lk.mine){ showToast('Open LOCK IN in the Dashboard menu to play'); return; }
-      msgApi('/v1/lk/open', { pid: it.id }).then(()=>{ it.lk.mine = true; it.lk.taken = (it.lk.taken || 0) + 1; upShowItem(); try{ localStorage.setItem('story-lk-ping', String(Date.now())); }catch(e){} showToast('Challenge accepted - open LOCK IN in the Dashboard menu to play'); })
-        .catch(e=>showToast(e.code === 'funds' ? 'Not enough in your game wallet for this bet' : e.code === 'theirfunds' ? 'They don’t have enough in their game wallet for this bet any more' : e.code === 'gone' || e.code === 'full' ? 'Everyone this challenge was for has already accepted' : 'Couldn’t accept - try again')); }
+      if(it.lk.full) return;
+      msgApi('/v1/lk/open', { pid: it.id }).then(()=>{ it.lk.mine = true; it.lk.taken = (it.lk.taken || 0) + 1; if(it.lk.taken >= (it.lk.max || 1)) it.lk.full = true; upShowItem(); try{ localStorage.setItem('story-lk-ping', String(Date.now())); }catch(e){} showToast('Challenge accepted - open LOCK IN in the Dashboard menu to play'); })
+        .catch(e=>{ if(e.code === 'full'){ it.lk.full = true; upShowItem(); } showToast(e.code === 'funds' ? 'Not enough in your game wallet for this bet' : e.code === 'theirfunds' ? 'They don’t have enough in their game wallet for this bet any more' : e.code === 'gone' || e.code === 'full' ? 'Everyone this challenge was for has already accepted' : 'Couldn’t accept - try again'); }); }
     else if(k === 'upv-next') upNext();
     else if(k === 'upv-prev') upPrev();
     else if(k === 'upv-close') upCloseView();
@@ -12998,8 +13000,11 @@ function upShowItem(){
   box.querySelector('[data-pf="upv-more"]').hidden = v.user.id === meId;   // #287: a whole highlight is deleted by holding its circle on Profile, not from here
   // Statuses (owner): heart it, comment under it, or message the person.
   box.querySelector('.up-v-bottom').hidden = !v.status;
-  const lkb = box.querySelector('.up-v-lk'); lkb.hidden = !(v.status && it.lk && v.user.id !== meId);   // #388 a Lock In challenge on someone's status
-  if(!lkb.hidden){ const left = Math.max(0, (it.lk.max || 1) - (it.lk.taken || 0)); lkb.textContent = it.lk.mine ? 'Accepted - play in LOCK IN' : 'Accept ' + upName(v.user) + '’s challenge' + ((it.lk.max || 1) > 1 ? ' · ' + left + ' left' : ''); }
+  const lkb = box.querySelector('.up-v-lk'), mineSt = v.user.id === meId;   // #388 a Lock In challenge on a status
+  lkb.hidden = !(v.status && it.lk && (!mineSt || it.lk.full));
+  if(!lkb.hidden){ const left = Math.max(0, (it.lk.max || 1) - (it.lk.taken || 0));
+    lkb.classList.toggle('full', !!it.lk.full && !it.lk.mine);   // #390 (owner): full - it says so (for 10 minutes, then the status goes)
+    lkb.textContent = it.lk.mine ? 'Accepted - play in LOCK IN' : it.lk.full ? (mineSt ? 'Challenge full - this status disappears in 10 minutes' : 'Challenge full - can’t accept anyone any more') : 'Accept ' + upName(v.user) + '’s challenge' + ((it.lk.max || 1) > 1 ? ' · ' + left + ' left' : ''); }
   if(v.status) upVActs();
   const img = box.querySelector('img'), vid = box.querySelector('video');
   try{ vid.pause(); }catch(e){}

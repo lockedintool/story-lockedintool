@@ -547,6 +547,8 @@ export class Hub {
   }
   dropOldStatuses() {
     const old = this.sql.exec("SELECT * FROM uposts WHERE kind = 'status' AND at < ?", Date.now() - 86400000).toArray();
+    // #390: a Lock In challenge that's full stays up saying so for 10 minutes, then goes
+    for (const p of this.sql.exec("SELECT * FROM uposts WHERE kind = 'status' AND lk LIKE '%fullAt%'").toArray()) { try { if (JSON.parse(p.lk).fullAt < Date.now() - 600000) old.push(p); } catch (e) {} }
     for (const p of old) { this.mediaDel('id = ? OR id = ? OR id = ?', p.media, p.thumb || '', this.postMusic(p).media || ''); this.sql.exec('DELETE FROM uposts WHERE id = ?', p.id); this.sql.exec('DELETE FROM ulikes WHERE pid = ?', p.id); this.sql.exec('DELETE FROM ucomments WHERE pid = ?', p.id); }
   }
   postMusic(p) { try { return JSON.parse(p.music || 'null') || {}; } catch (e) { return {}; } }
@@ -560,7 +562,7 @@ export class Hub {
     const mu = this.postMusic(p);
     const v = { id: p.id, kind: p.kind, type: items[0] ? items[0].type : 'text', url: items[0] ? items[0].url : '', thumb: items[0] ? items[0].thumb : '', at: p.at, title: p.title || '', text: p.text || '', items,
       music: mu.media ? { url: this.mediaUrl(mu.media), name: mu.name || '' } : null };
-    if (p.lk) { try { v.lk = JSON.parse(p.lk); v.lk.taken = this.one('SELECT COUNT(*) AS n FROM lkgames WHERE src = ?', p.id).n; if (me) v.lk.mine = !!this.one('SELECT 1 AS x FROM lkgames WHERE src = ? AND b = ?', p.id, me.id); } catch (e) {} }   // #388 / #389
+    if (p.lk) { try { v.lk = JSON.parse(p.lk); v.lk.taken = this.one('SELECT COUNT(*) AS n FROM lkgames WHERE src = ?', p.id).n; v.lk.full = !!v.lk.fullAt || v.lk.taken >= (v.lk.max || 1); if (me) v.lk.mine = !!this.one('SELECT 1 AS x FROM lkgames WHERE src = ? AND b = ?', p.id, me.id); } catch (e) {} }   // #388 / #389
     if (p.kind === 'status' || me) Object.assign(v, {
       hearts: this.one('SELECT COUNT(*) AS n FROM ulikes WHERE pid = ?', p.id).n,
       hearted: !!(me && this.one('SELECT 1 AS x FROM ulikes WHERE pid = ? AND uid = ?', p.id, me.id)),
@@ -1351,7 +1353,7 @@ export class Hub {
         id, lk.kind, u.id, me.id, stake, cur, seed, st ? JSON.stringify(st) : null, Date.now(), KINDS[lk.kind] === 'turn' ? u.id : null, p.id);
       this.act(u.id, 'lkyes', me.id, id, lk.kind);
       this.deliver(u.id, { t: 'fnote', kind: 'lkyes', id, from: me.id, name: me.name || '', username: me.username || '', game: lk.kind, at: Date.now() });
-      if (taken + 1 >= max) this.uposts(u, 'delete', { id: p.id });   // #389: everyone it was for has accepted - the status disappears
+      if (taken + 1 >= max) { lk.fullAt = Date.now(); this.sql.exec('UPDATE uposts SET lk = ? WHERE id = ?', JSON.stringify(lk), p.id); }   // #390 (owner): full - it says so for 10 minutes, then disappears (dropOldStatuses)
       return json({ ok: true, game: view(this.one('SELECT * FROM lkgames WHERE id = ?', id)) });
     }   // adding money needs Lockedintool's payment partner (not connected yet)
     if (act === 'challenge') {

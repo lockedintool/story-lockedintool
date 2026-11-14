@@ -22,11 +22,14 @@ class SpacesCover : Activity() {
         window.decorView.setBackgroundColor(bg)
         setContentView(View(this).apply { setBackgroundColor(bg) })
     }
+    override fun onResume() { super.onResume(); resumed = true }
+    override fun onPause() { resumed = false; super.onPause() }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
     @Deprecated("Back is the phone's own") override fun onBackPressed() { }   // the company screen above decides
     override fun finish() { super.finish(); overridePendingTransition(0, 0) }
     companion object {
         @Volatile var instance: SpacesCover? = null
+        @Volatile var resumed = false
         fun close() { instance?.let { a -> runCatching { a.finish() } } }
     }
 }

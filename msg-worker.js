@@ -220,6 +220,10 @@ export class Hub {
     // #381 SELLING: a shop on your profile - products / services with pictures, a price, a description; people message you
     // to buy (paying inside Lockedintool waits for a payment partner).
     this.sql.exec(`CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, uid TEXT, title TEXT, price INTEGER, cur TEXT, about TEXT, photos TEXT, active INTEGER DEFAULT 1, at INTEGER, sort INTEGER DEFAULT 0)`);
+    // #382 CUSTOMERS: the people an account sells to - name, contact (private), notes, their Lockedintool @username if they
+    // have one, and what they bought (a simple sales log). Managers on the team can see and add too.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, uid TEXT, name TEXT, contact TEXT, username TEXT, notes TEXT, at INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS custsales (id TEXT PRIMARY KEY, cid TEXT, uid TEXT, what TEXT, amount INTEGER, cur TEXT, at INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS teams (oid TEXT, mid TEXT, role TEXT, status TEXT, at INTEGER, PRIMARY KEY (oid, mid))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS callrates (uid TEXT, stars INTEGER, note TEXT, video INTEGER, grp INTEGER, secs INTEGER, at INTEGER)`);   // the end-of-call rating (owner) - no names shown
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, uid TEXT, kind TEXT, target TEXT, owner TEXT, reason TEXT, text TEXT, at INTEGER, status TEXT)`);
@@ -322,6 +326,7 @@ export class Hub {
       if (path.startsWith('/v1/team/')) return this.team(me, path.slice(9), body);
       if (path.startsWith('/v1/meet/')) return this.meet(me, path.slice(9), body);
       if (path.startsWith('/v1/shop/')) return this.shop(me, path.slice(9), body);
+      if (path.startsWith('/v1/cust/')) return this.cust(me, path.slice(9), body);
       if (path === '/v1/callrate') return this.callRate(me, body);
       if (path === '/v1/callrates') return this.callRates(me);
       if (path === '/v1/blockfix/list') return this.blockFixList(me);
@@ -1238,6 +1243,39 @@ export class Hub {
     }
     return json({ error: 'unknown' }, 404);
   }
+  // #382 CUSTOMERS
+  cust(me, act, b) {
+    b = b || {};
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, n);
+    let owner = me.id;
+    if (b.of && b.of !== me.id) {
+      if (!this.one("SELECT 1 AS x FROM teams WHERE oid = ? AND mid = ? AND status = 'member' AND role = 'manager'", String(b.of), me.id)) return json({ error: 'team' }, 403);
+      owner = String(b.of);
+    }
+    const sales = cid => this.sql.exec('SELECT * FROM custsales WHERE cid = ? ORDER BY at DESC LIMIT 200', cid).toArray().map(r => ({ id: r.id, what: r.what, amount: r.amount, cur: r.cur, at: r.at }));
+    const view = r => ({ id: r.id, name: r.name, contact: r.contact || '', username: r.username || '', notes: r.notes || '', at: r.at, sales: sales(r.id) });
+    if (act === 'list') return json({ customers: this.sql.exec('SELECT * FROM customers WHERE uid = ? ORDER BY name COLLATE NOCASE LIMIT 2000', owner).toArray().map(view) });
+    if (act === 'save') {
+      const name = clean(b.name, 80); if (!name) return json({ error: 'name' }, 400);
+      const un = clean(b.username, 30).replace(/^@/, '').toLowerCase();
+      const old = b.id ? this.one('SELECT * FROM customers WHERE id = ? AND uid = ?', clean(b.id, 40), owner) : null;
+      if (old) { this.sql.exec('UPDATE customers SET name = ?, contact = ?, username = ?, notes = ? WHERE id = ?', name, clean(b.contact, 120), un, clean(b.notes, 2000), old.id); return json({ ok: true, customer: view(this.one('SELECT * FROM customers WHERE id = ?', old.id)) }); }
+      if (this.one('SELECT COUNT(*) AS n FROM customers WHERE uid = ?', owner).n >= 5000) return json({ error: 'full' }, 400);
+      const id = 'cu' + rand(9);
+      this.sql.exec('INSERT INTO customers (id, uid, name, contact, username, notes, at) VALUES (?, ?, ?, ?, ?, ?, ?)', id, owner, name, clean(b.contact, 120), un, clean(b.notes, 2000), Date.now());
+      return json({ ok: true, customer: view(this.one('SELECT * FROM customers WHERE id = ?', id)) });
+    }
+    const c = this.one('SELECT * FROM customers WHERE id = ? AND uid = ?', clean(b.id, 40), owner);
+    if (!c) return json({ error: 'gone' }, 404);
+    if (act === 'delete') { this.sql.exec('DELETE FROM custsales WHERE cid = ?', c.id); this.sql.exec('DELETE FROM customers WHERE id = ?', c.id); return json({ ok: true }); }
+    if (act === 'sale') {
+      const what = clean(b.what, 120); if (!what) return json({ error: 'what' }, 400);
+      this.sql.exec('INSERT INTO custsales (id, cid, uid, what, amount, cur, at) VALUES (?, ?, ?, ?, ?, ?, ?)', 'cs' + rand(9), c.id, owner, what, Math.max(0, Math.min(1e11, Math.round(+b.amount || 0))), clean(b.cur, 3).toUpperCase() || 'USD', +b.at || Date.now());
+      return json({ ok: true, customer: view(c) });
+    }
+    if (act === 'unsale') { this.sql.exec('DELETE FROM custsales WHERE id = ? AND cid = ?', clean(b.sid, 40), c.id); return json({ ok: true, customer: view(c) }); }
+    return json({ error: 'unknown' }, 404);
+  }
   // #381 SELLING
   productView(r) { let ph = []; try { ph = JSON.parse(r.photos || '[]'); } catch (e) {} return { id: r.id, title: r.title, price: r.price, cur: r.cur, about: r.about || '', photos: ph.map(m => this.mediaUrl(m)), media: ph, active: !!r.active, at: r.at }; }
   shopOf(uid, all) { return this.sql.exec('SELECT * FROM products WHERE uid = ?' + (all ? '' : ' AND active = 1') + ' ORDER BY sort DESC, at DESC LIMIT 200', uid).toArray().map(r => this.productView(r)); }
@@ -1383,6 +1421,7 @@ export class Hub {
     this.sql.exec('DELETE FROM teams WHERE oid = ? OR mid = ?', uid, uid);   // #379
     for (const r of this.sql.exec('SELECT photos FROM products WHERE uid = ?', uid).toArray()) { let ph = []; try { ph = JSON.parse(r.photos || '[]'); } catch (e) {} for (const m of ph) this.mediaDel('id = ?', m); }   // #381
     this.sql.exec('DELETE FROM products WHERE uid = ?', uid);
+    this.sql.exec('DELETE FROM custsales WHERE uid = ?', uid); this.sql.exec('DELETE FROM customers WHERE uid = ?', uid);   // #382
     for (const m of this.sql.exec('SELECT id FROM meetings WHERE oid = ?', uid).toArray()) this.sql.exec('DELETE FROM meetpeople WHERE mid = ?', m.id);   // #380
     this.sql.exec('DELETE FROM meetings WHERE oid = ?', uid); this.sql.exec('DELETE FROM meetpeople WHERE uid = ?', uid);
     // #378: the account's files go with it

@@ -4757,6 +4757,7 @@ function litBgReadyFor(url){
 // at the moment it is about to show the Pages, instead of trusting the page to have noticed it was hidden (a window
 // that is only made invisible never tells the page). 'wait' = the app waits for bgState(true); 'none' = no picture.
 window.litBgEnsure = function(){
+  if(document.getElementById('lit-spaces')){ litBgSaid = true; return 'none'; }   // #324: the chooser covers the screen - nothing under it to wait for
   const ar = document.querySelector('#device-wrap #content-area'), url = ar && ar.__litbg || null;
   if(!url){ litBgSaid = true; return 'none'; }
   litBgSaid = false; litBgReadyFor.want = null; litBgReadyFor(url);
@@ -14813,7 +14814,10 @@ function spaceGo(id, noSave){
 }
 // A company's own picture: its Dashboard's background, else its Pages' (all pages); none = black.
 const SP_BG = {};
-async function spaceBg(id){
+// #324: one load per company, decoded before it's needed (a second ask while loading waits for the same picture).
+const SP_BGP = {};
+function spaceBg(id){ return SP_BGP[id] || (SP_BGP[id] = spaceBgLoad(id)); }
+async function spaceBgLoad(id){
   if(id in SP_BG) return SP_BG[id];
   SP_BG[id] = null;
   try{
@@ -14821,16 +14825,27 @@ async function spaceBg(id){
     const k = set.dashboard ? 'dashboard' : set.all ? 'all' : null; if(!k) return null;
     const db = await litBgDb();
     const blob = await new Promise(res=>{ const q = db.transaction('pics').objectStore('pics').get(k + '@' + id); q.onsuccess = ()=>res(q.result || null); q.onerror = ()=>res(null); });
-    if(blob){ SP_BG[id] = URL.createObjectURL(blob); const im = new Image(); im.src = SP_BG[id]; }
+    if(blob){ SP_BG[id] = URL.createObjectURL(blob); const im = new Image(); im.src = SP_BG[id]; try{ await im.decode(); }catch(e){} (window.LIT_SP_IMG = window.LIT_SP_IMG || []).push(im); }
   }catch(e){}
   return SP_BG[id];
 }
 // ---- The chooser (after every unlock on Second / Only system; when the app opens as an app) ----
 let spIdx = 0;
 window.litSpacesWanted = function(){ return bizOn() && spaceList().length > 0; };   // #317: the app asks before every chooser
+// #324 (owner, 14 Nov 2026: 'it's showing but it's not fast, idk why it needs to load'): while the phone is still on the
+// lock screen the app asks the page to get the chooser READY (pictures loaded and decoded, the chooser built) - so at the
+// unlock it only has to show.
+window.litSpacesPrep = function(){
+  if(/[?&](s3|widget)=/.test(location.search) || !window.litSpacesWanted()) return 'none';
+  spaceList().forEach(c=>spaceBg(c.id));
+  spacesShow(); const el = document.getElementById('lit-spaces'); if(el) el.dataset.at = String(Date.now());
+  return 'ok';
+};
 window.litSpacesOpen = function(){
   if(/[?&](s3|widget)=/.test(location.search) || !bizOn() || !spaceList().length) return 'none';
   if(!document.body){ return 'loading'; }
+  const ready = document.getElementById('lit-spaces');
+  if(ready && ready.dataset.at && Date.now() - (+ready.dataset.at) < 10 * 60000){ delete ready.dataset.at; try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){} return 'ok'; }
   spacesShow(); try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){}
   return document.getElementById('lit-spaces') ? 'ok' : 'not drawn';
 };

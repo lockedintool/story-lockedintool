@@ -3216,11 +3216,6 @@ class OverlayService : Service(), StoryBridge.Host {
         for (d in longArrayOf(500, 1200, 2500, 4500)) ui.postDelayed({ if (spacesHeld() && pagesPane?.shown != true) spacesReshow() }, d)
         // #345: the plain cover never stays without the company screen on it.
         ui.postDelayed({ if (!keyguardLocked() && (!spacesHolding() || pagesPane?.shown != true)) SpacesCover.close() }, 3000)
-        // #346 TEMPORARY (silent, no text on screen): what was ready at the unlock - read from the problem reports.
-        if (spacesShownAt <= screenOffAt) runCatching {
-            ProblemLog.record(this, "spacediag", "$spArmDiag | at unlock: cover=${SpacesCover.instance != null} coverResumed=${SpacesCover.resumed} made=${SpacesCover.made} gone=${SpacesCover.gone} closedBy=${SpacesCover.closedBy} pre=$spacesPreShown pages=${pagesPane?.shown} front=${StoryAccessibilityService.frontPkg == packageName}", "unlock")
-            ProblemLog.flush(this)
-        }
         if (spacesShownAt > screenOffAt) { spDiag("already shown for this unlock"); return }
         if (!keyguardLocked()) spacesStale()
         val why = when {

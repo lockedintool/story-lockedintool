@@ -355,3 +355,4 @@ commits, pushed as a new update) - nothing else changes.
 | 346 | 2026-11-14 | (temporary, silent) the phone reports what was ready at each unlock, to find why the company screen still shows late | f37884f |
 | 347 | 2026-11-14 | The company screen's screen-off preparation (the plain cover + drawn-first chooser) now really runs at screen off, once | 23ce293 |
 | 348 | 2026-11-14 | The company screen can't be tapped while the phone is locked (a touch on the Always On Display was choosing a company before you unlocked) | af6ae67 |
+| 349 | 2026-11-14 | The temporary silent unlock report is removed - the company screen works | PENDING |

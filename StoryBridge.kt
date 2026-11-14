@@ -879,6 +879,8 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     fun spacesDone() { if (pages) host.spacesDone() }
     /** #336 (owner, 14 Nov 2026): each company / Personal keeps the apps you opened in it and the one you were in. */
     @JavascriptInterface
+    fun spaceLabel(name: String) { if (pages) ctx.getSharedPreferences("story", android.content.Context.MODE_PRIVATE).edit().putString("space_name", name.take(60)).apply() }   // #350: the name over Recents
+    @JavascriptInterface
     fun spaceNow(id: String) { if (pages) ctx.getSharedPreferences("story", android.content.Context.MODE_PRIVATE).edit().putString("space_cur", id.ifEmpty { "personal" }.take(60)).apply() }
     @JavascriptInterface
     fun spaceSwitch(id: String): Boolean = pages && host.spaceSwitch(id)

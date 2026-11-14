@@ -110,6 +110,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // so whichever comes first wins; the other one is ignored.
     @Volatile private var aodStartedAt = 0L
     private fun onScreenOff() {
+        ui.post { recCoverHide() }   // #350
         backToLit = false; spacesUpFlag = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
         ContentGuard.clearForNow()   // 'This is a mistake' lets you carry on only until the screen goes off
         val now = System.currentTimeMillis()
@@ -1402,6 +1403,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
+        if (recCover != null) recCoverCheck()   // #350
         spaceSeen(pkg)   // #336: the app you're in belongs to the company / Personal in focus
         if (pkg != packageName && pkg != "com.android.systemui" && pkg != homePkg() && pkg != recentsPkg) backToLit = false   // #338: you picked an app
         if (spacesHeld() && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
@@ -1654,7 +1656,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // covers it (owner, Oct 2026: 'it also overlaps other things - the panel') and comes back the moment it's closed.
     // Checked only when windows change (StoryAccessibilityService), and every second only while the panel is down.
     private var panelOver = false
-    fun windowsMoved() { ui.removeCallbacks(panelCheck); ui.postDelayed(panelCheck, 120); ui.post { litHomeCheck() }
+    fun windowsMoved() { ui.removeCallbacks(panelCheck); ui.postDelayed(panelCheck, 120); ui.post { litHomeCheck() }; ui.post { if (recCover != null) recCoverCheck() }
         ui.post { if (keyguardLocked()) syncLockDial() } }   // the PIN page / panel coming up: the lock screen's buttons step away at once
 
     // ---- You stay in the system you switched to (owner, 29 Oct 2026: 'once you switch to lockedintool, even if I swipe
@@ -2042,6 +2044,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Apps | Lockedintool switch). Not in Only system (the Dashboard IS your home there) or Only use widgets, and not
      *  while Lockedintool is opening one of its own screens / apps. */
     fun recentsShown(pkg: String, cls: String) { if (pkg != packageName && pkg != "com.android.systemui") phoneScreenShown(); ui.post {
+        recCoverLook()   // #350
         if (spacesHeld() && pkg != packageName) ui.postDelayed({ spacesReshow() }, 300)   // #328: the company screen stays
         // #342: the phone's launcher / Recents window events that come with the UNLOCK itself made the Pages step aside -
         // Claude showed between the flashes. While the company screen is up (or waiting for the unlock) nothing steps aside.
@@ -3122,6 +3125,124 @@ class OverlayService : Service(), StoryBridge.Host {
         spPrefs().edit().putString(key, out.toString()).apply()
         if (spPrefs().getString("space_last_" + spaceCur(), "") == pkg) spaceLastSet("")
     } }
+    // ---- #350 LOCKEDINTOOL'S OWN SCREEN OVER THE PHONE'S RECENTS (owner, 14 Nov 2026: 'when I go to recents yes I can
+    //      still see the apps I opened on the other profiles'; '... so the phone already thinks its open but its
+    //      lockedintool'; 'Yes that what I wanted lockedintool to put its own screen on top of the recent'). The phone
+    //      still opens its own Recents (no app can take the swipe); the moment it shows, Lockedintool covers it with ONLY
+    //      the apps opened in the company / Personal in focus. Tap = back into that app; x / Close all only take apps off
+    //      this list - nothing is ever closed. Leaving Recents (Home, Back, an app) takes it away. Only with companies set
+    //      up, never on the lock screen, as an app (sysQuiet), during a call or while the company screen is up. ----
+    private var recCover: View? = null
+    private var recCoverWm: WindowManager? = null
+    private var recCoverShownAt = 0L
+    private fun recCoverWanted() = spacesWanted() && !keyguardLocked() && !sysQuiet() && !callActive && !createActive && !spacesHolding() && isInteractive()
+    private fun isInteractive() = runCatching { (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive }.getOrDefault(true)
+    /** Looks whether the phone's Recents is up and shows / takes away the cover (a few looks: One UI draws Recents inside
+     *  the home-screen app, which is only clear a moment later). */
+    private fun recCoverCheck() {
+        val up = recCoverWanted() && StoryAccessibilityService.recentsAppFront(recentsPkg)
+        if (up) { if (recCover == null) recCoverShow() }
+        else if (recCover != null && SystemClock.uptimeMillis() - recCoverShownAt > 250) recCoverHide()
+    }
+    private fun recCoverLook() { for (d in longArrayOf(0, 120, 300, 700)) ui.postDelayed({ recCoverCheck() }, d) }
+    private fun recCoverHide() {
+        val v = recCover ?: return
+        recCover = null
+        runCatching { recCoverWm?.removeView(v) }
+        recCoverWm = null
+    }
+    private fun recCoverApps(): List<String> {
+        val list = runCatching { org.json.JSONArray(spaceApps()) }.getOrNull() ?: return emptyList()
+        return (0 until list.length()).map { list.optString(it) }.filter { it.isNotEmpty() && packageManager.getLaunchIntentForPackage(it) != null }
+    }
+    private fun recCoverShow() {
+        recCoverShownAt = SystemClock.uptimeMillis()
+        val v = recCoverBuild()
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, layerType,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.OPAQUE)
+        lp.gravity = Gravity.TOP or Gravity.START
+        pinToScreen(lp)
+        recCover = v
+        recCoverWm = layerAdd(v, lp)
+    }
+    private fun recCoverRebuild() {
+        val wmNow = recCoverWm ?: return; val old = recCover ?: return
+        val v = recCoverBuild()
+        runCatching { wmNow.removeView(old) }
+        val lp = old.layoutParams as? WindowManager.LayoutParams ?: return
+        recCover = v; runCatching { wmNow.addView(v, lp) }
+    }
+    private fun recCoverBuild(): View {
+        val fg = th(Color.WHITE); val bg = th(Color.BLACK)
+        val sub = Color.argb(150, Color.red(fg), Color.green(fg), Color.blue(fg))
+        val card = th(Color.rgb(17, 17, 17)); val edge = th(Color.rgb(42, 42, 42))
+        val name = spPrefs().getString("space_name", "")?.ifEmpty { null } ?: (if (spaceCur() == "personal") "Personal" else "this company")
+        val root = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL; setBackgroundColor(bg)
+            setPadding((18 * dp).toInt(), statusBarHeightPx() + (16 * dp).toInt(), (18 * dp).toInt(), navBarHeightPx() + (14 * dp).toInt())
+            isClickable = true
+        }
+        root.addView(TextView(this).apply { text = "OPENED IN"; setTextColor(sub); textSize = 12f; letterSpacing = 0.1f })
+        root.addView(TextView(this).apply { text = name; setTextColor(fg); textSize = 22f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(0, (2 * dp).toInt(), 0, (14 * dp).toInt()); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+        val apps = recCoverApps()
+        val scroll = android.widget.ScrollView(this).apply { isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER }
+        val col = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL }
+        if (apps.isEmpty()) col.addView(TextView(this).apply { text = "No apps opened in $name yet"; setTextColor(sub); textSize = 15f
+            gravity = Gravity.CENTER; setPadding(0, (60 * dp).toInt(), 0, 0) })
+        for (pkg in apps) {
+            val row = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding((12 * dp).toInt(), (12 * dp).toInt(), (6 * dp).toInt(), (12 * dp).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 16 * dp; setColor(card); setStroke(dp.toInt().coerceAtLeast(1), edge) }
+                layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = (10 * dp).toInt() }
+            }
+            val icon = runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()
+            row.addView(android.widget.ImageView(this).apply { setImageDrawable(icon); layoutParams = android.widget.LinearLayout.LayoutParams((44 * dp).toInt(), (44 * dp).toInt()) })
+            val label = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+            row.addView(TextView(this).apply { text = label; setTextColor(fg); textSize = 15f; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding((12 * dp).toInt(), 0, (8 * dp).toInt(), 0); layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) })
+            row.addView(TextView(this).apply { text = "\u00D7"; setTextColor(sub); textSize = 22f; gravity = Gravity.CENTER
+                layoutParams = android.widget.LinearLayout.LayoutParams((44 * dp).toInt(), (44 * dp).toInt())
+                setOnClickListener { recCoverForget(pkg) } })
+            row.setOnClickListener { recCoverOpen(pkg) }
+            col.addView(row)
+        }
+        scroll.addView(col)
+        root.addView(scroll, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
+        if (apps.isNotEmpty()) root.addView(TextView(this).apply {
+            text = "Close all"; setTextColor(fg); textSize = 16f; setTypeface(typeface, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 22 * dp; setColor(bg); setStroke((1.5f * dp).toInt().coerceAtLeast(1), fg) }
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, (46 * dp).toInt()).apply { topMargin = (10 * dp).toInt() }
+            setOnClickListener { recCoverCloseAll() }
+        })
+        return root
+    }
+    private fun recCoverForget(pkg: String) {
+        val key = "space_apps_" + spaceCur()
+        val list = runCatching { org.json.JSONArray(spPrefs().getString(key, "[]")) }.getOrNull() ?: return
+        val out = org.json.JSONArray(); for (k in 0 until list.length()) list.optString(k).takeIf { it.isNotEmpty() && it != pkg }?.let { out.put(it) }
+        spPrefs().edit().putString(key, out.toString()).apply()
+        if (spPrefs().getString("space_last_" + spaceCur(), "") == pkg) spaceLastSet("")
+        recCoverRebuild()
+    }
+    /** Back into that app where you left it (its task comes to the front - nothing restarts). */
+    private fun recCoverOpen(pkg: String) {
+        val i = packageManager.getLaunchIntentForPackage(pkg) ?: return
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        backToLit = false
+        if (runCatching { startActivity(i) }.isSuccess) { recCoverHide(); pagesPane?.takeIf { it.shown && !pagesInHome() }?.let { hideOne(it) } }
+    }
+    /** Close all: the list is emptied (the apps keep running - Android lets no app close another) and you leave Recents
+     *  for the home screen, like the phone's own Close all. */
+    private fun recCoverCloseAll() {
+        spPrefs().edit().putString("space_apps_" + spaceCur(), "[]").apply()
+        spaceLastSet("")
+        recCoverHide()
+        runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
     /** Choosing a company / Personal: back into the app you were in there (true), else the Pages show it as before (false). */
     override fun spaceSwitch(id: String): Boolean {
         val want = id.ifEmpty { "personal" }

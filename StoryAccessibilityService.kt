@@ -169,6 +169,22 @@ class StoryAccessibilityService : AccessibilityService() {
                 runCatching { w.root?.packageName?.toString() }.getOrNull().let { it != null && it != s.packageName } } ?: return false
             return runCatching { app.root?.packageName?.toString() }.getOrNull() == home
         }
+        /** #350: the phone's Recents is the APP window in front (the launcher draws it on One UI / stock / Pixel) - never the
+         *  notification panel, whose 'Clear all' would otherwise look like Recents. */
+        fun recentsAppFront(recentsPkg: String?): Boolean {
+            val s = instance ?: return false
+            val ws = runCatching { s.windows }.getOrNull() ?: return false
+            if (ws.any { w -> w.isFocused && w.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM }) return false
+            for (w in ws) {
+                if (w.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION) continue
+                val r = runCatching { w.root }.getOrNull() ?: continue
+                val pk = runCatching { r.packageName?.toString() }.getOrNull() ?: continue
+                if (pk == s.packageName || pk == "com.android.systemui") continue
+                if (pk != recentsPkg && !pk.contains("launcher", true)) continue
+                if (recentsNode(r, 0)) return true
+            }
+            return false
+        }
         fun panelInFront(): Boolean? {
             val s = instance ?: return null
             val ws = runCatching { s.windows }.getOrNull() ?: return null

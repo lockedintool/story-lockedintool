@@ -92,6 +92,7 @@
   window.litAcctHomeToken = function(){ try{ var h = acctHome(); if((cur() || 'personal') === (h || 'personal')) return ''; var a = JSON.parse(g.call(window.localStorage, 'story-msg-account') || '{}') || {}; return a.token || ''; }catch(e){ return ''; } };
   try{ if(window.StoryNative && window.StoryNative.acctSpace) window.StoryNative.acctSpace(acctSfx()); }catch(e){}
   try{ if(window.StoryNative && window.StoryNative.spaceNow && !/[?&](s3|widget)=/.test(location.search)) window.StoryNative.spaceNow(cur() || 'personal'); }catch(e){}   // #336
+  try{ if(window.StoryNative && window.StoryNative.spaceLabel && !/[?&](s3|widget)=/.test(location.search)){ var _c = cur() || 'personal', _n = 'Personal'; if(_c !== 'personal'){ var _cs = JSON.parse(g.call(window.localStorage, 'story-companies') || '[]') || []; _n = ''; for(var _i = 0; _i < _cs.length; _i++) if(_cs[_i].id === _c) _n = String(_cs[_i].name || ''); } window.StoryNative.spaceLabel(_n); } }catch(e){}   // #350
   // Another window changed something: listeners see the plain key when it's this space's, and nothing they know when
   // it's another space's (a company's cards never land on Personal's screen).
   window.addEventListener('storage', function(e){

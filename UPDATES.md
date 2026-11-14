@@ -344,4 +344,4 @@ commits, pushed as a new update) - nothing else changes.
 | 335 | 2026-11-14 | The company screen no longer disappears by itself before you choose | 6cbe544 |
 | 336 | 2026-11-14 | Each company / Personal keeps its own opened apps: choosing it takes you back into the app you were in there, and Apps shows only what you opened there | 96c84ba |
 | 337 | 2026-11-14 | The 'stay in Lockedintool' rule is removed - Home and closing recent apps show the phone's own home screen, as the phone works | 2b1ca22 |
-| 338 | 2026-11-14 | Closing the phone's recent apps (or Close all) after opening them from Lockedintool goes back to Lockedintool, like any app | PENDING |
+| 338 | 2026-11-14 | Closing the phone's recent apps (or Close all) after opening them from Lockedintool goes back to Lockedintool, like any app | 6d8b97d |

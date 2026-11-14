@@ -288,6 +288,26 @@ for (const [w, h] of SIZES) {
     if (!(await pg.evaluate(() => window.__urls.length))) fail('search send button', 'Dashboard', 'tapping send did not open the search'); }
   await ctx.close();
 }
+// #377 (owner, 14 Nov 2026: 'The bottom gap on the trading page is way too big - can it be the same as the money page's
+// one'): a page that kept a size from when it was taller fills the screen again when you come to it.
+{
+  const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
+  await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); localStorage.setItem('story-focus', 'trading'); } catch (e) {}
+    window.StoryNative = new Proxy({}, { get: (t, k) => k === 'bottomRoom' ? (() => 48) : (() => '') }); });
+  await ctx.route('**/*', r => r.request().url().startsWith('http://localhost') ? r.continue() : r.abort());
+  const pg = await ctx.newPage();
+  await pg.goto(URL); await pg.waitForTimeout(2500);
+  await pg.evaluate(() => window.storyShow('trading', false)); await pg.waitForTimeout(900);
+  const gap = await pg.evaluate(async () => {
+    Object.keys(FIT_CACHE).forEach(k => { if (k.indexOf('trading|') === 0) FIT_CACHE[k].zoom = FIT_CACHE[k].zoom * 0.88; });   // a size from when it was taller
+    window.storyShow('money', false); await new Promise(r => setTimeout(r, 600));
+    window.storyShow('trading', false); await new Promise(r => setTimeout(r, 900));
+    const a = document.querySelector('#device-wrap #content-area'), el = a.firstElementChild, ab = a.getBoundingClientRect();
+    let bot = 0; Array.from(el.children).forEach(c => { const cs = getComputedStyle(c); if (cs.position === 'fixed' || cs.position === 'absolute' || cs.display === 'none') return; bot = Math.max(bot, c.getBoundingClientRect().bottom); });
+    return (ab.bottom - 48 - bot) / ab.height; });
+  if (gap > 0.03) fail('no big gap at the bottom', 'Focus page (Trading) @ 393x852', 'an empty strip of ' + Math.round(gap * 100) + '% at the bottom');
+  await ctx.close();
+}
 await within(b.close(), 15000);
 clearTimeout(WATCHDOG);
 if (fails.length) { console.log('OWNER RULES BROKEN (' + fails.length + '):\n' + fails.join('\n')); process.exit(1); }

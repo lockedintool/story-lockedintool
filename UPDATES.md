@@ -351,3 +351,4 @@ commits, pushed as a new update) - nothing else changes.
 | 342 | 2026-11-14 | No flashes before the company screen, and choosing Personal takes you back into the app you were in (not Lockedintool) | 6b8cfed |
 | 343 | 2026-11-14 | 'Leave owner mode' asks first - one accidental tap no longer locks your phone | e0e14dc |
 | 344 | 2026-11-14 | The Apps / Lockedintool switch no longer disappears as soon as it shows (on the phone's home screen) | 1a38d3c |
+| 345 | 2026-11-14 | No glimpse of the app or home screen before the company screen - a plain screen in its colour is ready under the lock screen | PENDING |

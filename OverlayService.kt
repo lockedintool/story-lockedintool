@@ -3041,6 +3041,9 @@ class OverlayService : Service(), StoryBridge.Host {
             // company screen'): the hidden window still held its OLD picture (a Lockedintool page) - it's shown only once
             // the chooser itself has been drawn (showPagesOn draws while the window is still invisible).
             if (!Security.lit(this)) { spacesPreShown = true; showPagesOn(p, "0") {} }
+            // #345: and the plain screen under it, so the unlock reveals Lockedintool - not the app / home screen you were on.
+            if (!SystemMode.on(this) && !AppMode.appOnly(this) && SpacesCover.instance == null)
+                startBg(Intent(this, SpacesCover::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 31)
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
@@ -3081,7 +3084,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Lockedintool's bottom button does nothing, its swipe doesn't step aside, and if the phone's Home / Recents or any app
      *  comes up anyway, the chooser comes straight back over it (never over a call). */
     @Volatile private var spacesUpFlag = false
-    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (on) { spacesPreShown = false; showWalletBtn(false) }; if (!on) spacesUnwarm() } }
+    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (on) { spacesPreShown = false; showWalletBtn(false) }; if (!on) { spacesUnwarm(); if (spaceAfterHide == null) SpacesCover.close() } } }
     /** #334 (owner, 14 Nov 2026: 'Still missing ... Like the home screen or recent apps'): the chooser counts as up from the
      *  moment it was put on screen at screen off - not only once the page said so after the unlock - so the phone's Home /
      *  Recents (or anything) coming up in between never leaves it hidden. */
@@ -3135,7 +3138,7 @@ class OverlayService : Service(), StoryBridge.Host {
         spaceAfterHide = if (same) "close" else "reload"
         ui.post {
             spacesUpFlag = false; spacesPreShown = false
-            if (StoryAccessibilityService.frontPkg == target) { pagesPane?.takeIf { it.shown }?.let { hideOne(it) } ?: spaceHidden(); return@post }
+            if (StoryAccessibilityService.frontPkg == target && SpacesCover.instance == null) { pagesPane?.takeIf { it.shown }?.let { hideOne(it) } ?: spaceHidden(); return@post }
             if (runCatching { startActivity(open) }.isFailure) { spaceAfterHide = null; pagesPane?.web?.evaluateJavascript("window.litSpacesClose&&window.litSpacesClose()", null); return@post }
             hidePanelFor(target, "where you were in this company")
         }
@@ -3144,6 +3147,7 @@ class OverlayService : Service(), StoryBridge.Host {
     /** #341: what the Pages do once they're out of sight after a company / Personal was chosen. */
     @Volatile private var spaceAfterHide: String? = null
     private fun spaceHidden() {
+        SpacesCover.close()   // #345
         val w = spaceAfterHide ?: return
         spaceAfterHide = null
         val p = pagesPane ?: return
@@ -3185,17 +3189,20 @@ class OverlayService : Service(), StoryBridge.Host {
             pw.evaluateJavascript("(function(){try{return window.litSpacesWanted?String(window.litSpacesWanted()):'none'}catch(e){return 'error'}})()") { r ->
                 val a = (r ?: "").trim('"')
                 if (a == "true") { getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("spaces_on", true).apply(); spacesAfterUnlock() }
-                else spDiag("off - the page says '" + a + "'")
+                else { SpacesCover.close(); spDiag("off - the page says '" + a + "'") }
             }
             return
         }
         // #334: it never goes missing after the unlock - looked at a few times (no loop) and put back if something took it away.
         for (d in longArrayOf(500, 1200, 2500, 4500)) ui.postDelayed({ if (spacesHeld() && pagesPane?.shown != true) spacesReshow() }, d)
+        // #345: the plain cover never stays without the company screen on it.
+        ui.postDelayed({ if (!keyguardLocked() && (!spacesHolding() || pagesPane?.shown != true)) SpacesCover.close() }, 3000)
         if (spacesShownAt > screenOffAt) { spDiag("already shown for this unlock"); return }
         if (!keyguardLocked()) spacesStale()
         val why = when {
             sysQuiet() -> "app mode / widgets"; callActive -> "call"; createActive -> "create"; keyguardLocked() -> "still locked"
             pickerHid.isNotEmpty() -> "picker"; openingPkg != null -> "opening app"; pagesPane == null -> "no pages"; else -> null }
+        if (why != null && why != "still locked") SpacesCover.close()   // #345: never left over anything else
         if (why != null) { if (why != "app mode / widgets" && why != "still locked") spacesWhy(why) else spDiag(why); return }
         val p = pagesPane ?: return
         spacesShownAt = System.currentTimeMillis()
@@ -3207,7 +3214,7 @@ class OverlayService : Service(), StoryBridge.Host {
             // The page answers whether it opened; a page that was (re)loading opens it itself once ready (spacesPending).
             ui.postDelayed({ p.web.evaluateJavascript("(function(){try{return document.getElementById('lit-spaces')?'ok':(window.litSpacesOpen?window.litSpacesOpen():'loading')}catch(e){return 'error '+e.message}})()") { r ->
                 val res = (r ?: "").trim('"')
-                if (res == "ok") { spacesDone(); spDiag("open (shown " + p.shown + ")") } else if (res != "loading") { spacesPreShown = false; spacesWhy("page: " + res) } else spDiag("page still loading")
+                if (res == "ok") { spacesDone(); spDiag("open (shown " + p.shown + ")") } else if (res != "loading") { spacesPreShown = false; SpacesCover.close(); spacesWhy("page: " + res) } else spDiag("page still loading")
             } }, 700) } }
     }
     /** As an app: the chooser shows each time the app is opened (after it was left). */

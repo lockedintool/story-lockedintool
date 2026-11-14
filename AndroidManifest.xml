@@ -142,6 +142,17 @@
             android:theme="@style/Theme.Story.Clear" />
 
         <!-- Delete account: the phone's own fingerprint / face / PIN check (see-through). -->
+        <!-- #345: the plain screen under the company screen, so the unlock never shows the app you were in first. -->
+        <activity
+            android:name=".SpacesCover"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity="com.story.launcher.cover"
+            android:noHistory="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Story.Home" />
+
         <activity
             android:name=".IdentityActivity"
             android:exported="false"

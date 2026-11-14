@@ -3348,6 +3348,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val same = spaceCur() == want
         spPrefs().edit().putString("space_cur", want).apply()
         val last = spPrefs().getString("space_last_$want", "") ?: ""
+        if (AppMode.APP_ONLY) return false   // #373: Lockedintool works alone - choosing a company never opens one of the phone's apps
         if (last == "~lit" || last == packageName) return false
         // #339 / #340: not in Lockedintool there - the phone's own home screen (Only system: Lockedintool IS the home).
         // #360 / #364: never been in an app there - a business's and Personal's 'home' is their own Lockedintool home, never

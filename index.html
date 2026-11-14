@@ -4508,8 +4508,13 @@ function orderFromHome(items, home){
 function styleItems(){ return orderFromHome(PAGE_SWITCH_ITEMS, rowHomeKey(curRow - 1, PAGE_SWITCH_ITEMS)); }
 // Layouts > Pages > Page layout (owner): your own order of the pages in each row ('story-row-order' {rowId: [keys]}).
 function rowOrders(){ try{ return JSON.parse(localStorage.getItem('story-row-order') || '{}') || {}; }catch(e){ return {}; } }
+// #373 THE APP-ONLY TEST, NO APPS (owner, 14 Nov 2026: 'Lockedintool's own apps won't work anymore. So let's remove apps
+// inside the dashboard. So lockedintool won't have access to the phone's apps anymore. It's now working alone'; 'We are
+// removing apps in lockedintool'): no Apps screen / APPS in the Dashboard menu, no app pages in the Rows, no app on the
+// Focus page, no company / Personal Apps page. (var: rowsList runs before the rest of the page is read.) The vault keeps it all.
+var LIT_NO_APPS = true;
 function rowsList(){
-  const apps = planBasicOnly() ? [] : appPagesStored(), ord = rowOrders();
+  const apps = (LIT_NO_APPS || planBasicOnly()) ? [] : appPagesStored(), ord = rowOrders();
   const sorted = (id, items)=>{ const o = ord[id] || []; const at = k=>{ const i = o.indexOf(k); return i < 0 ? 1e6 : i; };
     return items.map((it, i)=>[it, i]).sort((a, b)=>(at(a[0].key) - at(b[0].key)) || (a[1] - b[1])).map(x=>x[0]); };
   const hid = hiddenPages();
@@ -6158,7 +6163,7 @@ function dashboardScreen(){
           <div class="sidebar-item" data-dash="camera">CAMERA</div>
           <div class="sidebar-item" data-dash="gallery">GALLERY</div>
           <div class="sidebar-item" data-dash="alarm">ALARM</div>
-          ${planFree() ? '' : '<div class="sidebar-item" data-nav="apps">APPS</div>'}
+          ${planFree() || LIT_NO_APPS ? '' : '<div class="sidebar-item" data-nav="apps">APPS</div>'}
         </div>
         ${quotesCardHTML()}
       </div>
@@ -8276,6 +8281,7 @@ const FOCUS_KEY = 'story-focus';
 function focusAddon(){
   let v = null; try{ v = localStorage.getItem(FOCUS_KEY); }catch(e){}
   if(v === null){ let had = false; try{ had = (JSON.parse(localStorage.getItem('story-trade-accounts') || '[]') || []).length > 0; }catch(e){} return had ? 'trading' : ''; }
+  if(LIT_NO_APPS && v.indexOf('app:') === 0) return '';   // #373: no app on the Focus page
   return v;
 }
 function focusSet(v){ try{ localStorage.setItem(FOCUS_KEY, v || ''); }catch(e){} }
@@ -8299,7 +8305,7 @@ function focusAddSheetHTML(st){
   if(st.step === 'choose') return `
     <div class="modal-overlay" data-action="focus-cancel"><div class="confirm-sheet" onclick="event.stopPropagation()">
       <div class="confirm-title">Add to Focus page</div>
-      <div class="confirm-btn-row focus-opts" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-action="focus-builtin">Built-in add-ons</button><button class="btn-wide" style="margin-top:0;" data-action="focus-custom">Custom</button></div>
+      <div class="confirm-btn-row focus-opts" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-action="focus-builtin">Built-in add-ons</button>${LIT_NO_APPS ? '' : `<button class="btn-wide" style="margin-top:0;" data-action="focus-custom">Custom</button>`}</div>
       <button class="btn-wide" data-action="focus-cancel">Cancel</button>
     </div></div>`;
   if(st.step === 'builtin') return `
@@ -15193,7 +15199,7 @@ function bizHomeScreen(){
 // #364 (owner, 14 Nov 2026: 'Also put in personal'; 'the business account option - has its home screen replacing the
 // devices one'): with the Business account and companies set up, EVERY focus has its own home - a business its business
 // home, Personal its Personal home (the phone's own apps + Lockedintool) - in place of the phone's home screen.
-function spaceHomeHere(){ try{ return bizOn() && spaceList().length > 0; }catch(e){ return false; } }
+function spaceHomeHere(){ if(LIT_NO_APPS) return false; try{ return bizOn() && spaceList().length > 0; }catch(e){ return false; } }   // #373: no Apps page
 function spaceHomeKey(){ return litSpace() === 'personal' || !spaceOf(litSpace()) ? 'personal-home' : 'biz-home'; }
 // #369 (owner, 14 Nov 2026: 'Let's just call this Apps. Simple - it's just the same thing, shouldn't be called different names
 // because it's account names'): the company's home / Personal home is called Apps everywhere.
@@ -18147,6 +18153,7 @@ function renderDevice(){
   if(isAppPage(state.lastPage) && !rowOfPage(state.lastPage)) state.lastPage = PAGES[0] || 'wallet';
   // No plan (once subscriptions are really on) = Free: the Dashboard only - the Pages, the Apps screen and Layouts are
   // all hidden (owner, 28 Oct 2026: 'apps button on the dashboard and layouts, and pages, won't be available on the free').
+  if(LIT_NO_APPS && ['apps', 'biz-home', 'personal-home'].includes(state.current)) state.current = state.homeScreen || 'wallet';   // #373
   if(planFree() && !IN_STATION3_WINDOW && (isPagesScreen(state.current) || state.current === 'apps' || state.current === 'layouts' || state.current.indexOf('layouts-') === 0)){
     state.current = 'dashboard'; state.rowsViewOpen = false; state.pageStyleViewOpen = false;
   }
@@ -22171,7 +22178,7 @@ const TOUR_PAGES_OK = k=>!planFree() && PAGES.includes(k);
 const TOUR = [
   { s:'dashboard', t:'Welcome to Lockedintool', b:'A quick look around your new phone experience. It takes about a minute, and you can skip it at any time.' },
   { s:'dashboard', sel:'.search-row', t:'Search', b:'Search the web from here. Safe search is always on.' },
-  { s:'dashboard', sel:'.story-sidebar', t:'Your menu', b:'Notes, Settings, Information, your camera, gallery and alarms, and every app on your phone.' },
+  { s:'dashboard', sel:'.story-sidebar', t:'Your menu', b:LIT_NO_APPS ? 'Notes, Settings, Information, your camera, gallery and alarms.' : 'Notes, Settings, Information, your camera, gallery and alarms, and every app on your phone.' },
   { s:'dashboard', sel:'#quotes-card', t:'Your quote', b:'Tap the lock, then hold the card to write a quote of your own.' },
   { s:'dashboard', sel:'.story-bottom', t:'Quick controls', b:'Your phone\u2019s sound output, brightness, music and controls - the real ones, right here.' },
   { s:'dashboard', sel:'#dash-s3', t:'Station 3', b:'Messages, your Profile, Updates, Create (+), Call history and the dial pad.' },
@@ -22181,7 +22188,7 @@ const TOUR = [
   { s:'wallet', sel:'.paycard-wrap', t:'Wallet', b:'Your real cards. Add a card, then tap it to see its details after your fingerprint, face or PIN.', need:()=>TOUR_PAGES_OK('wallet') },
   { s:'wallet', sel:'[data-action="tap-to-pay"]', t:'Tap to Pay', b:'Pay at the till: hold the back of your phone near the card reader.', need:()=>TOUR_PAGES_OK('wallet') },
   { s:'wallet', sel:'.wallet-float-dock', t:'Transfer Money', b:'Send and receive money from here.', need:()=>TOUR_PAGES_OK('wallet') },
-  { s:'trading', sel:'.focus-plus, .acct-title', t:'Focus page', b:'The page you make your own: add the Trading Page or any app. Swipe left and right to move between your pages, and up and down for your other rows.', need:()=>TOUR_PAGES_OK('trading') },
+  { s:'trading', sel:'.focus-plus, .acct-title', t:'Focus page', b:(LIT_NO_APPS ? 'The page you make your own: add the Trading Page.' : 'The page you make your own: add the Trading Page or any app.') + ' Swipe left and right to move between your pages, and up and down for your other rows.', need:()=>TOUR_PAGES_OK('trading') },
   { s:'settings', sel:'.set2-card:has(.set2-link), .set2-card', t:'Settings', b:'Your system, theme, security, privacy and notifications - and your plan, at the very bottom.' },
   { s:'dashboard', t:'You\u2019re all set', b:'You can take this tour again at any time from Information.' },
 ];

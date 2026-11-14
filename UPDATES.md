@@ -379,3 +379,4 @@ commits, pushed as a new update) - nothing else changes.
 | 370 | 2026-11-14 | The app-only test: Lockedintool is only an app (no Second / Only system, no System switch, no bottom button of its own); everything works inside the app. Everything before is kept in the vault branch vault-2026-11-14. | c444ed9 |
 | 371 | 2026-11-14 | No setup screen: the Lockedintool icon always opens the app itself, like any normal app. | c444ed9 |
 | 372 | 2026-11-14 | Subscription in the app-only test: no Second system / Only system choice - just Basic and Premium. | 690b6ef |
+| 373 | 2026-11-14 | No apps in the app-only test: Lockedintool no longer shows or opens the phone's apps (no Apps screen, no app pages, no app on Focus, no company Apps page). |  |

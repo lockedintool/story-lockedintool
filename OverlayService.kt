@@ -3103,7 +3103,9 @@ class OverlayService : Service(), StoryBridge.Host {
         // #339 (owner, 14 Nov 2026: 'I still start on lockedintool idk why'): you weren't in Lockedintool there - the
         // phone's own home screen, as the phone works (Only system / the app: Lockedintool IS where you land).
         if (last.isEmpty()) {
-            if (SystemMode.on(this) || sysQuiet()) return false
+            // #340 (owner, 14 Nov 2026: 'this applies to all lockedintool systems, account and app - just the Only system
+            // lockedintool is the user's complete home screen'): only Only system lands in Lockedintool here.
+            if (SystemMode.on(this) && !AppMode.appOnly(this)) return false
             val h = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ui.post {
                 spacesUpFlag = false; spacesPreShown = false

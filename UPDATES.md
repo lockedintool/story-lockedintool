@@ -394,4 +394,4 @@ commits, pushed as a new update) - nothing else changes.
 | 385 | 2026-11-14 | Lock In: sparks fly out from behind the LOCK IN! badge while you're on the page, win / loss screens animate, and 'Rack by winning' replaces 'Earn racks' | 1aaa87e |
 | 386 | 2026-11-14 | Lock In: it reads 'Rack 145' everywhere, never '145 racks' | 6a75475 |
 | 387 | 2026-11-14 | Lock In says Rank, not Rack: 'Rank by winning', 'Rank 145' | 46ced8a |
-| 388 | 2026-11-14 | Lock In: post a challenge to your status - anyone who sees it can tap Accept challenge and play you |  |
+| 388 | 2026-11-14 | Lock In: post a challenge to your status - anyone who sees it can tap Accept challenge and play you | 2d029d6 |

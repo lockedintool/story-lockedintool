@@ -560,7 +560,7 @@ export class Hub {
     const mu = this.postMusic(p);
     const v = { id: p.id, kind: p.kind, type: items[0] ? items[0].type : 'text', url: items[0] ? items[0].url : '', thumb: items[0] ? items[0].thumb : '', at: p.at, title: p.title || '', text: p.text || '', items,
       music: mu.media ? { url: this.mediaUrl(mu.media), name: mu.name || '' } : null };
-    if (p.lk) { try { v.lk = JSON.parse(p.lk); } catch (e) {} }   // #388
+    if (p.lk) { try { v.lk = JSON.parse(p.lk); v.lk.taken = this.one('SELECT COUNT(*) AS n FROM lkgames WHERE src = ?', p.id).n; if (me) v.lk.mine = !!this.one('SELECT 1 AS x FROM lkgames WHERE src = ? AND b = ?', p.id, me.id); } catch (e) {} }   // #388 / #389
     if (p.kind === 'status' || me) Object.assign(v, {
       hearts: this.one('SELECT COUNT(*) AS n FROM ulikes WHERE pid = ?', p.id).n,
       hearted: !!(me && this.one('SELECT 1 AS x FROM ulikes WHERE pid = ? AND uid = ?', p.id, me.id)),
@@ -662,7 +662,7 @@ export class Hub {
         id, me.id, kind, first.type || 'text', first.media || null, first.thumb || null, Date.now(), title || null, text || null, items.length ? JSON.stringify(items) : null, music);
       if (hl) this.sql.exec('UPDATE uposts SET hl = ?, hlname = ? WHERE id = ?', hl, String(b.hlname || '').trim().slice(0, 40) || 'Highlight', id);
       if (kind === 'status' && b.lk && ['reaction', 'quiz', 'memory', 'ttt', 'c4'].includes(String(b.lk.kind))) {   // #388
-        this.sql.exec('UPDATE uposts SET lk = ? WHERE id = ?', JSON.stringify({ kind: String(b.lk.kind), stake: Math.max(0, Math.min(1e9, Math.round(+b.lk.stake || 0))), cur: String(b.lk.cur || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD' }), id);
+        this.sql.exec('UPDATE uposts SET lk = ? WHERE id = ?', JSON.stringify({ kind: String(b.lk.kind), stake: Math.max(0, Math.min(1e9, Math.round(+b.lk.stake || 0))), cur: String(b.lk.cur || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD', max: Math.max(1, Math.min(100, Math.round(+b.lk.max || 1))) }), id);
       }
       this.notifyFollowers(me, kind, id);
       this.dropOldStatuses();
@@ -1337,6 +1337,8 @@ export class Hub {
       if (was) return json({ ok: true, game: view(was) });
       let lk = {}; try { lk = JSON.parse(p.lk); } catch (e) {}
       if (!KINDS[lk.kind]) return json({ error: 'kind' }, 400);
+      const max = lk.max || 1, taken = this.one('SELECT COUNT(*) AS n FROM lkgames WHERE src = ?', p.id).n;   // #389 the poster chose how many people can accept
+      if (taken >= max) return json({ error: 'full' }, 409);
       const stake = lk.stake || 0, cur = lk.cur || 'USD';
       if (stake > 0) {
         if (this.lkWallet(me.id, cur).bal < stake) return json({ error: 'funds' }, 400);
@@ -1349,6 +1351,7 @@ export class Hub {
         id, lk.kind, u.id, me.id, stake, cur, seed, st ? JSON.stringify(st) : null, Date.now(), KINDS[lk.kind] === 'turn' ? u.id : null, p.id);
       this.act(u.id, 'lkyes', me.id, id, lk.kind);
       this.deliver(u.id, { t: 'fnote', kind: 'lkyes', id, from: me.id, name: me.name || '', username: me.username || '', game: lk.kind, at: Date.now() });
+      if (taken + 1 >= max) this.uposts(u, 'delete', { id: p.id });   // #389: everyone it was for has accepted - the status disappears
       return json({ ok: true, game: view(this.one('SELECT * FROM lkgames WHERE id = ?', id)) });
     }   // adding money needs Lockedintool's payment partner (not connected yet)
     if (act === 'challenge') {

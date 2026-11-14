@@ -15190,7 +15190,9 @@ function bizHomeScreen(){
 // home, Personal its Personal home (the phone's own apps + Lockedintool) - in place of the phone's home screen.
 function spaceHomeHere(){ try{ return bizOn() && spaceList().length > 0; }catch(e){ return false; } }
 function spaceHomeKey(){ return litSpace() === 'personal' || !spaceOf(litSpace()) ? 'personal-home' : 'biz-home'; }
-function spaceHomeName(){ return spaceHomeKey() === 'personal-home' ? 'Personal home' : 'Business home'; }
+// #369 (owner, 14 Nov 2026: 'Let's just call this Apps. Simple - it's just the same thing, shouldn't be called different names
+// because it's account names'): the company's home / Personal home is called Apps everywhere.
+function spaceHomeName(){ return 'Apps'; }
 // #363: on Only system there's no bottom switch, so in a business the pages' ‹ offers both ways back.
 function bizBack2(){ try{ return spaceHomeHere() && sysOn(); }catch(e){ return false; } }
 function bizBack2Pop(){

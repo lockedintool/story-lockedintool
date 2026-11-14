@@ -3223,9 +3223,11 @@ class OverlayService : Service(), StoryBridge.Host {
         scroll.addView(col)
         root.addView(scroll, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
         if (apps.isNotEmpty()) root.addView(TextView(this).apply {
-            text = "Close all"; setTextColor(fg); textSize = 16f; setTypeface(typeface, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
-            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 22 * dp; setColor(bg); setStroke((1.5f * dp).toInt().coerceAtLeast(1), fg) }
-            layoutParams = android.widget.LinearLayout.LayoutParams(-1, (46 * dp).toInt()).apply { topMargin = (10 * dp).toInt() }
+            // #352 (owner: 'Make the close all button smaller and move it up a lil bit')
+            text = "Close all"; setTextColor(fg); textSize = 14f; setTypeface(typeface, android.graphics.Typeface.BOLD); gravity = Gravity.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 18 * dp; setColor(bg); setStroke((1.5f * dp).toInt().coerceAtLeast(1), fg) }
+            layoutParams = android.widget.LinearLayout.LayoutParams((160 * dp).toInt(), (36 * dp).toInt()).apply {
+                topMargin = (10 * dp).toInt(); bottomMargin = (28 * dp).toInt(); gravity = Gravity.CENTER_HORIZONTAL }
             setOnClickListener { recCoverCloseAll() }
         })
         return root

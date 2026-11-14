@@ -356,4 +356,4 @@ commits, pushed as a new update) - nothing else changes.
 | 347 | 2026-11-14 | The company screen's screen-off preparation (the plain cover + drawn-first chooser) now really runs at screen off, once | 23ce293 |
 | 348 | 2026-11-14 | The company screen can't be tapped while the phone is locked (a touch on the Always On Display was choosing a company before you unlocked) | af6ae67 |
 | 349 | 2026-11-14 | The temporary silent unlock report is removed - the company screen works | 805c26b |
-| 350 | 2026-11-14 | Lockedintool's own screen on top of the phone's Recents: only the apps opened in the company you're in | |
+| 350 | 2026-11-14 | Lockedintool's own screen on top of the phone's Recents: only the apps opened in the company you're in | 43c40cb |

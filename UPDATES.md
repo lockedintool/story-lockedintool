@@ -359,4 +359,4 @@ commits, pushed as a new update) - nothing else changes.
 | 350 | 2026-11-14 | Lockedintool's own screen on top of the phone's Recents: only the apps opened in the company you're in | 43c40cb |
 | 351 | 2026-11-14 | Lockedintool's Recents screen covers the phone's sooner, and the phone's clock / battery bar stays visible above it | 0d20b13 |
 | 352 | 2026-11-14 | The Recents screen's Close all button is smaller and sits a little higher | fce7ae4 |
-| 353 | 2026-11-14 | Lockedintool's Recents screen goes up the moment the swipe starts, before the phone's Recents shows | |
+| 353 | 2026-11-14 | Lockedintool's Recents screen goes up the moment the swipe starts, before the phone's Recents shows | d40fbe3 |

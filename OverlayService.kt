@@ -68,6 +68,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private val unlocked = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             userPresentAt = System.currentTimeMillis()
+            spacesTouchable()   // #348
             showWalletBtn(false)   // #333: unlocked - the lock screen's Wallet page button goes at once (never over the company screen)
             ui.post { secWaitUnlocked(); endLockWallet() }
             ui.postDelayed({ spDiag("unlocked"); spacesAfterUnlock() }, 250)   // #302: Business - choose your focus after every unlock
@@ -977,6 +978,11 @@ class OverlayService : Service(), StoryBridge.Host {
         }
         // Profile's main window takes the keyboard like the Pages do (so typing a name / username / bio just works).
         p.lp.flags = if (p.gap) flagsFor(true, false) else if (p.profile) flagsFor(false, shown) else flagsFor(p.small, shown)
+        // #348 (the #346 reports, 14 Nov 2026): the company screen put up at screen off shows over the Always On Display and
+        // a touch there (double-tap to wake...) CHOSE a company before you'd even unlocked - then the unlock showed your
+        // app. While the phone is locked it can be seen but never touched; it becomes touchable at the unlock.
+        if (p === pagesPane && shown && spacesHolding() && (keyguardLocked() || !getSystemService(android.os.PowerManager::class.java).isInteractive))
+            p.lp.flags = p.lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         // Lock screen dial pad: hear touches anywhere else on the lock screen (swipe up to unlock...) to step away.
         if (p.lock && shown) p.lp.flags = p.lp.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         if ((p === pagesPane && cardSecureOn) || (p === profilePane && cardSecureProfile)) p.lp.flags = p.lp.flags or WindowManager.LayoutParams.FLAG_SECURE   // card details showing
@@ -3069,7 +3075,7 @@ class OverlayService : Service(), StoryBridge.Host {
             if (res == "null" && tries < 4) { ui.postDelayed({ spacesArm(tries + 1) }, 400); return@evaluateJavascript }
             if (res != "ok") { if (!p.shown && !pagesInHome() && !spacesWarm) runCatching { p.web.onPause() }; SpacesCover.close(); return@evaluateJavascript }
             // #341: Pages already up (you were in Lockedintool) or kept in the Home: the chooser is on top of them already.
-            if (p.shown || pagesInHome()) { spacesPreShown = true; return@evaluateJavascript }
+            if (p.shown || pagesInHome()) { spacesPreShown = true; if (p.shown) setShown(p, true); return@evaluateJavascript }   // #348: re-applied untouchable
             // #342: shown only once the chooser itself has been drawn - never the hidden window's old picture.
             if (!Security.lit(this)) { spacesPreShown = true; showPagesOn(p, "0") {} }
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
@@ -3160,6 +3166,13 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     /** #335: the company screen is on screen or waiting for the unlock - the Pages are never reloaded under it (a reload wiped it). */
     private fun spacesHolding() = spacesUpFlag || spacesPreShown
+    /** #348: unlocked - the company screen takes touches again. */
+    private fun spacesTouchable() {
+        val p = pagesPane ?: return
+        if (!p.shown || keyguardLocked()) return
+        val f = flagsFor(p.small, true) or (if (cardSecureOn) WindowManager.LayoutParams.FLAG_SECURE else 0)
+        if (p.lp.flags != f) { p.lp.flags = f; runCatching { p.wm.updateViewLayout(p.frame, p.lp) } }
+    }
     private fun spacesHeld() = spacesUpFlag || (spacesPreShown && !keyguardLocked())
     private fun spacesReshow() {
         if (!spacesHeld() || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return
@@ -3187,6 +3200,7 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     override fun spacesTrace(): String = ""
     private fun spacesAfterUnlock() {
+        spacesTouchable()   // #348
         // #317: the saved 'companies are on' flag may never have been written - ask the page itself.
         if (!spacesWanted()) {
             val pw = pagesPane?.web

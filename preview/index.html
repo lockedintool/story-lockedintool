@@ -1446,7 +1446,7 @@
   .cardrv-copy{ flex:0 0 auto; padding:7px 12px; border-radius:10px; border:1px solid #2a2a2a; background:#000000; color:#ffffff; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; }
   .cardrv-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   /* Business accounts - the company chooser and companies (#302) */
-  #lit-spaces{ position:fixed; inset:0; z-index:100000; background:#000000; color:#ffffff; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #lit-spaces{ position:fixed; inset:0; z-index:999996; background:#000000; color:#ffffff; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
   #lit-spaces .sp-bg{ position:absolute; inset:0; background-size:cover; background-position:center; }
   #lit-spaces .sp-name{ position:absolute; left:16px; right:16px; top:15%; text-align:center; font-size:26px; font-weight:900; text-shadow:0 0 0.75px #000, 0 0 1.5px #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #lit-spaces .sp-track{ position:absolute; left:0; right:0; top:calc(15% + 52px); height:min(44vh, 76vw); }
@@ -9813,7 +9813,7 @@ function subscriptionScreen(){
       ${w.status === 'pending' ? `<button class="btn-wide" data-action="sub-reopen">${w.provider === 'stitch' ? 'Open my bank’s page again' : 'Open the payment page again'}</button>
       <button class="btn-wide" data-action="sub-cancel"${state.sub.busy ? ' disabled' : ''}>Cancel - nothing is paid</button>` : `<button class="btn-wide btn-primary" data-action="sub-done">Done</button>`}
     </div>` : ''}
-    ${SUB_PLANS.filter(p=>!(active && s.plan === p.key)).map(p=>{ const pr = plans[p.key] || {}; return `
+    ${SUB_PLANS.filter(p=>!(active && s.plan === p.key && !(state.sub.mode && s.mode && state.sub.mode !== s.mode))).map(p=>{ const pr = plans[p.key] || {}; return `
       <div class="sub-card${p.key === 'premium' ? ' sub-premium' : ''}">
         <div class="sub-top"><div class="sub-name">${p.name}</div><div class="sub-price">$${pr.usd}/month</div></div>
         ${p.badge ? `<div class="sub-badge">${p.badge}</div>` : ''}
@@ -9916,6 +9916,14 @@ function subOptionScreen(locked){
 }
 function subOptConfirm(){
   const k = state.sub.optView; state.sub.optView = null;
+  // #322 (owner, 14 Nov 2026: 'can only choose one system. Can't switch. Unless pay for the second system price to switch'):
+  // a customer with a plan under one system switches to the other only by paying a plan under it.
+  const cur = subState() || {};
+  if(cur.active && !cur.officialPlan && !fullAccess() && cur.mode && cur.mode !== k){
+    state.sub.mode = k; renderDevice();
+    showToast('Switching to ' + subOptName(k) + ' comes with a plan for it - choose one below');
+    return;
+  }
   if(k === 'second' && sysModeState().on){ showToast('Lockedintool is your only system - log out or delete your account to change it'); renderDevice(); return; }
   state.sub.mode = k; renderDevice();
   // The official account's option is kept on the server (no payment) - Premium under the option it chose.
@@ -9927,7 +9935,9 @@ function subOptConfirm(){
   else showToast('Only system - now choose your plan');
 }
 // A plan paid under "Only system" turns it on (here, and whenever Lockedintool sees that plan).
-function subApplyMode(){ const s = subState() || {}; const sw = systemStateGet(); if(s.active && s.mode === 'only' && litSignedIn() && (!sw.app || (sw.on && !sw.owner)) && !sysModeState().on && sysModeState().ready){ try{ window.StoryNative.systemModeSet(true, ''); }catch(e){} syncAppPages(); } sysHomeCheck(); }
+function subApplyMode(){ const s = subState() || {}; const sw = systemStateGet();
+  if(s.active && s.mode === 'second' && !s.officialPlan && !sw.owner && sysModeState().on){ try{ window.StoryNative.systemModeSet(false, 'PLAN-SECOND'); }catch(e){} }   // #322: a plan paid under Second system switches Only system off
+  if(s.active && s.mode === 'only' && litSignedIn() && (!sw.app || (sw.on && !sw.owner)) && !sysModeState().on && sysModeState().ready){ try{ window.StoryNative.systemModeSet(true, ''); }catch(e){} syncAppPages(); } sysHomeCheck(); }
 // Only system is on but Lockedintool isn't the phone's Home app yet (Android's question was never answered - owner,
 // 4 Nov 2026: 'Nothing is happening'): ask it again, once each time Lockedintool's screens start, from the Pages window.
 let sysHomeAsked = false;
@@ -21737,8 +21747,17 @@ function litAuthOpen(mode){
   const logo = '<img alt="" src="icon-192.png">';
   const p = profileData();
   const forgotBtn = '<button class="lit-auth-link" data-auth="to-forgot">Forgot password?</button>';
-  if(litAuthMode === 'welcome') el.innerHTML = '<div class="lit-auth-in">' + logo + '<h1>Welcome</h1><p>Create your account, or log in to the one you have.</p>' +
-    '<button data-auth="to-signup">Create your account</button><button class="lit-auth-alt" data-auth="to-login">Log in</button></div>';
+  // #322 (owner, 14 Nov 2026: 'When they set up lockedintool, Lockedintool will tell them they need to create a personal
+  // account first'): the first account is your PERSONAL account - your main one, with your plan; a company's space
+  // asks for that company's own account (it shares your plan).
+  const spCo = (typeof spaceOf === 'function' && window.litSpace && litSpace() !== 'personal') ? spaceOf(litSpace()) : null;
+  if(litAuthMode === 'welcome') el.innerHTML = '<div class="lit-auth-in">' + logo + (spCo
+      ? '<h1>' + escText(spCo.name) + '</h1><p>Create the Lockedintool account for ' + escText(spCo.name) + ', or log in to it. It shares your plan.</p>' +
+        '<button data-auth="to-signup">Create the ' + escText(spCo.name) + ' account</button><button class="lit-auth-alt" data-auth="to-login">Log in</button>' +
+        '<button class="lit-auth-alt" data-sp-act="personal">View Personal account</button>'
+      : '<h1>Welcome</h1><p>Start with your Personal account - your main Lockedintool account. Or log in to it.</p>' +
+        '<button data-auth="to-signup">Create your Personal account</button><button class="lit-auth-alt" data-auth="to-login">Log in</button>' +
+        ((typeof spaceList === 'function' && spaceList().length) ? '<button class="lit-auth-alt" data-sp-act="chooser">Choose another focus</button>' : '')) + '</div>';
   else if(litAuthMode === 'login') el.innerHTML = '<div class="lit-auth-in">' + logo + '<h1>Log in</h1><p>Your @username and password.</p>' +
     '<label>Username</label><div class="lit-auth-at"><span>@</span><input class="lit-auth-user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="30" value="' + escText(litForgot.u || '') + '"></div>' +
     '<label>Password</label><input class="lit-auth-pw" type="password" autocomplete="current-password" maxlength="128">' + litSaveRow() +

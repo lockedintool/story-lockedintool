@@ -387,3 +387,4 @@ commits, pushed as a new update) - nothing else changes.
 | 378 | 2026-11-14 | Files: every account (each company too) keeps its own files and folders in Lockedintool - add pictures, videos, documents and audio, open, rename, move and delete them. Dashboard menu > FILES. | 3664638 |
 | 379 | 2026-11-14 | Team: add the people who work with you by @username as Manager or Staff; they accept in their own TEAM screen and then see (managers: also manage) your Files. Dashboard menu > TEAM. | 7493f7b |
 | 380 | 2026-11-14 | Meetings: plan a meeting (day, time, length, notes), invite your team or anyone by @username; they're told, answer Going / Can't go, get reminded 10 minutes before, and join the meeting's call. Dashboard menu > MEETINGS. | 78ab4d1 |
+| 381 | 2026-11-14 | Selling: your own shop - add products or services with pictures, price and a description (Dashboard menu > SHOP). It shows on your profile; people tap a product and Message to buy. |  |

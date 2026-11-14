@@ -100,7 +100,8 @@ class OverlayService : Service(), StoryBridge.Host {
             // #317: the screen came back on WITHOUT the lock screen (the phone locks a few seconds after the screen goes
             // off, so a quick off / on never unlocks) - the company chooser shows all the same.
             spLog("screen on (lock screen up: $lockedAtScreenOn)")
-            if (!lockedAtScreenOn) ui.postDelayed({ spacesAfterUnlock() }, 300) }
+            if (!lockedAtScreenOn) ui.postDelayed({ spacesAfterUnlock() }, 300)
+            else unlockWatchStart() }
     }
     // Always On Display: the moment the screen goes off, switch it straight back on with Station 3
     // showing. Android's display watcher usually reports "off" before the screen-off broadcast does,
@@ -2972,6 +2973,21 @@ class OverlayService : Service(), StoryBridge.Host {
     // #309 (owner, 13 Nov 2026: 'I'm turning off and unlocking my phone and I'm not seeing that screen'): it answers BOTH
     // the unlock broadcast and the phone's own locked / unlocked listener (once per unlock), and any reason it didn't
     // open is reported, so the cause shows in the problem report.
+    /** #323 (owner's unlock log, 14 Nov 2026: only 'screen on (lock screen up: true)', never 'unlocked'): on the owner's
+     *  phone neither the unlock broadcast (USER_PRESENT) nor the keyguard listener (a system-only permission) ever arrives,
+     *  so nothing that waits for the unlock ran - the company screen included. After the screen comes on at the lock
+     *  screen, Lockedintool looks every 0.3 s whether it's still locked (only until it's unlocked or the screen goes off,
+     *  then every 1.5 s) and runs the same unlock steps itself if the phone's own signal didn't come. */
+    private var unlockWatchAt = 0L
+    private val unlockWatch = object : Runnable { override fun run() {
+        val now = System.currentTimeMillis()
+        if (screenOffAt > unlockWatchAt) return
+        val km = getSystemService(android.app.KeyguardManager::class.java)
+        // every 0.3 s for the first 2 minutes, then every 1.5 s while the screen stays on (e.g. the Always On Display)
+        if (km?.isKeyguardLocked == true) { ui.postDelayed(this, if (now - unlockWatchAt < 120_000L) 300 else 1500); return }
+        if (userPresentAt < unlockWatchAt) { spLog("unlocked (seen by Lockedintool)"); runCatching { unlocked.onReceive(this@OverlayService, Intent(Intent.ACTION_USER_PRESENT)) } }
+    } }
+    private fun unlockWatchStart() { unlockWatchAt = System.currentTimeMillis(); ui.removeCallbacks(unlockWatch); ui.postDelayed(unlockWatch, 300) }
     @Volatile private var spacesShownAt = 0L
     @Volatile private var sysAsideAt = 0L
     /** #312 (owner, 13 Nov 2026: 'I'm turning my phone off and on, nothing is happening, I'm not seeing that screen'): a

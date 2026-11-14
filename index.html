@@ -15111,7 +15111,7 @@ function acctBoxHTML(){
 // #319 TEMPORARY (owner's phone only): what happened after the last unlocks - remove once the chooser works.
 function spTraceHTML(){
   let t = ''; try{ if(NATIVE && window.StoryNative.spacesTrace) t = window.StoryNative.spacesTrace() || ''; }catch(e){}
-  if(!t || !fullAccess()) return '';
+  if(!t) return '';   // the app only keeps this log on the owner's phone (Release.isOwner) - shown whichever account is active
   return `<div class="set2-sub" style="margin-top:18px;">UNLOCK LOG (temporary - send a screenshot)</div><pre style="white-space:pre-wrap;font-size:11px;line-height:1.45;margin:6px 0 0;padding:10px;border:1px solid #2a2a2a;border-radius:12px;">${escText(t)}</pre>`;
 }
 function acctApply(k){

@@ -152,6 +152,9 @@ class MainActivity : Activity() {
             col.addView(btn("Publish live update") { askPin("Publish live update", "Everything you see on this phone now goes to everyone.") { pin -> publish(pin, "publish") } })
             col.addView(btn("Undo last update") { askPin("Undo last update", "Everyone goes back to the screens from before the last update.") { pin -> publish(pin, "undo") } })
             col.addView(btn("Leave owner mode") { Release.setOwner(this, false); channelChanged() })
+            // #323 TEMPORARY: what happened after the last unlocks (the company screen) - remove with #318 / #319.
+            val trace = getSharedPreferences("story", MODE_PRIVATE).getString("spaces_trace", "") ?: ""
+            col.addView(title("Unlock log (company screen):\n" + (if (trace.isBlank()) "nothing written yet - lock and unlock the phone, then open this again" else trace), 12f).apply { setTextColor(Color.parseColor("#FFAAAAAA")); setPadding(0, pad, 0, 0); setTextIsSelectable(true) })
         }
         addBuildLine(col, pad)
         setContentView(ScrollView(this).apply { setBackgroundColor(StoryTheme.swap(this@MainActivity, Color.BLACK)); addView(col) })

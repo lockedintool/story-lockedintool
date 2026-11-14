@@ -90,6 +90,21 @@ class MainActivity : Activity() {
         if (getSharedPreferences("story", MODE_PRIVATE).getBoolean("enabled", false) && AppMode.appOnly(this) && !intent.getBooleanExtra("setup", false)) {
             LockedintoolApp.open(this, null); finish(); return
         }
+        // #371 (owner, 14 Nov 2026, a screenshot of this setup screen: 'So lockedintool won't have this app anymore. Everything
+        // will work as a normal app'): in the app-only test there is no setup screen - the icon opens Lockedintool itself,
+        // starting it the first time by itself. (Android's own 'display over other apps' switch is the one thing it still
+        // needs - Station 3 and the Pages are drawn with it - so a phone without it gets Android's own screen for it once.)
+        if (AppMode.APP_ONLY && !intent.getBooleanExtra("setup", false)) {
+            if (!Settings.canDrawOverlays(this)) {
+                android.widget.Toast.makeText(this, "Allow Lockedintool to display over other apps, then open Lockedintool again", android.widget.Toast.LENGTH_LONG).show()
+                runCatching { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))) }
+                finish(); return
+            }
+            if (Build.VERSION.SDK_INT >= 33) runCatching { requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1) }
+            getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("enabled", true).apply()
+            runCatching { startForegroundService(Intent(this, OverlayService::class.java)) }
+            LockedintoolApp.open(this, null); finish(); return
+        }
         // Everything was copied from the old Lockedintool: remove it (asked once by itself, the button stays until it's gone).
         if (AppMove.removeOld(this)) {
             col.addView(title("Everything was copied from the old Lockedintool. Remove the old one so only this one runs. Log in once to bring your chats back.", 15f))

@@ -12,7 +12,12 @@ import android.content.Context
  *  working as a system (pref 'enabled' was set); new installs start as the app. */
 object AppMode {
     private const val PREF = "system_on"
+    /** #370 THE APP-ONLY TEST (owner, 14 Nov 2026: 'Let's make lockedintool just an app ... make everything work like inside
+     *  the app'; everything before is kept in the vault branch vault-2026-11-14 and the published 1.544 is left alone):
+     *  Lockedintool is ONLY an app - never Second / Only system. Set false to bring the systems back. */
+    const val APP_ONLY = true
     fun systemOn(c: Context): Boolean {
+        if (APP_ONLY) return false
         val p = c.getSharedPreferences("story", Context.MODE_PRIVATE)
         if (!p.contains(PREF)) { val v = p.getBoolean("enabled", false); p.edit().putBoolean(PREF, v).apply(); return v }
         return p.getBoolean(PREF, true)

@@ -10939,7 +10939,10 @@ function systemStateGet(){
   try{ if(NATIVE && window.StoryNative.systemState){ const [on, mode, who] = String(window.StoryNative.systemState()).split('|'); return { on: on === 'on', mode, owner: who === 'owner', app: true }; } }catch(e){}
   return { on:false, mode:'second', owner:true, app:false };
 }
+// #370 THE APP-ONLY TEST: Lockedintool is only an app - no System switch / systems box in Settings (the vault keeps them).
+const LIT_APP_ONLY = true;
 function systemCardsHTML(){
+  if(LIT_APP_ONLY) return '';
   const st = systemStateGet();
   const sub = (typeof subState === 'function' && subState()) || {};
   const bought = sub.active && (sub.mode === 'only' || sub.mode === 'second') ? sub.mode : '';

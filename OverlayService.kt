@@ -109,7 +109,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // so whichever comes first wins; the other one is ignored.
     @Volatile private var aodStartedAt = 0L
     private fun onScreenOff() {
-        spacesUpFlag = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
+        spacesUpFlag = false; spacesPreShown = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
         ContentGuard.clearForNow()   // 'This is a mistake' lets you carry on only until the screen goes off
         val now = System.currentTimeMillis()
         if (now - aodStartedAt < 800) return               // the same screen-off, reported twice
@@ -678,7 +678,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // ---- Apps | Lockedintool switch (owner: 'rename the word Pages on the switch to Lockedintool') ----
     private var pickerAt = 0L
     private fun showPicker() {
-        if (spacesUpFlag) return   // #328: nothing skips the company screen
+        if (spacesHeld()) return   // #328: nothing skips the company screen
         hidePicker()
         pickerAt = SystemClock.uptimeMillis()
         val row = LinearLayout(this).apply {
@@ -1391,7 +1391,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
-        if (spacesUpFlag && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
+        if (spacesHeld() && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
         litAppPkg?.let { a -> if (pkg != a && pkg != "com.android.systemui" && pkg != packageName) {   // Lockedintool's own screens (unlock, call setup) keep it
             litAppPkg = null
             if (AppMode.appOnly(this) && pagesPane?.shown != true) {
@@ -2022,7 +2022,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Apps | Lockedintool switch). Not in Only system (the Dashboard IS your home there) or Only use widgets, and not
      *  while Lockedintool is opening one of its own screens / apps. */
     fun recentsShown(pkg: String, cls: String) { if (pkg != packageName && pkg != "com.android.systemui") phoneScreenShown(); ui.post {
-        if (spacesUpFlag && pkg != packageName) ui.postDelayed({ spacesReshow() }, 300)   // #328: the company screen stays
+        if (spacesHeld() && pkg != packageName) ui.postDelayed({ spacesReshow() }, 300)   // #328: the company screen stays
         // The phone's own Home / Recents just came up: a switch that popped up with that same swipe goes away, so only
         // the phone's screen shows (a switch you opened with a real tap earlier stays).
         if (picker != null && pkg != packageName && SystemClock.uptimeMillis() - pickerAt < 800 &&
@@ -2081,7 +2081,7 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile private var swipeUpAt = 0L
     private fun phoneSwipe(kind: String) { ui.post {
         if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
-        if (spacesUpFlag) { ui.postDelayed({ spacesReshow() }, 350); return@post }   // #328: the company screen stays
+        if (spacesHeld()) { ui.postDelayed({ spacesReshow() }, 350); return@post }   // #328: the company screen stays
         if (keyguardLocked() || sysQuiet() || SystemMode.on(this)) return@post
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive) return@post
         swipeUpAt = SystemClock.uptimeMillis()
@@ -3041,8 +3041,12 @@ class OverlayService : Service(), StoryBridge.Host {
      *  comes up anyway, the chooser comes straight back over it (never over a call). */
     @Volatile private var spacesUpFlag = false
     override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (on) { spacesPreShown = false; showWalletBtn(false) }; if (!on) spacesUnwarm() } }
+    /** #334 (owner, 14 Nov 2026: 'Still missing ... Like the home screen or recent apps'): the chooser counts as up from the
+     *  moment it was put on screen at screen off - not only once the page said so after the unlock - so the phone's Home /
+     *  Recents (or anything) coming up in between never leaves it hidden. */
+    private fun spacesHeld() = spacesUpFlag || (spacesPreShown && !keyguardLocked())
     private fun spacesReshow() {
-        if (!spacesUpFlag || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return
+        if (!spacesHeld() || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return
         val p = pagesPane ?: return
         hidePicker()
         showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar() }
@@ -3078,6 +3082,8 @@ class OverlayService : Service(), StoryBridge.Host {
             }
             return
         }
+        // #334: it never goes missing after the unlock - looked at a few times (no loop) and put back if something took it away.
+        for (d in longArrayOf(500, 1200, 2500, 4500)) ui.postDelayed({ if (spacesHeld() && pagesPane?.shown != true) spacesReshow() }, d)
         if (spacesShownAt > screenOffAt) { spDiag("already shown for this unlock"); return }
         if (!keyguardLocked()) spacesStale()
         val why = when {

@@ -29,6 +29,10 @@ class StoryAccessibilityService : AccessibilityService() {
             if (e.isPassword || ENTRY_TREE_CLASS.containsMatchIn(e.className?.toString() ?: "")) OverlayService.instance?.lockBouncerShown(sure = true)
             else if (looksLikeUnlockEntry(e)) OverlayService.instance?.lockBouncerShown(sure = false)
         }
+        // #350: the phone's Recents drawing itself (One UI draws it in the home-screen app) - Lockedintool's own screen
+        // covers it at the very first sign, not a moment later.
+        if (e.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && pkg != packageName && pkg != "com.android.systemui" && pkg.contains("launcher", true))
+            OverlayService.instance?.recCoverPoke()
         when (e.eventType) {
             // Which app is on screen (so music playing in the background can be told apart from it).
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {

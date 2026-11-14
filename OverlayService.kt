@@ -3144,7 +3144,15 @@ class OverlayService : Service(), StoryBridge.Host {
         if (up) { if (recCover == null) recCoverShow() }
         else if (recCover != null && SystemClock.uptimeMillis() - recCoverShownAt > 250) recCoverHide()
     }
-    private fun recCoverLook() { for (d in longArrayOf(0, 120, 300, 700)) ui.postDelayed({ recCoverCheck() }, d) }
+    private fun recCoverLook() { for (d in longArrayOf(0, 50, 100, 160, 230, 320, 450, 700)) ui.postDelayed({ recCoverCheck() }, d) }
+    /** #350: the launcher's screen changed - a quick look whether it's Recents (only while companies are set up and the
+     *  cover isn't up yet; at most every 60 ms, so it never slows the phone). */
+    @Volatile private var recPokeAt = 0L
+    fun recCoverPoke() {
+        if (recCover != null || !spacesWanted()) return
+        val now = SystemClock.uptimeMillis(); if (now - recPokeAt < 60) return; recPokeAt = now
+        ui.post { if (recCover == null) recCoverCheck() }
+    }
     private fun recCoverHide() {
         val v = recCover ?: return
         recCover = null
@@ -3159,10 +3167,12 @@ class OverlayService : Service(), StoryBridge.Host {
         recCoverShownAt = SystemClock.uptimeMillis()
         val v = recCoverBuild()
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, layerType,
+            WindowManager.LayoutParams.MATCH_PARENT, realHeightPx() - statusBarHeightPx(), layerType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.OPAQUE)
+        // The phone's clock / battery bar stays visible above it, like every Lockedintool screen.
         lp.gravity = Gravity.TOP or Gravity.START
+        lp.y = statusBarHeightPx()
         pinToScreen(lp)
         recCover = v
         recCoverWm = layerAdd(v, lp)
@@ -3181,7 +3191,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val name = spPrefs().getString("space_name", "")?.ifEmpty { null } ?: (if (spaceCur() == "personal") "Personal" else "this company")
         val root = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL; setBackgroundColor(bg)
-            setPadding((18 * dp).toInt(), statusBarHeightPx() + (16 * dp).toInt(), (18 * dp).toInt(), navBarHeightPx() + (14 * dp).toInt())
+            setPadding((18 * dp).toInt(), (16 * dp).toInt(), (18 * dp).toInt(), navBarHeightPx() + (14 * dp).toInt())
             isClickable = true
         }
         root.addView(TextView(this).apply { text = "OPENED IN"; setTextColor(sub); textSize = 12f; letterSpacing = 0.1f })

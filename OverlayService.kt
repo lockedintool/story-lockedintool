@@ -700,8 +700,11 @@ class OverlayService : Service(), StoryBridge.Host {
         // #363 (owner, 14 Nov 2026: 'on the second system ... tap the bottom button and switch to apps which should take you
         // back to business home'; then 'Business home replaces apps'): with a business in focus the switch reads Business home |
         // Lockedintool - Business home = its business home; Lockedintool = your Lockedintool.
-        val biz = spacesWanted() && spaceCur() != "personal"
-        row.addView(word(if (biz) "Business home" else "Apps") { if (biz) { setInLit(true); showPanel(station3Only = false, page = "biz-home") } else { setInLit(false); hidePanel() } })
+        // #364 (owner, same day: 'Also put in personal' - 'has its home screen replacing the devices one'): Personal has its own
+        // home too, so with the Business account the switch reads Personal home | Lockedintool there.
+        val biz = spacesWanted()
+        val homeWord = if (spaceCur() == "personal") "Personal home" else "Business home"
+        row.addView(word(if (biz) homeWord else "Apps") { if (biz) { setInLit(true); showPanel(station3Only = false, page = "~space") } else { setInLit(false); hidePanel() } })
         row.addView(TextView(this).apply { text = "|"; setTextColor(th(Color.parseColor("#66FFFFFF"))); textSize = 18f })
         row.addView(word("Lockedintool") { setInLit(true); showPanel(station3Only = false, page = if (biz) "~home" else null) })  // the only way into Lockedintool itself (owner: it says Lockedintool, not Pages)
         picker = row
@@ -1676,19 +1679,25 @@ class OverlayService : Service(), StoryBridge.Host {
     // lockedintool unless switched. I think the phone should work how it works'; chose 'Remove it everywhere'): the
     // 'stay in Lockedintool' rule is gone - the phone's Home / closing Recents show the phone's own home screen as normal.
     @Suppress("UNUSED") private fun inLitOld(): Boolean = inLitCache ?: getSharedPreferences("story", MODE_PRIVATE).getBoolean("in_lit", false).also { inLitCache = it }
-    private fun inLit(): Boolean = false
+    // #365 (owner, 14 Nov 2026: 'business home should always stay as a home screen. Its the same thing just not the phones
+    // original - Lockedintool. But it will only be on second system'): on Second system with companies set up, the focus's
+    // own home (Business home / Personal home) IS the home screen - wherever the phone would show its own home screen,
+    // Lockedintool shows it. Without companies the phone works as it works (#337).
+    private fun spaceHomeOn(): Boolean = spacesWanted() && !SystemMode.on(this) && !AppMode.appOnly(this) && !WidgetMode.on(this)
+    private fun inLit(): Boolean = spaceHomeOn()
     /** #338: the phone's Recents was opened from inside Lockedintool - closing it brings you back to Lockedintool. */
     @Volatile private var backToLit = false
     private fun setInLit(on: Boolean) { if (inLit() != on) { inLitCache = on; getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("in_lit", on).apply() } }
     private fun litHomeCheck() {
         if (!(inLit() || backToLit) || pagesPane == null || pagesPane?.shown == true || keyguardLocked() || sysQuiet() || SystemMode.on(this)) return
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive || callActive || picker != null) return
+        if (spacesHolding()) return   // #365: the company screen decides while it's up
         // Only the phone's OWN home screen counts: the last app Android brought to the front must be the home-screen app
         // (owner's recording, 29 Oct 2026: Lockedintool opened by itself while they were in another app).
         val home = homePkg() ?: return
         if (StoryAccessibilityService.frontPkg != home) return
         // The phone went Home because you swiped the bottom button up (#257): that's switching to Apps - stay there.
-        if (SystemClock.uptimeMillis() - swipeUpAt < 1500) { if (!StoryAccessibilityService.recentsInFront()) setInLit(false); return }
+        if (!spaceHomeOn() && SystemClock.uptimeMillis() - swipeUpAt < 1500) { if (!StoryAccessibilityService.recentsInFront()) setInLit(false); return }   // #365: with companies, Home = their home
         if (StoryAccessibilityService.homeInFront(home) && !StoryAccessibilityService.recentsInFront()) { backToLit = false; showPanel(station3Only = false) }
     }
     private val panelCheck = Runnable {
@@ -2074,7 +2083,7 @@ class OverlayService : Service(), StoryBridge.Host {
         val home = !SystemMode.on(this) && pkg == homePkg()          // One UI's Recents is the launcher itself, so this catches Recents too
         // The phone's Home came up right after you swiped the bottom button up (#257): that's switching to Apps.
         // (Recents is drawn by the home-screen app on One UI: decide a moment later, once it's clear which one it is.)
-        if (home && inLit() && SystemClock.uptimeMillis() - swipeUpAt < 1500) ui.postDelayed({
+        if (home && inLit() && !spaceHomeOn() && SystemClock.uptimeMillis() - swipeUpAt < 1500) ui.postDelayed({
             if (inLit() && !StoryAccessibilityService.recentsInFront() && StoryAccessibilityService.frontPkg == homePkg()) {
                 setInLit(false); if (pagesPane?.shown == true) stepAsideForPhoneNav() }
         }, 700)
@@ -3318,16 +3327,11 @@ class OverlayService : Service(), StoryBridge.Host {
         val last = spPrefs().getString("space_last_$want", "") ?: ""
         if (last == "~lit" || last == packageName) return false
         // #339 / #340: not in Lockedintool there - the phone's own home screen (Only system: Lockedintool IS the home).
-        val target: String; val open: Intent
-        if (last.isEmpty()) {
-            if (SystemMode.on(this) && !AppMode.appOnly(this)) return false
-            if (want != "personal") return false   // #360: a business's 'home' is its own business home, never the phone's
-            target = homePkg() ?: return false
-            open = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        } else {
-            target = last
-            open = packageManager.getLaunchIntentForPackage(last) ?: return false
-        }
+        // #360 / #364: never been in an app there - a business's and Personal's 'home' is their own Lockedintool home, never
+        // the phone's home screen (the Pages land on it).
+        if (last.isEmpty()) return false
+        val target = last
+        val open = packageManager.getLaunchIntentForPackage(last) ?: return false
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         // #341 (owner, 14 Nov 2026: 'the two problems still not fixed' - 'I still start on lockedintool'): the chooser
         // stays on screen until you're really there, then the Pages go - no Lockedintool page in between. What's already

@@ -380,4 +380,4 @@ commits, pushed as a new update) - nothing else changes.
 | 371 | 2026-11-14 | No setup screen: the Lockedintool icon always opens the app itself, like any normal app. | c444ed9 |
 | 372 | 2026-11-14 | Subscription in the app-only test: no Second system / Only system choice - just Basic and Premium. | 690b6ef |
 | 373 | 2026-11-14 | No apps in the app-only test: Lockedintool no longer shows or opens the phone's apps (no Apps screen, no app pages, no app on Focus, no company Apps page). | 5cf3eb4 |
-| 374 | 2026-11-14 | Opening the app with companies: no Dashboard flash before the company screen. |  |
+| 374 | 2026-11-14 | Opening the app with companies: no Dashboard flash before the company screen. | 44e4a87 |

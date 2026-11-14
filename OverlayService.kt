@@ -3021,7 +3021,9 @@ class OverlayService : Service(), StoryBridge.Host {
         if (sysQuiet() || callActive || createActive) return
         val p = pagesPane ?: return
         p.web.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()") { r ->
-            if ((r ?: "").trim('"') != "ok" || p.shown || pagesInHome()) return@evaluateJavascript
+            val res = (r ?: "").trim('"')
+            spLog("screen off: chooser " + res + (if (p.shown) ", Pages already up" else "") + (if (pagesInHome()) ", in Home" else "") + (if (Security.lit(this)) ", Lockedintool security" else ""))
+            if (res != "ok" || p.shown || pagesInHome()) return@evaluateJavascript
             if (!Security.lit(this)) { setShown(p, true); spacesPreShown = true }
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }

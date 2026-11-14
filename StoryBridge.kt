@@ -73,6 +73,9 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun spacesDone()
         fun spacesTrace(): String
         fun spacesUp(on: Boolean)
+        fun spaceSwitch(id: String): Boolean
+        fun spaceApps(): String
+        fun spaceAppForget(pkg: String)
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -874,6 +877,15 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     fun spacesPending(): Boolean = pages && host.spacesPending()
     @JavascriptInterface
     fun spacesDone() { if (pages) host.spacesDone() }
+    /** #336 (owner, 14 Nov 2026): each company / Personal keeps the apps you opened in it and the one you were in. */
+    @JavascriptInterface
+    fun spaceNow(id: String) { if (pages) ctx.getSharedPreferences("story", android.content.Context.MODE_PRIVATE).edit().putString("space_cur", id.ifEmpty { "personal" }.take(60)).apply() }
+    @JavascriptInterface
+    fun spaceSwitch(id: String): Boolean = pages && host.spaceSwitch(id)
+    @JavascriptInterface
+    fun spaceApps(): String = if (pages) host.spaceApps() else "[]"
+    @JavascriptInterface
+    fun spaceAppForget(pkg: String) { if (pages) host.spaceAppForget(pkg) }
     /** #321: which account this phone is on now ('' = the main one) - the profile picture file follows it. */
     @JavascriptInterface
     fun acctSpace(sfx: String) { ctx.getSharedPreferences("story", android.content.Context.MODE_PRIVATE).edit().putString("acct_sfx", sfx.take(60)).apply() }

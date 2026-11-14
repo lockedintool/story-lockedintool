@@ -959,6 +959,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // Never shown on a locked phone without its unlock (#273), except a call's screen.
         if (shown && (p === profilePane || p === dialPane) && !callActive && keyguardLocked()) return
         if (p === pagesPane && shown) { parkedDash = false; if (homeUp) homeShotSoon() }
+        if (p === pagesPane && shown && !p.shown && !spacesHolding() && !keyguardLocked()) spaceLastSet("")   // #336: you came back to Lockedintool itself
         if (shown && p === pagesPane && pagesInHome() && LockedintoolHome.current?.visibleNow != true) homeDetach()
         p.shown = shown
         if (p === pagesPane) { if (shown) SystemMode.reset() else if (SystemMode.on(this)) { ui.removeCallbacks(systemCheckRun); ui.postDelayed(systemCheckRun, 700) } }
@@ -1393,6 +1394,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
+        spaceSeen(pkg)   // #336: the app you're in belongs to the company / Personal in focus
         if (spacesHeld() && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
         litAppPkg?.let { a -> if (pkg != a && pkg != "com.android.systemui" && pkg != packageName) {   // Lockedintool's own screens (unlock, call setup) keep it
             litAppPkg = null
@@ -3009,7 +3011,7 @@ class OverlayService : Service(), StoryBridge.Host {
             // the unlock just revealed it. Now it's always like that: the Pages with the chooser are put on screen under the
             // lock screen (Lockedintool's normal layer is below the lock screen - nothing shows while locked). With Lockedintool
             // security on it only draws hidden, so company names never show before Lockedintool is unlocked.
-            if (!Security.lit(this)) { setShown(p, true); spacesPreShown = true }
+            if (!Security.lit(this)) { spacesPreShown = true; setShown(p, true) }
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
@@ -3046,6 +3048,47 @@ class OverlayService : Service(), StoryBridge.Host {
     /** #334 (owner, 14 Nov 2026: 'Still missing ... Like the home screen or recent apps'): the chooser counts as up from the
      *  moment it was put on screen at screen off - not only once the page said so after the unlock - so the phone's Home /
      *  Recents (or anything) coming up in between never leaves it hidden. */
+    // ---- #336 (owner, 14 Nov 2026: 'if I have Facebook opened on lockedintool and I move to personal I shouldn't see
+    //      Facebook ... and since I have apps opened when I go to each I should still be in those apps'; 'I should only see
+    //      the apps I opened - and if I left it opened it shouldn't close'): every company / Personal remembers the apps
+    //      opened while it was in focus and the one you were in. Choosing it takes you back into that app; Apps lists what
+    //      you opened there. Nothing is ever closed. (The phone's own Recents belongs to Android and still lists everything.) ----
+    private fun spPrefs() = getSharedPreferences("story", MODE_PRIVATE)
+    private fun spaceCur() = spPrefs().getString("space_cur", "personal")?.ifEmpty { "personal" } ?: "personal"
+    private fun spaceLastSet(pkg: String) { if (spacesWanted()) spPrefs().edit().putString("space_last_" + spaceCur(), pkg).apply() }
+    private fun spaceSeen(pkg: String) {
+        if (!spacesWanted() || keyguardLocked() || spacesHolding()) return
+        if (pkg == homePkg() && pkg != packageName) { spaceLastSet(""); return }   // the phone's home screen: you left the apps
+        if (pkg == packageName || pkg == "com.android.systemui" || pkg == "android" || packageManager.getLaunchIntentForPackage(pkg) == null) return
+        val key = "space_apps_" + spaceCur()
+        val list = runCatching { org.json.JSONArray(spPrefs().getString(key, "[]")) }.getOrNull() ?: org.json.JSONArray()
+        val out = org.json.JSONArray().put(pkg)
+        for (k in 0 until list.length()) { val q = list.optString(k); if (q.isNotEmpty() && q != pkg && out.length() < 30) out.put(q) }
+        spPrefs().edit().putString(key, out.toString()).putString("space_last_" + spaceCur(), pkg).apply()
+    }
+    override fun spaceApps(): String = spPrefs().getString("space_apps_" + spaceCur(), "[]") ?: "[]"
+    override fun spaceAppForget(pkg: String) { ui.post {
+        val key = "space_apps_" + spaceCur()
+        val list = runCatching { org.json.JSONArray(spPrefs().getString(key, "[]")) }.getOrNull() ?: return@post
+        val out = org.json.JSONArray(); for (k in 0 until list.length()) list.optString(k).takeIf { it.isNotEmpty() && it != pkg }?.let { out.put(it) }
+        spPrefs().edit().putString(key, out.toString()).apply()
+        if (spPrefs().getString("space_last_" + spaceCur(), "") == pkg) spaceLastSet("")
+    } }
+    /** Choosing a company / Personal: back into the app you were in there (true), else the Pages show it as before (false). */
+    override fun spaceSwitch(id: String): Boolean {
+        val want = id.ifEmpty { "personal" }
+        spPrefs().edit().putString("space_cur", want).apply()
+        val last = spPrefs().getString("space_last_$want", "") ?: ""
+        if (last.isEmpty() || last == packageName) return false
+        val i = packageManager.getLaunchIntentForPackage(last) ?: return false
+        ui.post {
+            spacesUpFlag = false; spacesPreShown = false
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { startActivity(i) }.isFailure) return@post
+            hidePanelFor(last, "your app in this company")
+        }
+        return true
+    }
     /** #335: the company screen is on screen or waiting for the unlock - the Pages are never reloaded under it (a reload wiped it). */
     private fun spacesHolding() = spacesUpFlag || spacesPreShown
     private fun spacesHeld() = spacesUpFlag || (spacesPreShown && !keyguardLocked())

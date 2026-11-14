@@ -91,6 +91,7 @@
   window.litAcctSfx = acctSfx;
   window.litAcctHomeToken = function(){ try{ var h = acctHome(); if((cur() || 'personal') === (h || 'personal')) return ''; var a = JSON.parse(g.call(window.localStorage, 'story-msg-account') || '{}') || {}; return a.token || ''; }catch(e){ return ''; } };
   try{ if(window.StoryNative && window.StoryNative.acctSpace) window.StoryNative.acctSpace(acctSfx()); }catch(e){}
+  try{ if(window.StoryNative && window.StoryNative.spaceNow && !/[?&](s3|widget)=/.test(location.search)) window.StoryNative.spaceNow(cur() || 'personal'); }catch(e){}   // #336
   // Another window changed something: listeners see the plain key when it's this space's, and nothing they know when
   // it's another space's (a company's cards never land on Personal's screen).
   window.addEventListener('storage', function(e){
@@ -1446,6 +1447,7 @@
   .cardrv-copy{ flex:0 0 auto; padding:7px 12px; border-radius:10px; border:1px solid #2a2a2a; background:#000000; color:#ffffff; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; }
   .cardrv-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   /* Business accounts - the company chooser and companies (#302) */
+  .opened-x{ border:0; background:none; color:inherit; font-size:22px; line-height:1; padding:4px 10px; margin:-4px -6px -4px 0; opacity:0.7; }
   #lit-spaces{ position:fixed; inset:0; z-index:999996; background:#000000; color:#ffffff; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
   #lit-spaces .sp-name{ position:absolute; left:16px; right:16px; top:15%; text-align:center; font-size:26px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #lit-spaces .sp-track{ position:absolute; left:0; right:0; top:calc(15% + 52px); height:min(44vh, 76vw); }
@@ -14668,6 +14670,7 @@ function appsScreen(){
     <div class="page-shell apps-shell">
     ${topBar('Apps', false)}
     <div class="apps-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="apps-search-input" type="text" placeholder="Search apps" autocomplete="off" value="${escText(state.appsQuery || '').replace(/"/g,'&quot;')}"><button class="apps-search-x" data-apps-clear aria-label="Clear"${state.appsQuery ? '' : ' style="visibility:hidden"'}>×</button></div>
+    ${appsOpenedHTML()}
     ${sections.map(sec=>{
       const items = state.installedApps.filter(a=>a.section===sec && appInSpace(a)).sort((x, y)=>(y.own ? 1 : 0) - (x.own ? 1 : 0));
       if(!items.length) return '';
@@ -14699,6 +14702,26 @@ function appsScreen(){
     ${state.spMoveApp ? spMoveTemplate() : ''}
   `;
 }
+// #336 (owner, 14 Nov 2026: 'I should only see the apps I opened - and if I left it opened it shouldn't close'): with
+// companies, Apps starts with the apps you opened while this company / Personal was in focus (newest first). Tap = open it
+// (where you left it); × only takes it off this list - the app itself is never closed.
+function appsOpenedHTML(){
+  if(!NATIVE || !bizOn() || !window.StoryNative.spaceApps) return '';
+  let pk = []; try{ pk = JSON.parse(window.StoryNative.spaceApps() || '[]') || []; }catch(e){}
+  const apps = pk.map(p=>state.installedApps.find(a=>a.pkg === p)).filter(Boolean);
+  if(!apps.length) return '';
+  return `<div class="section-title" data-apps-sec="OPENED">OPENED IN ${escText(spaceName(litSpace()).toUpperCase())}</div>
+    ${apps.map(a=>`<div class="row-card app-row" style="cursor:pointer;" data-app-sec="OPENED" data-app-name="${escText((a.name || '').toLowerCase())}" data-native-pkg="${escText(a.pkg)}">
+      <div class="row"><div class="row-left"><div class="row-icon">${appIconHTML(a)}</div><div class="row-name">${escText(a.name)}</div></div>
+      <button class="opened-x" data-opened-x="${escText(a.pkg)}" aria-label="Take off this list">×</button></div></div>`).join('')}`;
+}
+window.addEventListener('click', e=>{
+  const x = e.target.closest && e.target.closest('[data-opened-x]'); if(!x) return;
+  e.stopPropagation(); e.preventDefault();
+  try{ window.StoryNative.spaceAppForget(x.getAttribute('data-opened-x')); }catch(err){}
+  const row = x.closest('.app-row'); if(row) row.remove();
+  if(!document.querySelector('#device-wrap [data-app-sec="OPENED"]')){ const t = document.querySelector('#device-wrap [data-apps-sec="OPENED"]'); if(t) t.remove(); }
+}, true);
 // Apps search + letter bar (#236 - owner, 6 Nov 2026: 'Can you add a app search bar. And a letter scroll bar With a lil fun
 // wiggle animation scroll', drawing the bar down the right edge beside the app list). Search filters as you type (no redraw);
 // slide a finger along the letters: the letters near it bulge out in a wave that follows the finger, a big letter bubble
@@ -14810,7 +14833,9 @@ function spaceGo(id, noSave){
   try{ if(NATIVE && window.StoryNative.spacesUp) window.StoryNative.spacesUp(false); }catch(e){}   // #328: chosen - the phone is free again
   spacesClose();
   const want = id && id !== 'personal' && spaceOf(id) ? id : '';
-  if((litSpace() === 'personal' ? '' : litSpace()) === want){ if(window.storyShow) window.storyShow(null); return; }
+  // #336: back into the app you were in there (the phone opens it; the Pages step aside), else its Home Screen as before.
+  let toApp = false; try{ if(NATIVE && window.StoryNative.spaceSwitch) toApp = !!window.StoryNative.spaceSwitch(want || 'personal'); }catch(e){}
+  if((litSpace() === 'personal' ? '' : litSpace()) === want){ if(!toApp && window.storyShow) window.storyShow(null); return; }
   if(!noSave){ try{ saveSettings && saveSettings(); }catch(e){} }
   localStorage.setItem('story-space', want);
   try{ sessionStorage.setItem('lit-space-home', '1'); }catch(e){}

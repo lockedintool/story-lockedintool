@@ -1510,6 +1510,10 @@
   .sh-ph button{ position:absolute; top:3px; right:3px; width:22px; height:22px; border-radius:11px; border:0; background:rgba(0,0,0,0.7); color:#fff; font-size:15px; line-height:20px; padding:0; }
   .sh-ph-add{ border:1px dashed #444; color:#ddd; font-size:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; } .sh-ph-add small{ font-size:10px; color:#9a9a9a; }
   .sh-cur{ flex:0 0 76px !important; text-transform:uppercase; text-align:center; }
+  .cu-q{ margin:0 0 10px !important; }
+  .cu-amt{ flex:0 0 112px !important; }
+  .cu-sale{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #222; font-size:13px; } .cu-sale > span:first-child{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .cu-sale small{ font-size:11px; color:#9a9a9a; } .cu-sale button{ background:transparent; border:0; color:#9a9a9a; font-size:18px; padding:0 4px; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
@@ -6206,6 +6210,7 @@ function dashboardScreen(){
           <div class="sidebar-item" data-nav="staff">TEAM</div>
           <div class="sidebar-item" data-nav="meetings">MEETINGS</div>
           <div class="sidebar-item" data-nav="shop">SHOP</div>
+          <div class="sidebar-item" data-nav="customers">CUSTOMERS</div>
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
@@ -17172,6 +17177,7 @@ function renderScreenContent(){
     case 'staff': return staffScreen();
     case 'meetings': return meetingsScreen();
     case 'shop': return shopScreen();
+    case 'customers': return customersScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -22211,6 +22217,82 @@ document.addEventListener('click', e=>{
   }
   renderDevice();
 }, true);
+// ---- #382 CUSTOMERS (the take-over plan: Files -> Team -> Meetings -> Selling -> Customers): the people you sell to - name,
+// contact, their @username, notes and what they bought, with the total. Managers on a team see / add their company's too.
+const CU = { list:[], loaded:false, loading:false, err:'', sheet:null, q:'', of:'', ofName:'' };
+function cuOf(o){ return CU.of ? Object.assign({ of: CU.of }, o || {}) : (o || null); }
+function cuLoad(){
+  if(CU.loading || !msgAccount()) return; CU.loading = true;
+  msgApi('/v1/cust/list', cuOf({})).then(r=>{ CU.list = r.customers || []; CU.loaded = true; CU.err = ''; })
+    .catch(e=>{ CU.err = e.code === 'signin' ? 'signin' : 'net'; })
+    .finally(()=>{ CU.loading = false; if(state.current === 'customers' && !CU.sheet) renderDevice(); });
+}
+function cuTotal(c){ const t = {}; (c.sales || []).forEach(x=>{ t[x.cur] = (t[x.cur] || 0) + x.amount; }); return Object.keys(t).map(k=>{ try{ return fmtCur(t[k] / 100, k, false); }catch(e){ return k + ' ' + (t[k] / 100).toFixed(2); } }).join(' + '); }
+function customersScreen(){
+  if(!CU.loaded && !CU.loading && !CU.err) setTimeout(cuLoad, 0);
+  if(!TM.loaded && !TM.loading && msgAccount()) setTimeout(tmLoad, 0);
+  const sh = CU.sheet, c = sh && sh.id ? CU.list.find(x=>x.id === sh.id) : null;
+  const row = x=>`<div class="row-card sh-row cu-row" data-cu="open" data-id="${escText(x.id)}" data-q="${escText((x.name + ' ' + x.username + ' ' + x.contact).toLowerCase())}">
+      <span class="tm-pic"><b>${escText((x.name || '?').charAt(0).toUpperCase())}</b></span>
+      <span class="fl-tx"><b>${escText(x.name)}</b><small>${escText([x.username ? '@' + x.username : '', (x.sales || []).length ? (x.sales.length + ' sale' + (x.sales.length === 1 ? '' : 's') + ' · ' + cuTotal(x)) : 'No sales yet'].filter(Boolean).join(' · '))}</small></span></div>`;
+  const mgr = TM.mine.filter(t=>t.status === 'member' && t.role === 'manager');
+  const form = (x)=>`<input id="cu-name" class="bz-in" placeholder="Name" autocomplete="off" value="${escText(x.name || '').replace(/"/g, '&quot;')}">
+      <input id="cu-contact" class="bz-in" placeholder="Phone or email (only you see it)" autocomplete="off" value="${escText(x.contact || '').replace(/"/g, '&quot;')}">
+      <input id="cu-user" class="bz-in" placeholder="Their @username on Lockedintool (optional)" autocomplete="off" autocapitalize="off" value="${escText(x.username ? '@' + x.username : '').replace(/"/g, '&quot;')}">
+      <textarea id="cu-notes" class="bz-in mt-notes" placeholder="Notes - sizes, what they like, when to follow up…">${escText(x.notes || '')}</textarea>`;
+  const sheetHTML = !sh ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${
+    sh.t === 'new' ? `<div class="fl-sh-t">New customer</div>${form({})}
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-cu="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-cu="save">Save</button></div>`
+    : sh.t === 'view' && c ? `<div class="fl-sh-t">${escText(c.name)}</div>${form(c)}
+      <button class="btn-wide" data-cu="save" data-id="${escText(c.id)}">Save changes</button>
+      <div class="section-title" style="margin-top:14px;">WHAT THEY BOUGHT${(c.sales || []).length ? ' · ' + escText(cuTotal(c)) : ''}</div>
+      ${(c.sales || []).map(x=>`<div class="cu-sale"><span><b>${escText(x.what)}</b><small>${escText(new Date(x.at).toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' }))}</small></span><span>${escText(x.amount ? (()=>{ try{ return fmtCur(x.amount / 100, x.cur, false); }catch(e){ return x.cur + ' ' + (x.amount / 100).toFixed(2); } })() : '-')}</span><button data-cu="unsale" data-id="${escText(c.id)}" data-sid="${escText(x.id)}" aria-label="Remove">×</button></div>`).join('') || '<div class="fl-sh-s">Nothing yet.</div>'}
+      <div class="mt-two"><input id="cu-what" class="bz-in" placeholder="What they bought" autocomplete="off"><input id="cu-amt" class="bz-in cu-amt" inputmode="decimal" placeholder="Amount"></div>
+      <div class="mt-two"><input id="cu-cur" class="bz-in sh-cur" maxlength="3" autocapitalize="characters" value="${escText((typeof moneyMainCur === 'function' && moneyMainCur()) || 'USD')}"><button class="btn-wide" style="margin-top:10px;" data-cu="sale" data-id="${escText(c.id)}">+ Add sale</button></div>
+      <button class="btn-wide fl-del" data-cu="del" data-id="${escText(c.id)}">Delete customer</button><button class="btn-wide" data-cu="close">Close</button>`
+    : sh.t === 'del' && c ? `<div class="fl-sh-t">Delete ${escText(c.name)}?</div><div class="fl-sh-s">Their details and sales are removed for good.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-cu="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-cu="del-yes" data-id="${escText(c.id)}">Delete</button></div>` : ''
+  }</div></div>`;
+  return `
+    <div class="page-shell fl-page">
+    ${topBar('Customers', false)}
+    ${mgr.length ? `<div class="fl-chips">${[{ id:'', name:'My customers' }].concat(mgr.map(t=>({ id:t.id, name: t.name || '@' + t.username }))).map(o=>`<button class="fl-chip${CU.of === o.id ? ' on' : ''}" data-cu="whose" data-v="${escText(o.id)}" data-n="${escText(o.name)}">${escText(o.name)}</button>`).join('')}</div>` : ''}
+    <div class="fl-head"><div class="fl-sum">${CU.loaded ? CU.list.length + ' customer' + (CU.list.length === 1 ? '' : 's') : CU.err === 'signin' ? 'Log in to keep your customers' : CU.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>
+      <div class="fl-note">${CU.of ? escText(CU.ofName) + '’s customers - you’re a manager there.' : 'The people you sell to, what they bought and your notes - kept privately for this account.'}</div></div>
+    <button class="btn-wide btn-primary fl-add" data-cu="new">+ Add customer</button>
+    ${CU.list.length > 5 ? `<input id="cu-q" class="bz-in cu-q" placeholder="Search customers" autocomplete="off" value="${escText(CU.q).replace(/"/g, '&quot;')}">` : ''}
+    <div class="cu-list">${CU.list.length ? CU.list.map(row).join('') : CU.loaded ? '<div class="fl-empty">No customers yet. Add the people you sell to - and keep track of what they buy.</div>' : ''}</div>
+    ${sheetHTML}
+    </div>`;
+}
+document.addEventListener('input', e=>{ if(e.target && e.target.id === 'cu-q'){ CU.q = e.target.value; const q = CU.q.toLowerCase().trim(); document.querySelectorAll('.cu-row').forEach(r=>{ r.style.display = !q || (r.getAttribute('data-q') || '').includes(q) ? '' : 'none'; }); } });
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-cu]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-cu'), id = b.getAttribute('data-id');
+  const g = i=>((document.getElementById(i) || {}).value || '').trim();
+  const put = r=>{ if(r && r.customer){ const i = CU.list.findIndex(x=>x.id === r.customer.id); if(i >= 0) CU.list[i] = r.customer; else CU.list.push(r.customer); CU.list.sort((x, y)=>x.name.localeCompare(y.name)); } if(state.current === 'customers') renderDevice(); };
+  switch(a){
+    case 'whose': CU.of = b.getAttribute('data-v') || ''; CU.ofName = b.getAttribute('data-n') || ''; CU.list = []; CU.loaded = false; CU.err = ''; cuLoad(); break;
+    case 'new': if(!msgAccount()){ showToast('Log in to keep your customers'); return; } CU.sheet = { t:'new' }; break;
+    case 'open': CU.sheet = { t:'view', id }; break;
+    case 'save': { const name = g('cu-name'); if(!name){ showToast('Add their name'); return; }
+      const body = cuOf({ id: id || undefined, name, contact: g('cu-contact'), username: g('cu-user'), notes: g('cu-notes') });
+      if(!id) CU.sheet = null;
+      msgApi('/v1/cust/save', body).then(r=>{ put(r); showToast(id ? 'Saved' : 'Customer added'); }).catch(()=>showToast('Couldn’t save - try again'));
+      if(!id) break; return; }
+    case 'sale': { const what = g('cu-what'); if(!what){ showToast('Say what they bought'); return; }
+      const amount = Math.round(parseFloat(g('cu-amt').replace(',', '.')) * 100) || 0, cur = g('cu-cur').toUpperCase() || 'USD';
+      if(!/^[A-Z]{3}$/.test(cur)){ showToast('The currency is 3 letters, like USD or ZAR'); return; }
+      msgApi('/v1/cust/sale', cuOf({ id, what, amount, cur })).then(put).catch(()=>showToast('Couldn’t add the sale - try again')); return; }
+    case 'unsale': msgApi('/v1/cust/unsale', cuOf({ id, sid: b.getAttribute('data-sid') })).then(put).catch(()=>showToast('Couldn’t remove it - try again')); return;
+    case 'del': CU.sheet = { t:'del', id }; break;
+    case 'del-yes': CU.list = CU.list.filter(x=>x.id !== id); CU.sheet = null; msgApi('/v1/cust/delete', cuOf({ id })).catch(()=>{ showToast('Couldn’t delete - try again'); cuLoad(); }); break;
+    case 'close': CU.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
+}, true);
 async function flUploadOne(f){
   FL.busy++; if(state.current === 'files') renderDevice();
   try{
@@ -23212,7 +23294,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['customers','shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

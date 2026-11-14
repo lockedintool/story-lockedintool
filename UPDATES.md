@@ -352,4 +352,4 @@ commits, pushed as a new update) - nothing else changes.
 | 343 | 2026-11-14 | 'Leave owner mode' asks first - one accidental tap no longer locks your phone | e0e14dc |
 | 344 | 2026-11-14 | The Apps / Lockedintool switch no longer disappears as soon as it shows (on the phone's home screen) | 1a38d3c |
 | 345 | 2026-11-14 | No glimpse of the app or home screen before the company screen - a plain screen in its colour is ready under the lock screen | ba304e4 |
-| 346 | 2026-11-14 | (temporary, silent) the phone reports what was ready at each unlock, to find why the company screen still shows late | PENDING |
+| 346 | 2026-11-14 | (temporary, silent) the phone reports what was ready at each unlock, to find why the company screen still shows late | f37884f |

@@ -2122,9 +2122,12 @@ class OverlayService : Service(), StoryBridge.Host {
         // #353 (owner, 14 Nov 2026: 'Still slow i can still see the phones one'; chose 'Cover at swipe start'): the moment
         // the phone takes a swipe from the bottom, Lockedintool's opened-apps screen goes up - before the phone's Recents
         // draws. It goes again if the swipe turns out to be Home or an app (recCoverCheck after the grace period).
+        // #354 (owner: 'Also close it its slow'): a swipe from the bottom while the screen is already up = leaving Recents
+        // (Home) - it goes at once, not after the phone has finished.
+        if (kind == "cancel" && recCover != null && !recCoverEarly) { recCoverHide(); return@post }
         if (kind == "cancel" && recCover == null && recCoverWanted()) {
             recCoverShow(); recCoverEarly = true
-            for (d in longArrayOf(500, 800, 1100, 1600)) ui.postDelayed({ recCoverEarly = false; recCoverCheck() }, d)
+            for (d in longArrayOf(350, 550, 800, 1200)) ui.postDelayed({ recCoverEarly = false; recCoverCheck() }, d)
         }
         if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
         if (spacesHeld()) { ui.postDelayed({ spacesReshow() }, 350); return@post }   // #328: the company screen stays
@@ -3151,7 +3154,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun recCoverCheck() {
         val up = recCoverWanted() && StoryAccessibilityService.recentsAppFront(recentsPkg)
         if (up) { if (recCover == null) recCoverShow() }
-        else if (recCover != null && !recCoverEarly && SystemClock.uptimeMillis() - recCoverShownAt > 250) recCoverHide()
+        else if (recCover != null && !recCoverEarly) recCoverHide()
     }
     private fun recCoverLook() { for (d in longArrayOf(0, 50, 100, 160, 230, 320, 450, 700)) ui.postDelayed({ recCoverCheck() }, d) }
     /** #350: the launcher's screen changed - a quick look whether it's Recents (only while companies are set up and the

@@ -12954,7 +12954,7 @@ function upRenderPerson(){
     '<div class="pf-stats">' + [['following', 'Following'], ['followers', 'Followers'], ['posts', 'Posts']].map(([k, l])=>'<div class="pf-stat"><div class="pf-stat-n">' + (p[k] === undefined ? '—' : fmtCount(p[k])) + '</div><div class="pf-stat-l">' + l + '</div></div>').join('') + '</div>' +
     (p.about && !p.isFollowing && !isMe ? '<div class="up-p-about">' + escText(p.about) + '</div>' : '') +
     (p.bio ? '<div class="up-p-bio">' + escText(p.bio) + '</div>' : '') +
-    (p.racks ? '<div class="up-shop-t">LOCK IN · RACK ' + p.racks + '</div>' : '') +
+    (p.racks ? '<div class="up-shop-t">LOCK IN · RANK ' + p.racks + '</div>' : '') +
     ((p.highlights || []).length ? '<div class="pf-hls up-p-hls">' + p.highlights.map((h, i)=>'<button class="pf-hl" data-pf="up-hl" data-i="' + i + '"><span class="pf-hl-c"><img alt="" loading="lazy" src="' + escText(h.cover || '') + '"></span><span class="pf-hl-n">' + escText(h.name) + '</span></button>').join('') + '</div>' : '') +
     (isMe ? '' : '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing || p.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : p.requested ? 'Requested' : 'Follow') + '</button>' +
       (p.canMsg === false ? '' : '<button class="up-follow up-follow-lg" data-pf="up-message">Message</button>') + '</div>') +
@@ -22470,8 +22470,8 @@ function lockInScreen(){
     <div class="page-shell fl-page lk-page">
     ${topBar('', false)}
     ${lkLogo()}
-    <div class="lk-rec"><span class="lk-racks"><small>Rack</small><b>${LK.racks}</b></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
-    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Rack by winning - solo, against Lockedintool or against people</small></span><span>›</span></button>
+    <div class="lk-rec"><span class="lk-racks"><small>Rank</small><b>${LK.racks}</b></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
+    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Rank by winning - solo, against Lockedintool or against people</small></span><span>›</span></button>
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
@@ -22515,7 +22515,7 @@ function lkSheetHTML(sh){
     return `<div class="fl-sh-t">${LK_NAMES[k]}</div><div class="fl-sh-s">${escText(LK_ABOUT[k])}</div>
       <div class="section-title" style="margin-top:12px;">SINGLE PLAYER</div>
       ${LK_SCORE[k] ? `<div class="mt-two"><button class="btn-wide" style="margin-top:0;" data-lk="practice" data-k="${k}">Play solo</button><button class="btn-wide" style="margin-top:0;" data-lk="cpu" data-k="${k}">Beat Lockedintool</button></div>
-        <div class="fl-sh-s">${LK.best[k] != null ? 'Your best: ' + escText(lkScoreTxt(k, LK.best[k])) + ' · ' : ''}Rack by winning - a new best racks more.</div>`
+        <div class="fl-sh-s">${LK.best[k] != null ? 'Your best: ' + escText(lkScoreTxt(k, LK.best[k])) + ' · ' : ''}Rank by winning - a new best ranks you higher.</div>`
         : `<button class="btn-wide" data-lk="cpu" data-k="${k}">Play Lockedintool</button>`}
       ${biz ? '' : `<div class="section-title" style="margin-top:12px;">CHALLENGE SOMEONE</div>
       <div class="lk-seg"><button class="${sh.bet ? '' : 'on'}" data-lk="bet" data-v="0">Free</button><button class="${sh.bet ? 'on' : ''}" data-lk="bet" data-v="1">Bet</button></div>
@@ -22532,8 +22532,8 @@ function lkSheetHTML(sh){
       <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk="decline" data-id="${escText(g.id)}">Decline</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk="accept" data-id="${escText(g.id)}">Accept</button></div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'board'){ const b = LK.board;
-    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' · Rack ' + b.myRacks : 'Win a game to rack and get on the board') : 'Loading…'}</div>
-      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>Rack ${u.racks} · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has racked yet.</div>') : ''}</div>
+    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' · Rank ' + b.myRacks : 'Win a game to rank on the board') : 'Loading…'}</div>
+      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>Rank ${u.racks} · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has ranked yet.</div>') : ''}</div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'wallet') return `<div class="fl-sh-t">Game wallet</div>
       <div class="fl-sh-s">Your game wallet is only used inside Lock In. Add money to it, then bet with it - when a game you both agreed to ends, the winner gets the money automatically.</div>
@@ -22606,7 +22606,7 @@ function lkSoloResultHTML(p){
   return lkResWrap(p.key + (p.newBest ? 'b' : ''), vs ? (draw ? 'draw' : won ? 'won' : 'lost') : (p.newBest ? 'won' : 'draw'), `<div class="lk-mid"><div class="lk-big">${vs ? (draw ? 'Draw' : won ? 'You beat Lockedintool!' : 'Lockedintool won') : escText(lkScoreTxt(k, p.done))}</div>
     ${vs && !turn ? `<div class="lk-vs"><span><small>You</small><b>${escText(lkScoreTxt(k, p.done))}</b></span><span><small>Lockedintool</small><b>${escText(lkScoreTxt(k, p.target))}</b></span></div>` : ''}
     ${vs && turn ? lkBoardHTML(lkCpuGame(p), true) : ''}
-    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your rack…' : 'Log in to rack') : p.earned ? 'Rack +' + p.earned + (p.newBest ? ' · new best!' : '') + ' · Rack ' + LK.racks : 'Today’s solo rack is full - play people for more'}</div>
+    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your rank…' : 'Log in to rank') : p.earned ? 'Rank +' + p.earned + (p.newBest ? ' · new best!' : '') + ' · Rank ' + LK.racks : 'Today’s solo ranking is full - play people to rank higher'}</div>
     <button class="btn-wide btn-primary" data-lk="${vs ? 'cpu' : 'practice'}" data-k="${k}">Play again</button></div>`);
 }
 function lkSoloSend(p, body){

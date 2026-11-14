@@ -331,4 +331,4 @@ commits, pushed as a new update) - nothing else changes.
 | 322 | 2026-11-14 | Your Personal account is the main one (the Welcome screen says so); each company asks for its own account; switching systems only by paying a plan for the other system | a6e3d96 |
 | 323 | 2026-11-14 | Lockedintool notices the unlock itself (the phone never told it), so the company screen and everything else that waits for the unlock works | 14e2831 |
 | 324 | 2026-11-14 | The company screen is made ready while the phone is still locked, so it shows straight away when you unlock | 062e701 |
-| 325 | 2026-11-14 | The company screen has no background pictures - it follows the System theme (black or white) | (this) |
+| 325 | 2026-11-14 | The company screen has no background pictures - it follows the System theme (black or white) | 6bc3218 |

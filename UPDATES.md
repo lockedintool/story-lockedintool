@@ -333,4 +333,4 @@ commits, pushed as a new update) - nothing else changes.
 | 324 | 2026-11-14 | The company screen is made ready while the phone is still locked, so it shows straight away when you unlock | 062e701 |
 | 325 | 2026-11-14 | The company screen has no background pictures - it follows the System theme (black or white) | 6bc3218 |
 | 326 | 2026-11-14 | The company screen always stays black, in both themes | 872c7b8 |
-| 327 | 2026-11-14 | Undoes #326: the company screen follows the System theme again (black or white) | (this) |
+| 327 | 2026-11-14 | Undoes #326: the company screen follows the System theme again (black or white) | 2715ed2 |

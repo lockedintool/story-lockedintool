@@ -2035,6 +2035,9 @@ class OverlayService : Service(), StoryBridge.Host {
      *  while Lockedintool is opening one of its own screens / apps. */
     fun recentsShown(pkg: String, cls: String) { if (pkg != packageName && pkg != "com.android.systemui") phoneScreenShown(); ui.post {
         if (spacesHeld() && pkg != packageName) ui.postDelayed({ spacesReshow() }, 300)   // #328: the company screen stays
+        // #342: the phone's launcher / Recents window events that come with the UNLOCK itself made the Pages step aside -
+        // Claude showed between the flashes. While the company screen is up (or waiting for the unlock) nothing steps aside.
+        if (spacesHolding() && pkg != packageName) return@post
         // The phone's own Home / Recents just came up: a switch that popped up with that same swipe goes away, so only
         // the phone's screen shows (a switch you opened with a real tap earlier stays).
         if (picker != null && pkg != packageName && SystemClock.uptimeMillis() - pickerAt < 800 &&
@@ -3027,7 +3030,10 @@ class OverlayService : Service(), StoryBridge.Host {
             // the unlock just revealed it. Now it's always like that: the Pages with the chooser are put on screen under the
             // lock screen (Lockedintool's normal layer is below the lock screen - nothing shows while locked). With Lockedintool
             // security on it only draws hidden, so company names never show before Lockedintool is unlocked.
-            if (!Security.lit(this)) { spacesPreShown = true; setShown(p, true) }
+            // #342 (owner, 14 Nov 2026: 'Flash and it stayed a bit to lockedintool glitch flash it claude glitch flash to the
+            // company screen'): the hidden window still held its OLD picture (a Lockedintool page) - it's shown only once
+            // the chooser itself has been drawn (showPagesOn draws while the window is still invisible).
+            if (!Security.lit(this)) { spacesPreShown = true; showPagesOn(p, "0") {} }
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
@@ -3186,6 +3192,7 @@ class OverlayService : Service(), StoryBridge.Host {
         if (why != null) { if (why != "app mode / widgets" && why != "still locked") spacesWhy(why) else spDiag(why); return }
         val p = pagesPane ?: return
         spacesShownAt = System.currentTimeMillis()
+        spacesPreShown = true   // #342: the Pages show for the chooser - not 'you were in Lockedintool' (Personal sent you there)
         hideLiveWidgets()
         getSharedPreferences("story", MODE_PRIVATE).edit().putLong("spaces_pending", spacesShownAt).apply()
         spDiag("opening…")
@@ -3193,7 +3200,7 @@ class OverlayService : Service(), StoryBridge.Host {
             // The page answers whether it opened; a page that was (re)loading opens it itself once ready (spacesPending).
             ui.postDelayed({ p.web.evaluateJavascript("(function(){try{return document.getElementById('lit-spaces')?'ok':(window.litSpacesOpen?window.litSpacesOpen():'loading')}catch(e){return 'error '+e.message}})()") { r ->
                 val res = (r ?: "").trim('"')
-                if (res == "ok") { spacesDone(); spDiag("open (shown " + p.shown + ")") } else if (res != "loading") spacesWhy("page: " + res) else spDiag("page still loading")
+                if (res == "ok") { spacesDone(); spDiag("open (shown " + p.shown + ")") } else if (res != "loading") { spacesPreShown = false; spacesWhy("page: " + res) } else spDiag("page still loading")
             } }, 700) } }
     }
     /** As an app: the chooser shows each time the app is opened (after it was left). */

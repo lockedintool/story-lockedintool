@@ -1403,7 +1403,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
-        if (recCover != null) recCoverCheck()   // #350
+        if (recCover != null) { if (recCoverEarly && pkg != homePkg() && pkg != recentsPkg && pkg != packageName) recCoverEarly = false; recCoverCheck() }   // #350 / #353
         spaceSeen(pkg)   // #336: the app you're in belongs to the company / Personal in focus
         if (pkg != packageName && pkg != "com.android.systemui" && pkg != homePkg() && pkg != recentsPkg) backToLit = false   // #338: you picked an app
         if (spacesHeld() && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
@@ -2119,6 +2119,13 @@ class OverlayService : Service(), StoryBridge.Host {
     /** When the bottom button was last swiped up (any kind) - the phone's home screen showing right after it is that swipe. */
     @Volatile private var swipeUpAt = 0L
     private fun phoneSwipe(kind: String) { ui.post {
+        // #353 (owner, 14 Nov 2026: 'Still slow i can still see the phones one'; chose 'Cover at swipe start'): the moment
+        // the phone takes a swipe from the bottom, Lockedintool's opened-apps screen goes up - before the phone's Recents
+        // draws. It goes again if the swipe turns out to be Home or an app (recCoverCheck after the grace period).
+        if (kind == "cancel" && recCover == null && recCoverWanted()) {
+            recCoverShow(); recCoverEarly = true
+            for (d in longArrayOf(500, 800, 1100, 1600)) ui.postDelayed({ recCoverEarly = false; recCoverCheck() }, d)
+        }
         if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
         if (spacesHeld()) { ui.postDelayed({ spacesReshow() }, 350); return@post }   // #328: the company screen stays
         if (keyguardLocked() || sysQuiet() || SystemMode.on(this)) return@post
@@ -3135,6 +3142,8 @@ class OverlayService : Service(), StoryBridge.Host {
     private var recCover: View? = null
     private var recCoverWm: WindowManager? = null
     private var recCoverShownAt = 0L
+    /** #353: put up at the start of a swipe - kept until the phone has had time to show its Recents (or not). */
+    @Volatile private var recCoverEarly = false
     private fun recCoverWanted() = spacesWanted() && !keyguardLocked() && !sysQuiet() && !callActive && !createActive && !spacesHolding() && isInteractive()
     private fun isInteractive() = runCatching { (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive }.getOrDefault(true)
     /** Looks whether the phone's Recents is up and shows / takes away the cover (a few looks: One UI draws Recents inside
@@ -3142,7 +3151,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun recCoverCheck() {
         val up = recCoverWanted() && StoryAccessibilityService.recentsAppFront(recentsPkg)
         if (up) { if (recCover == null) recCoverShow() }
-        else if (recCover != null && SystemClock.uptimeMillis() - recCoverShownAt > 250) recCoverHide()
+        else if (recCover != null && !recCoverEarly && SystemClock.uptimeMillis() - recCoverShownAt > 250) recCoverHide()
     }
     private fun recCoverLook() { for (d in longArrayOf(0, 50, 100, 160, 230, 320, 450, 700)) ui.postDelayed({ recCoverCheck() }, d) }
     /** #350: the launcher's screen changed - a quick look whether it's Recents (only while companies are set up and the
@@ -3154,6 +3163,7 @@ class OverlayService : Service(), StoryBridge.Host {
         ui.post { if (recCover == null) recCoverCheck() }
     }
     private fun recCoverHide() {
+        recCoverEarly = false
         val v = recCover ?: return
         recCover = null
         runCatching { recCoverWm?.removeView(v) }

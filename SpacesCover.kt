@@ -16,7 +16,7 @@ import android.view.View
 class SpacesCover : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
-        instance = this
+        instance = this; made++
         window.setWindowAnimations(0)
         val bg = StoryTheme.swap(this, Color.BLACK)
         window.decorView.setBackgroundColor(bg)
@@ -24,12 +24,15 @@ class SpacesCover : Activity() {
     }
     override fun onResume() { super.onResume(); resumed = true }
     override fun onPause() { resumed = false; super.onPause() }
-    override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
+    override fun onDestroy() { if (instance === this) instance = null; gone++; super.onDestroy() }
     @Deprecated("Back is the phone's own") override fun onBackPressed() { }   // the company screen above decides
     override fun finish() { super.finish(); overridePendingTransition(0, 0) }
     companion object {
         @Volatile var instance: SpacesCover? = null
         @Volatile var resumed = false
-        fun close() { instance?.let { a -> runCatching { a.finish() } } }
+        @Volatile var made = 0
+        @Volatile var gone = 0
+        @Volatile var closedBy = ""
+        fun close() { instance?.let { a -> closedBy = Throwable().stackTrace.getOrNull(1)?.methodName ?: "?"; runCatching { a.finish() } } }
     }
 }

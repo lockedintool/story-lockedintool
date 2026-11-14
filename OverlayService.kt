@@ -109,7 +109,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // so whichever comes first wins; the other one is ignored.
     @Volatile private var aodStartedAt = 0L
     private fun onScreenOff() {
-        backToLit = false; spacesUpFlag = false; spacesPreShown = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
+        backToLit = false; spacesUpFlag = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
         ContentGuard.clearForNow()   // 'This is a mistake' lets you carry on only until the screen goes off
         val now = System.currentTimeMillis()
         if (now - aodStartedAt < 800) return               // the same screen-off, reported twice
@@ -3041,9 +3041,6 @@ class OverlayService : Service(), StoryBridge.Host {
             // company screen'): the hidden window still held its OLD picture (a Lockedintool page) - it's shown only once
             // the chooser itself has been drawn (showPagesOn draws while the window is still invisible).
             if (!Security.lit(this)) { spacesPreShown = true; showPagesOn(p, "0") {} }
-            // #345: and the plain screen under it, so the unlock reveals Lockedintool - not the app / home screen you were on.
-            if (!SystemMode.on(this) && !AppMode.appOnly(this) && SpacesCover.instance == null)
-                spArmDiag += " coverStart=" + startBg(Intent(this, SpacesCover::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 31)
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
@@ -3054,23 +3051,27 @@ class OverlayService : Service(), StoryBridge.Host {
      *  ready. Now the chooser is put ON SCREEN the moment the screen goes off - exactly the case the owner found instant (an
      *  unanswered chooser that simply stayed up) - and it stays until a company / Personal is chosen. With Lockedintool
      *  security on it only draws hidden (no company names before Lockedintool is unlocked). */
-    private fun spacesArm() {
-        if (sysQuiet() || callActive || createActive) return
+    private fun spacesArm(tries: Int = 0) {
+        if (sysQuiet() || callActive || createActive) { spacesPreShown = false; return }
         val p = pagesPane ?: return
-        // #339 (owner, 14 Nov 2026: 'the company screen sometimes gets gapped and the home screen or recent open apps show
-        // first'): hidden Pages REST (WebView.onPause), and a resting page runs no script - so the chooser was sometimes
-        // only built later, after the unlock. It's woken first now, then put to rest again if nothing is shown.
+        // The screen-off is reported twice (display state + broadcast): arm once.
+        if (tries == 0) { val now = SystemClock.uptimeMillis(); if (now - spArmAt < 1500) return; spArmAt = now; spacesPreShown = false }
+        // #345 / #347: the plain cover goes up FIRST, straight away - it doesn't wait for the page (Second system only;
+        // only with companies). The unlock reveals it instead of the app / home screen you were on.
+        if (tries == 0 && spacesWanted() && !SystemMode.on(this) && !AppMode.appOnly(this) && !Security.lit(this) && SpacesCover.instance == null)
+            spCoverStarted = startBg(Intent(this, SpacesCover::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION), 31)
+        // #339: hidden Pages REST (WebView.onPause) and run no script - woken first.
         if (!p.shown) runCatching { p.web.onResume() }
         p.web.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()") { r ->
             val res = (r ?: "").trim('"')
-            if (res != "ok" && !p.shown && !pagesInHome() && !spacesWarm) runCatching { p.web.onPause() }
-            spArmDiag = "arm=$res shown=${p.shown} home=${pagesInHome()} sec=${Security.lit(this)} sys=${SystemMode.on(this)} app=${AppMode.appOnly(this)}"
-            spLog("screen off: chooser " + res + (if (p.shown) ", Pages already up" else "") + (if (pagesInHome()) ", in Home" else "") + (if (Security.lit(this)) ", Lockedintool security" else ""))
-            if (res != "ok") return@evaluateJavascript
-            // #341: the Pages already up (you were in Lockedintool) or kept in the Home get the chooser on top too - you never
-            // unlock onto a Lockedintool page first ('I still start on lockedintool').
+            spArmDiag = "arm=$res try=$tries shown=${p.shown} home=${pagesInHome()} sec=${Security.lit(this)} sys=${SystemMode.on(this)} coverStart=$spCoverStarted"
+            // #347: a page that was (re)loading has no answer yet ('null') - ask again shortly.
+            if (res == "null" && tries < 4) { ui.postDelayed({ spacesArm(tries + 1) }, 400); return@evaluateJavascript }
+            if (res != "ok") { if (!p.shown && !pagesInHome() && !spacesWarm) runCatching { p.web.onPause() }; SpacesCover.close(); return@evaluateJavascript }
+            // #341: Pages already up (you were in Lockedintool) or kept in the Home: the chooser is on top of them already.
             if (p.shown || pagesInHome()) { spacesPreShown = true; return@evaluateJavascript }
-            if (!Security.lit(this)) { spacesPreShown = true; setShown(p, true) }
+            // #342: shown only once the chooser itself has been drawn - never the hidden window's old picture.
+            if (!Security.lit(this)) { spacesPreShown = true; showPagesOn(p, "0") {} }
             else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
@@ -3148,6 +3149,8 @@ class OverlayService : Service(), StoryBridge.Host {
     /** #341: what the Pages do once they're out of sight after a company / Personal was chosen. */
     @Volatile private var spaceAfterHide: String? = null
     @Volatile private var spArmDiag = "no arm"
+    private var spArmAt = 0L
+    @Volatile private var spCoverStarted = false
     private fun spaceHidden() {
         SpacesCover.close()   // #345
         val w = spaceAfterHide ?: return
@@ -3201,7 +3204,7 @@ class OverlayService : Service(), StoryBridge.Host {
         ui.postDelayed({ if (!keyguardLocked() && (!spacesHolding() || pagesPane?.shown != true)) SpacesCover.close() }, 3000)
         // #346 TEMPORARY (silent, no text on screen): what was ready at the unlock - read from the problem reports.
         if (spacesShownAt <= screenOffAt) runCatching {
-            ProblemLog.record(this, "spacediag", "$spArmDiag | at unlock: cover=${SpacesCover.instance != null} coverResumed=${SpacesCover.resumed} pre=$spacesPreShown pages=${pagesPane?.shown} front=${StoryAccessibilityService.frontPkg == packageName}", "unlock")
+            ProblemLog.record(this, "spacediag", "$spArmDiag | at unlock: cover=${SpacesCover.instance != null} coverResumed=${SpacesCover.resumed} made=${SpacesCover.made} gone=${SpacesCover.gone} closedBy=${SpacesCover.closedBy} pre=$spacesPreShown pages=${pagesPane?.shown} front=${StoryAccessibilityService.frontPkg == packageName}", "unlock")
             ProblemLog.flush(this)
         }
         if (spacesShownAt > screenOffAt) { spDiag("already shown for this unlock"); return }

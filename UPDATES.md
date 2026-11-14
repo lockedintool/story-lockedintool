@@ -369,4 +369,4 @@ commits, pushed as a new update) - nothing else changes.
 | 360 | 2026-11-14 | The business home: each business lands on its own home with its own email / social apps (own logins) and Lockedintool's tools | 79c5f6d |
 | 361 | 2026-11-14 | Problem reports tidied: the temporary Recents / company-screen diagnostic reports (removed in #349 / #359) are closed. No app change. | 557a934 |
 | 362 | 2026-11-14 | The business home now shows: with a business in focus Lockedintool opens on that business's home (it used to open on your Home Screen page). | 7ff3245 |
-| 363 | 2026-11-14 | Getting back to the business home: on Second system the bottom switch reads Business home \| Lockedintool while a business is in focus; on Only system the pages' ‹ button shows Business home \| Dashboard. |  |
+| 363 | 2026-11-14 | Getting back to the business home: on Second system the bottom switch reads Business home \| Lockedintool while a business is in focus; on Only system the pages' ‹ button shows Business home \| Dashboard. | 4426454 |

@@ -362,3 +362,4 @@ commits, pushed as a new update) - nothing else changes.
 | 353 | 2026-11-14 | Lockedintool's Recents screen goes up the moment the swipe starts, before the phone's Recents shows | d40fbe3 |
 | 354 | 2026-11-14 | Lockedintool's Recents screen closes at once when you leave it | 31fbc9d |
 | 355 | 2026-11-14 | Lockedintool's Recents screen lists only the apps that are still open | 185f780 |
+| 356 | 2026-11-14 | Temporary silent reports on when Lockedintool's Recents screen goes up (to find why it's late) | |

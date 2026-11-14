@@ -2043,7 +2043,9 @@ class OverlayService : Service(), StoryBridge.Host {
      *  aside when an app opens - so the home screen / opened apps show; the owner comes back the usual way (the
      *  Apps | Lockedintool switch). Not in Only system (the Dashboard IS your home there) or Only use widgets, and not
      *  while Lockedintool is opening one of its own screens / apps. */
-    fun recentsShown(pkg: String, cls: String) { if (pkg != packageName && pkg != "com.android.systemui") phoneScreenShown(); ui.post {
+    fun recentsShown(pkg: String, cls: String) { if (pkg != packageName && pkg != "com.android.systemui") phoneScreenShown()
+        if (recCover == null && pkg != packageName && pkg != "com.android.systemui") recLauncherAt = SystemClock.uptimeMillis()   // #356
+        ui.post {
         recCoverLook()   // #350
         if (spacesHeld() && pkg != packageName) ui.postDelayed({ spacesReshow() }, 300)   // #328: the company screen stays
         // #342: the phone's launcher / Recents window events that come with the UNLOCK itself made the Pages step aside -
@@ -2119,6 +2121,7 @@ class OverlayService : Service(), StoryBridge.Host {
     /** When the bottom button was last swiped up (any kind) - the phone's home screen showing right after it is that swipe. */
     @Volatile private var swipeUpAt = 0L
     private fun phoneSwipe(kind: String) { ui.post {
+        if (spacesWanted()) ProblemLog.record(this, "recdiag", "swipe kind=" + kind + " coverUp=" + (recCover != null) + " wanted=" + recCoverWanted(), "recents")   // #356
         // #353 (owner, 14 Nov 2026: 'Still slow i can still see the phones one'; chose 'Cover at swipe start'): the moment
         // the phone takes a swipe from the bottom, Lockedintool's opened-apps screen goes up - before the phone's Recents
         // draws. It goes again if the swipe turns out to be Home or an app (recCoverCheck after the grace period).
@@ -2126,7 +2129,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // (Home) - it goes at once, not after the phone has finished.
         if (kind == "cancel" && recCover != null && !recCoverEarly) { recCoverHide(); return@post }
         if (kind == "cancel" && recCover == null && recCoverWanted()) {
-            recCoverShow(); recCoverEarly = true
+            recCoverSrc = "swipe"; recCoverShow(); recCoverEarly = true
             for (d in longArrayOf(350, 550, 800, 1200)) ui.postDelayed({ recCoverEarly = false; recCoverCheck() }, d)
         }
         if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
@@ -3192,8 +3195,19 @@ class OverlayService : Service(), StoryBridge.Host {
         recOpenWords = w
         if (recCoverApps() != before) recCoverRebuild()
     }
+    // #356 TEMPORARY (owner, 14 Nov 2026, on 1.585: 'Lockedintools recents still show up very late'): each time the cover
+    // goes up a silent 'recdiag' problem report says what put it up (the swipe start or the phone's Recents event) and how
+    // long after the phone's own signal - nothing on screen. Remove once the late cover is fixed.
+    @Volatile private var recCoverSrc = "event"
+    @Volatile private var recLauncherAt = 0L
     private fun recCoverShow() {
         recCoverShownAt = SystemClock.uptimeMillis()
+        runCatching {
+            val since = if (recLauncherAt > 0) recCoverShownAt - recLauncherAt else -1
+            val b = when { since < 0 -> "?"; since < 100 -> "<100"; since < 250 -> "<250"; since < 500 -> "<500"; since < 1000 -> "<1000"; else -> ">1000" }
+            ProblemLog.record(this, "recdiag", "src=" + recCoverSrc + " afterLauncherEvent=" + b + " barUp=" + (bar != null), "recents")
+        }
+        recCoverSrc = "event"
         val v = recCoverBuild()
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, realHeightPx() - statusBarHeightPx(), layerType,

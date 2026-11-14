@@ -108,6 +108,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // so whichever comes first wins; the other one is ignored.
     @Volatile private var aodStartedAt = 0L
     private fun onScreenOff() {
+        spacesUpFlag = false; spacesUnwarm()   // #328: a new unlock asks again
         ContentGuard.clearForNow()   // 'This is a mistake' lets you carry on only until the screen goes off
         val now = System.currentTimeMillis()
         if (now - aodStartedAt < 800) return               // the same screen-off, reported twice
@@ -676,6 +677,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // ---- Apps | Lockedintool switch (owner: 'rename the word Pages on the switch to Lockedintool') ----
     private var pickerAt = 0L
     private fun showPicker() {
+        if (spacesUpFlag) return   // #328: nothing skips the company screen
         hidePicker()
         pickerAt = SystemClock.uptimeMillis()
         val row = LinearLayout(this).apply {
@@ -1388,6 +1390,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  if I have it turned on'). Leaving it for the phone's home screen / another app ends it - and Station 3 with it. */
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
+        if (spacesUpFlag && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
         litAppPkg?.let { a -> if (pkg != a && pkg != "com.android.systemui" && pkg != packageName) {   // Lockedintool's own screens (unlock, call setup) keep it
             litAppPkg = null
             if (AppMode.appOnly(this) && pagesPane?.shown != true) {
@@ -2018,6 +2021,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Apps | Lockedintool switch). Not in Only system (the Dashboard IS your home there) or Only use widgets, and not
      *  while Lockedintool is opening one of its own screens / apps. */
     fun recentsShown(pkg: String, cls: String) { if (pkg != packageName && pkg != "com.android.systemui") phoneScreenShown(); ui.post {
+        if (spacesUpFlag && pkg != packageName) ui.postDelayed({ spacesReshow() }, 300)   // #328: the company screen stays
         // The phone's own Home / Recents just came up: a switch that popped up with that same swipe goes away, so only
         // the phone's screen shows (a switch you opened with a real tap earlier stays).
         if (picker != null && pkg != packageName && SystemClock.uptimeMillis() - pickerAt < 800 &&
@@ -2076,6 +2080,7 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile private var swipeUpAt = 0L
     private fun phoneSwipe(kind: String) { ui.post {
         if (lockWallet) { closeLockWallet(); return@post }   // #298: the swipe on the lock screen's Wallet = back to the lock screen
+        if (spacesUpFlag) { ui.postDelayed({ spacesReshow() }, 350); return@post }   // #328: the company screen stays
         if (keyguardLocked() || sysQuiet() || SystemMode.on(this)) return@post
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive) return@post
         swipeUpAt = SystemClock.uptimeMillis()
@@ -2987,10 +2992,34 @@ class OverlayService : Service(), StoryBridge.Host {
         if (km?.isKeyguardLocked == true) { ui.postDelayed(this, if (now - unlockWatchAt < 120_000L) 100 else 1500); return }
         if (userPresentAt < unlockWatchAt) { spLog("unlocked (seen by Lockedintool)"); runCatching { unlocked.onReceive(this@OverlayService, Intent(Intent.ACTION_USER_PRESENT)) }; spacesAfterUnlock() }
     } }
-    /** #324: the chooser is made ready while the phone is still locked, so the unlock only has to show it. */
+    /** #324: the chooser is made ready while the phone is still locked, so the unlock only has to show it.
+     *  #328 (owner, 14 Nov 2026: 'it's showing, just that it's slow'): it's also DRAWN then - the hidden Pages wake up and
+     *  draw it while their window is still invisible, so at the unlock the window only has to appear. */
+    private var spacesWarm = false
     private fun spacesPrep() {
         if (sysQuiet() || callActive) return
-        pagesPane?.web?.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()", null)
+        val p = pagesPane ?: return
+        p.web.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()") { r ->
+            if ((r ?: "").trim('"') == "ok" && !p.shown && !pagesInHome()) { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
+        }
+    }
+    private fun spacesUnwarm() {
+        if (!spacesWarm) return
+        spacesWarm = false
+        val p = pagesPane ?: return
+        if (!p.shown && !pagesInHome()) { p.frame.alpha = 0f; runCatching { p.web.onPause() } }
+    }
+    /** #328 (owner, 14 Nov 2026: 'I can close the screen - idk why the bottom button is available. No one should bypass the
+     *  company screen, or anything'): from the unlock until you choose a company or Personal, the chooser can't be skipped:
+     *  Lockedintool's bottom button does nothing, its swipe doesn't step aside, and if the phone's Home / Recents or any app
+     *  comes up anyway, the chooser comes straight back over it (never over a call). */
+    @Volatile private var spacesUpFlag = false
+    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (!on) spacesUnwarm() } }
+    private fun spacesReshow() {
+        if (!spacesUpFlag || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return
+        val p = pagesPane ?: return
+        hidePicker()
+        showPagesOn(p, "window.litSpacesOpen&&window.litSpacesOpen()") { updateBubble(); addBar() }
     }
     private fun unlockWatchStart() { unlockWatchAt = System.currentTimeMillis(); ui.removeCallbacks(unlockWatch); ui.postDelayed(unlockWatch, 300) }
     @Volatile private var spacesShownAt = 0L

@@ -72,6 +72,7 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
         fun spacesPending(): Boolean
         fun spacesDone()
         fun spacesTrace(): String
+        fun spacesUp(on: Boolean)
         fun createKeep(): String
         fun liveMode(on: Boolean)
         fun closeProfile()
@@ -876,6 +877,8 @@ class StoryBridge(private val ctx: Context, private val host: Host, private val 
     /** #321: which account this phone is on now ('' = the main one) - the profile picture file follows it. */
     @JavascriptInterface
     fun acctSpace(sfx: String) { ctx.getSharedPreferences("story", android.content.Context.MODE_PRIVATE).edit().putString("acct_sfx", sfx.take(60)).apply() }
+    @JavascriptInterface
+    fun spacesUp(on: Boolean) { if (pages) host.spacesUp(on) }
     @JavascriptInterface
     fun spacesTrace(): String = if (pages) host.spacesTrace() else ""
 

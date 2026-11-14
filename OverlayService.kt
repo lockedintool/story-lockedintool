@@ -708,9 +708,14 @@ class OverlayService : Service(), StoryBridge.Host {
         // #366 (owner, 14 Nov 2026: 'Having two home screens' doesn't make sense - chose 'Yes, one home'): with companies set up
         // the focus's home (Business home / Personal home) IS Lockedintool's home - the switch is Apps | Lockedintool as always,
         // Lockedintool opens that home (storyShow(null)), Apps goes back to the app underneath (never the phone's home - #365).
-        row.addView(word("Apps") { setInLit(false); hidePanel() })
+        // #368 (owner, same day: 'the bottom button switch doesn't work - it always leads to the business home, not lockedintool
+        // anymore even when I'm tapping lockedintool. Because it's supposed to only happen when I press apps'): with companies,
+        // Apps = the focus's home (Business home / Personal home - the 'apps' side), Lockedintool = your Lockedintool (your Home
+        // Screen page).
+        val biz = spacesWanted() && !SystemMode.on(this) && !AppMode.appOnly(this)
+        row.addView(word("Apps") { if (biz) { setInLit(true); showPanel(station3Only = false, page = "~space") } else { setInLit(false); hidePanel() } })
         row.addView(TextView(this).apply { text = "|"; setTextColor(th(Color.parseColor("#66FFFFFF"))); textSize = 18f })
-        row.addView(word("Lockedintool") { setInLit(true); showPanel(station3Only = false) })  // the only way into Lockedintool itself (owner: it says Lockedintool, not Pages)
+        row.addView(word("Lockedintool") { setInLit(true); showPanel(station3Only = false, page = if (biz) "~home" else null) })  // the only way into Lockedintool itself (owner: it says Lockedintool, not Pages)
         picker = row
         // A touch anywhere outside the switch just closes it - nothing is chosen.
         row.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hidePicker(); false }

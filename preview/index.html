@@ -1491,6 +1491,12 @@
   .fl-more{ background:transparent; border:0; color:#ddd; font-size:20px; padding:4px 8px; margin:-4px -6px -4px 0; }
   .fl-empty{ font-size:13px; color:#9a9a9a; text-align:center; padding:30px 10px; line-height:1.5; }
   .fl-sheet{ max-height:80%; overflow-y:auto; } .fl-sheet .btn-wide{ margin-top:8px; } .fl-sh-t{ font-size:16px; font-weight:700; margin-bottom:6px; word-break:break-word; } .fl-sh-s{ font-size:12px; color:#9a9a9a; margin-top:6px; }
+  .tm-row{ display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:8px; }
+  .tm-pic{ width:38px; height:38px; flex:0 0 38px; border-radius:50%; background:#1a1a1a; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#ddd; }
+  .tm-pic img{ width:100%; height:100%; object-fit:cover; }
+  .tm-row{ flex-wrap:wrap; } .tm-btns{ display:flex; gap:6px; flex:1 0 100%; justify-content:flex-end; margin-top:-2px; } .tm-btns button{ border-radius:14px; padding:6px 11px; font-size:12px; font-weight:600; border:1px solid #333; background:transparent; color:#ddd; }
+  .tm-btns .tm-yes{ background:#fff; color:#000; border-color:#fff; }
+  .tm-roles{ display:flex; gap:8px; margin-top:10px; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
@@ -6174,6 +6180,7 @@ function dashboardScreen(){
         <div class="story-sidebar">
           <div class="sidebar-item" data-nav="notes">NOTES</div>
           <div class="sidebar-item" data-nav="files">FILES</div>
+          <div class="sidebar-item" data-nav="staff">TEAM</div>
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
@@ -12508,6 +12515,8 @@ function actLine(a){
   if(k === 'request') return a.pending ? 'wants to follow you' : 'asked to follow you';
   if(k === 'follow') return 'started following you';
   if(k === 'accepted') return 'accepted your follow request';
+  if(k === 'team') return 'added you to their team' + (t ? ' as ' + (t === 'manager' ? 'a manager' : 'staff') : '') + ' - open TEAM in the Dashboard menu to accept';   // #379
+  if(k === 'teamok') return 'joined your team';
   if(k === 'like') return t === 'status' ? 'liked your status' : 'liked your post';
   if(k === 'share') return 'shared your post';
   if(k === 'comment'){ const st = t.indexOf('s:') === 0; return 'commented on your ' + (st ? 'status' : 'post') + ': “' + escText(st ? t.slice(2) : t) + '”'; }
@@ -13551,6 +13560,11 @@ async function msgOnServer(m){
     if(m.seq) msgSend({ t:'ack', seq:m.seq });
     if(m.kind === 'live') return;   // owner: Live is removed from Lockedintool
     const who = m.name || (m.username ? '@' + m.username : 'Someone');
+    if(m.kind === 'team' || m.kind === 'teamok'){   // #379 Team
+      if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(who, m.kind === 'team' ? who + ' added you to their team - open TEAM in the Dashboard menu to accept' : who + ' joined your team'); }catch(e){}
+      try{ localStorage.setItem('story-team-ping', String(Date.now())); }catch(e){}
+      return;
+    }
     if(m.kind === 'request' || m.kind === 'accepted'){   // follow requests (#246)
       if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(who, m.kind === 'request' ? who + ' wants to follow you' : who + ' accepted your follow request'); }catch(e){}
       if(typeof upLoad === 'function') setTimeout(()=>{ try{ upLoad(); }catch(e){} }, 800);
@@ -17101,6 +17115,7 @@ function renderScreenContent(){
     case 'spaces-settings': return spacesSettingsScreen();
     case 'space-album': return spaceAlbumScreen();
     case 'files': return filesScreen();
+    case 'staff': return staffScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -21824,11 +21839,12 @@ document.addEventListener('click', e=>{
 // one app: business meetings, photos, store files'; 'Take over - build lockedintool to its fullest reach ... you can add stuff but
 // don't remove anything'): each account's own files and folders on Lockedintool's server - a company's account keeps its own.
 // Every file is locked on the phone (AES-GCM) before it goes up; opening it unlocks it on the phone (the chat file viewer).
-const FL = { files:[], folders:[], used:0, loaded:false, loading:false, folder:'', busy:0, sheet:null, pick:null, err:'' };
+const FL = { files:[], folders:[], used:0, loaded:false, loading:false, folder:'', busy:0, sheet:null, pick:null, err:'', of:'', ofName:'', canEdit:true };
+function flOf(o){ return FL.of ? Object.assign({ of: FL.of }, o || {}) : (o || null); }   // #379: a team's files
 function flLoad(){
   if(FL.loading) return; if(!msgAccount()){ FL.err = 'signin'; return; }
   FL.loading = true;
-  msgApi('/v1/files/list').then(r=>{ FL.files = r.files || []; FL.folders = r.folders || []; FL.used = r.used || 0; FL.loaded = true; FL.err = ''; })
+  msgApi('/v1/files/list', flOf({})).then(r=>{ FL.files = r.files || []; FL.folders = r.folders || []; FL.used = r.used || 0; FL.canEdit = r.canEdit !== false; FL.loaded = true; FL.err = ''; })
     .catch(e=>{ FL.err = e.code === 'signin' ? 'signin' : 'net'; })
     .finally(()=>{ FL.loading = false; if(state.current === 'files') renderDevice(); });
 }
@@ -21836,13 +21852,14 @@ function flDate(t){ const d = new Date(t), n = new Date(); return d.toDateString
 function flSub(f){ const ext = f.kind === 'photo' ? 'Picture' : f.kind === 'video' ? 'Video' : f.kind === 'audio' ? 'Audio' : ((f.name.split('.').pop() || 'File').toUpperCase().slice(0, 6)); return ext + (f.size ? ' · ' + litSize(f.size) : '') + ' · ' + flDate(f.at) + (FL.folder ? '' : (f.folder ? ' · ' + f.folder : '')); }
 function filesScreen(){
   if(!FL.loaded && !FL.loading && !FL.err) setTimeout(flLoad, 0);
+  if(!TM.loaded && !TM.loading && msgAccount()) setTimeout(tmLoad, 0);
   const list = FL.folder ? FL.files.filter(f=>f.folder === FL.folder) : FL.files;
   const who = (typeof spaceName === 'function' && typeof litSpace === 'function' && bizOn && bizOn()) ? spaceName(litSpace()) : '';
   const chip = (v, t)=>`<button class="fl-chip${FL.folder === v ? ' on' : ''}" data-fl="folder" data-v="${escText(v)}">${escText(t)}</button>`;
   const row = f=>`<div class="row-card fl-row" data-fl="open" data-id="${escText(f.id)}">
       <span class="fl-ic">${LIT_ICON[f.kind] || LIT_ICON.doc}</span>
       <span class="fl-tx"><b>${escText(f.name)}</b><small>${escText(flSub(f))}</small></span>
-      <button class="fl-more" data-fl="more" data-id="${escText(f.id)}" aria-label="More">⋮</button></div>`;
+      ${FL.canEdit ? `<button class="fl-more" data-fl="more" data-id="${escText(f.id)}" aria-label="More">⋮</button>` : ''}</div>`;
   const sheet = FL.sheet;
   const fo = sheet && sheet.id ? FL.files.find(x=>x.id === sheet.id) : null;
   const sheetHTML = !sheet ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${
@@ -21875,15 +21892,90 @@ function filesScreen(){
   return `
     <div class="page-shell fl-page">
     ${topBar('Files', false)}
+    ${TM.mine.some(t=>t.status === 'member') ? `<div class="fl-chips fl-whose">${[{ id:'', name:'My files' }].concat(TM.mine.filter(t=>t.status === 'member').map(t=>({ id:t.id, name: t.name || '@' + t.username }))).map(o=>`<button class="fl-chip${FL.of === o.id ? ' on' : ''}" data-fl="whose" data-v="${escText(o.id)}" data-n="${escText(o.name)}">${escText(o.name)}</button>`).join('')}</div>` : ''}
     <div class="fl-head"><div class="fl-sum">${FL.loaded ? FL.files.length + ' file' + (FL.files.length === 1 ? '' : 's') + (FL.used ? ' · ' + litSize(FL.used) : '') : FL.err === 'signin' ? 'Log in to keep your files' : FL.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>
-      <div class="fl-note">Kept privately on Lockedintool${who ? ' for ' + escText(who) : ''} - locked on this phone before they go up.</div></div>
-    <div class="fl-chips">${chip('', 'All files')}${FL.folders.map(n=>chip(n, n)).join('')}<button class="fl-chip fl-new" data-fl="newfolder">+ Folder</button>${FL.folder ? `<button class="fl-chip" data-fl="folderopts" aria-label="Folder options">⋯</button>` : ''}</div>
-    <button class="btn-wide btn-primary fl-add" data-fl="add">+ Add files${FL.folder ? ' to ' + escText(FL.folder) : ''}</button>
+      <div class="fl-note">${FL.of ? escText(FL.ofName) + '’s files - shared with you as ' + (FL.canEdit ? 'a manager' : 'staff (open only)') : 'Kept privately on Lockedintool' + (who ? ' for ' + escText(who) : '') + ' - locked on this phone before they go up.'}</div></div>
+    <div class="fl-chips">${chip('', 'All files')}${FL.folders.map(n=>chip(n, n)).join('')}${FL.canEdit ? `<button class="fl-chip fl-new" data-fl="newfolder">+ Folder</button>` : ''}${FL.folder && FL.canEdit ? `<button class="fl-chip" data-fl="folderopts" aria-label="Folder options">⋯</button>` : ''}</div>
+    ${FL.canEdit ? `<button class="btn-wide btn-primary fl-add" data-fl="add">+ Add files${FL.folder ? ' to ' + escText(FL.folder) : ''}</button>` : ''}
     ${FL.busy ? `<div class="fl-busy">Uploading ${FL.busy} file${FL.busy === 1 ? '' : 's'}…</div>` : ''}
     <div class="fl-list">${list.length ? list.map(row).join('') : FL.loaded ? `<div class="fl-empty">${FL.folder ? 'This folder is empty.' : 'No files yet. Add documents, pictures, videos and audio - they stay here for this account, on any phone you log in on.'}</div>` : ''}</div>
     ${sheetHTML}
     </div>`;
 }
+// ---- #379 TEAM (owner, 14 Nov 2026: 'run a full business inside lockedintool'; the take-over plan: Files -> Team -> ...):
+// the people who work with this account (a company's account), invited by @username as Manager (adds / changes the files)
+// or Staff (sees and opens them). They accept in their own TEAM screen; then the account's Files show for them too.
+const TM = { members:[], mine:[], loaded:false, loading:false, sheet:null, err:'' };
+function tmLoad(){
+  if(TM.loading || !msgAccount()) return; TM.loading = true;
+  msgApi('/v1/team/list').then(r=>{ TM.members = r.members || []; TM.mine = r.mine || []; TM.loaded = true; TM.err = ''; })
+    .catch(e=>{ TM.err = e.code === 'signin' ? 'signin' : 'net'; })
+    .finally(()=>{ TM.loading = false; if(state.current === 'staff' || state.current === 'files') renderDevice(); });
+}
+window.addEventListener('storage', e=>{ if(e.key === 'story-team-ping'){ TM.loaded = false; if(state.current === 'staff') tmLoad(); } });
+function tmPic(u){ return u.photo ? `<img alt="" src="${escText(u.photo)}">` : `<b>${escText(((u.name || u.username || '?').trim().charAt(0) || '?').toUpperCase())}</b>`; }
+function tmRole(r){ return r === 'manager' ? 'Manager' : 'Staff'; }
+function staffScreen(){
+  if(!TM.loaded && !TM.loading && !TM.err) setTimeout(tmLoad, 0);
+  const sh = TM.sheet, mem = sh && sh.id ? TM.members.find(x=>x.id === sh.id) : null, team = sh && sh.oid ? TM.mine.find(x=>x.id === sh.oid) : null;
+  const who = (typeof bizOn === 'function' && bizOn() && typeof spaceName === 'function') ? spaceName(litSpace()) : 'this account';
+  const person = (u, right)=>`<div class="row-card tm-row"><span class="tm-pic">${tmPic(u)}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${escText((u.name && u.username ? '@' + u.username + ' · ' : '') + tmRole(u.role) + (u.status === 'invited' ? ' · invited' : ''))}</small></span>${right}</div>`;
+  const sheetHTML = !sh ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${
+    sh.t === 'add' ? `<div class="fl-sh-t">Add to your team</div><div class="fl-sh-s">They’ll get an invite and join once they accept.</div>
+      <input id="tm-in" class="bz-in" placeholder="@username" autocomplete="off" autocapitalize="off">
+      <div class="tm-roles"><button class="fl-chip${sh.role !== 'manager' ? ' on' : ''}" data-tm="role-pick" data-v="staff">Staff</button><button class="fl-chip${sh.role === 'manager' ? ' on' : ''}" data-tm="role-pick" data-v="manager">Manager</button></div>
+      <div class="fl-sh-s">${sh.role === 'manager' ? 'A manager can add, rename, move and delete the files.' : 'Staff can see and open the files.'}</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-tm="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-tm="invite">Invite</button></div>`
+    : sh.t === 'member' && mem ? `<div class="fl-sh-t">${escText(mem.name || '@' + mem.username)}</div>
+      <button class="btn-wide" data-tm="set-role" data-id="${escText(mem.id)}" data-v="${mem.role === 'manager' ? 'staff' : 'manager'}">${mem.role === 'manager' ? 'Make staff' : 'Make manager'}</button>
+      <button class="btn-wide fl-del" data-tm="remove" data-id="${escText(mem.id)}">Remove from team</button><button class="btn-wide" data-tm="close">Cancel</button>`
+    : sh.t === 'remove' && mem ? `<div class="fl-sh-t">Remove ${escText(mem.name || '@' + mem.username)}?</div><div class="fl-sh-s">They won’t see this account’s files any more.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-tm="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-tm="remove-yes" data-id="${escText(mem.id)}">Remove</button></div>`
+    : sh.t === 'leave' && team ? `<div class="fl-sh-t">Leave ${escText(team.name || '@' + team.username)}’s team?</div><div class="fl-sh-s">You won’t see their files any more.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-tm="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-tm="leave-yes" data-oid="${escText(team.id)}">Leave</button></div>` : ''
+  }</div></div>`;
+  const mine = TM.mine;
+  return `
+    <div class="page-shell fl-page">
+    ${topBar('Team', false)}
+    <div class="fl-head"><div class="fl-sum">${TM.loaded ? TM.members.length + ' in ' + escText(who === 'this account' ? 'your team' : who + '’s team') : TM.err === 'signin' ? 'Log in to build your team' : TM.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>
+      <div class="fl-note">The people who work with ${escText(who)}. Managers add and change its files; staff see and open them.</div></div>
+    <button class="btn-wide btn-primary fl-add" data-tm="add">+ Add to team</button>
+    <div class="section-title">YOUR TEAM</div>
+    ${TM.members.length ? TM.members.map(u=>person(u, `<button class="fl-more" data-tm="member" data-id="${escText(u.id)}" aria-label="More">⋮</button>`)).join('') : TM.loaded ? '<div class="fl-empty">No one yet. Add the people you work with by their @username.</div>' : ''}
+    ${mine.length ? `<div class="section-title">TEAMS YOU’RE IN</div>` + mine.map(t=>person(t, t.status === 'invited'
+      ? `<span class="tm-btns"><button class="tm-no" data-tm="decline" data-oid="${escText(t.id)}">Decline</button><button class="tm-yes" data-tm="accept" data-oid="${escText(t.id)}">Accept</button></span>`
+      : `<span class="tm-btns"><button class="tm-no" data-tm="leave" data-oid="${escText(t.id)}">Leave</button><button class="tm-yes" data-tm="files" data-oid="${escText(t.id)}" data-n="${escText(t.name || '@' + t.username)}">Files</button></span>`)).join('') : ''}
+    ${sheetHTML}
+    </div>`;
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-tm]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-tm'), id = b.getAttribute('data-id'), oid = b.getAttribute('data-oid');
+  switch(a){
+    case 'add': if(!msgAccount()){ showToast('Log in to build your team'); return; } TM.sheet = { t:'add', role:'staff' }; break;
+    case 'role-pick': { const v = (document.getElementById('tm-in') || {}).value || ''; TM.sheet.role = b.getAttribute('data-v'); renderDevice(); const i = document.getElementById('tm-in'); if(i) i.value = v; return; }
+    case 'invite': { const un = ((document.getElementById('tm-in') || {}).value || '').trim().replace(/^@/, ''); if(!un){ showToast('Type their @username'); return; }
+      const role = TM.sheet.role; TM.sheet = null;
+      msgApi('/v1/team/invite', { username:un, role }).then(r=>{ if(r.member) TM.members.push(r.member); showToast('Invite sent to @' + un.toLowerCase()); if(state.current === 'staff') renderDevice(); })
+        .catch(err=>showToast(err.code === 'nouser' ? 'No one on Lockedintool is called @' + un : err.code === 'self' ? 'That’s you' : err.code === 'already' ? '@' + un + ' is already in your team' : 'Couldn’t send the invite - try again'));
+      break; }
+    case 'member': TM.sheet = { t:'member', id }; break;
+    case 'set-role': { const m = TM.members.find(x=>x.id === id); if(m) m.role = b.getAttribute('data-v'); TM.sheet = null; msgApi('/v1/team/role', { mid:id, role: b.getAttribute('data-v') }).catch(()=>{ showToast('Couldn’t change the role'); tmLoad(); }); break; }
+    case 'remove': TM.sheet = { t:'remove', id }; break;
+    case 'remove-yes': TM.members = TM.members.filter(x=>x.id !== id); TM.sheet = null; msgApi('/v1/team/remove', { mid:id }).catch(()=>{ showToast('Couldn’t remove them'); tmLoad(); }); break;
+    case 'accept': case 'decline': { const t = TM.mine.find(x=>x.id === oid); if(a === 'accept'){ if(t) t.status = 'member'; } else TM.mine = TM.mine.filter(x=>x.id !== oid);
+      msgApi('/v1/team/respond', { oid, accept: a === 'accept' }).then(()=>showToast(a === 'accept' ? 'You joined the team' : 'Invite declined')).catch(()=>{ showToast('Couldn’t answer - try again'); tmLoad(); }); break; }
+    case 'leave': TM.sheet = { t:'leave', oid }; break;
+    case 'leave-yes': TM.mine = TM.mine.filter(x=>x.id !== oid); TM.sheet = null; if(FL.of === oid){ FL.of = ''; FL.loaded = false; } msgApi('/v1/team/leave', { oid }).catch(()=>{ showToast('Couldn’t leave - try again'); tmLoad(); }); break;
+    case 'files': FL.of = oid; FL.ofName = b.getAttribute('data-n') || ''; FL.folder = ''; FL.files = []; FL.folders = []; FL.loaded = false; FL.err = ''; state.current = 'files'; flLoad(); break;
+    case 'close': TM.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
+  if(TM.sheet && TM.sheet.t === 'add') setTimeout(()=>{ const i = document.getElementById('tm-in'); if(i){ i.focus(); try{ if(NATIVE && window.StoryNative.setTyping) window.StoryNative.setTyping(true); }catch(err){} } }, 0);
+}, true);
 async function flUploadOne(f){
   FL.busy++; if(state.current === 'files') renderDevice();
   try{
@@ -21891,7 +21983,7 @@ async function flUploadOne(f){
     const key = await crypto.subtle.generateKey({ name:'AES-GCM', length:256 }, true, ['encrypt']), ivb = crypto.getRandomValues(new Uint8Array(12));
     bytes = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv: ivb }, key, bytes));
     const m = await upPutMedia({ bytes, mime:'application/octet-stream' });
-    const r = await msgApi('/v1/files/add', { m, k: B64.to(await crypto.subtle.exportKey('raw', key)), iv: B64.to(ivb), name: f.name, mime: f.mime, size, kind: f.kind, folder: FL.folder });
+    const r = await msgApi('/v1/files/add', flOf({ m, k: B64.to(await crypto.subtle.exportKey('raw', key)), iv: B64.to(ivb), name: f.name, mime: f.mime, size, kind: f.kind, folder: FL.folder }));
     if(r.file) FL.files.unshift(r.file); FL.used += size;
   }catch(e){ showToast(e.code === 'big' ? 'That file is too big (300 MB max)' : e.code === 'full' ? 'Your Files are full' : 'Couldn’t add ' + (f.name || 'that file') + ' - try again'); }
   FL.busy--; if(state.current === 'files') renderDevice();
@@ -21905,6 +21997,7 @@ document.addEventListener('click', e=>{
   const val = ()=>((document.getElementById('fl-in') || {}).value || '').trim();
   switch(a){
     case 'folder': FL.folder = b.getAttribute('data-v') || ''; break;
+    case 'whose': FL.of = b.getAttribute('data-v') || ''; FL.ofName = b.getAttribute('data-n') || ''; FL.folder = ''; FL.files = []; FL.folders = []; FL.loaded = false; FL.err = ''; flLoad(); break;
     case 'add': if(!msgAccount()){ showToast('Log in to keep your files'); return; } FL.sheet = { t:'add' }; break;
     case 'add-photo': FL.sheet = null; renderDevice(); litGrid('photo', flAdd); return;
     case 'add-video': FL.sheet = null; renderDevice(); litGrid('video', flAdd); return;
@@ -21918,15 +22011,15 @@ document.addEventListener('click', e=>{
     case 'move': FL.sheet = { t:'move', id }; break;
     case 'del': FL.sheet = { t:'del', id }; break;
     case 'close': FL.sheet = null; break;
-    case 'rename-save': { const n = val(); if(!n || !f) return; f.name = n; FL.sheet = null; msgApi('/v1/files/update', { id, name:n }).catch(()=>showToast('Couldn’t rename it')); break; }
-    case 'move-to': if(!f) return; f.folder = b.getAttribute('data-v') || ''; FL.sheet = null; msgApi('/v1/files/update', { id, folder: f.folder }).catch(()=>showToast('Couldn’t move it')); break;
-    case 'del-yes': if(!f) return; FL.files = FL.files.filter(x=>x.id !== id); FL.used = Math.max(0, FL.used - (f.size || 0)); FL.sheet = null; msgApi('/v1/files/delete', { id }).catch(()=>{ showToast('Couldn’t delete it'); flLoad(); }); break;
+    case 'rename-save': { const n = val(); if(!n || !f) return; f.name = n; FL.sheet = null; msgApi('/v1/files/update', flOf({ id, name:n })).catch(()=>showToast('Couldn’t rename it')); break; }
+    case 'move-to': if(!f) return; f.folder = b.getAttribute('data-v') || ''; FL.sheet = null; msgApi('/v1/files/update', flOf({ id, folder: f.folder })).catch(()=>showToast('Couldn’t move it')); break;
+    case 'del-yes': if(!f) return; FL.files = FL.files.filter(x=>x.id !== id); FL.used = Math.max(0, FL.used - (f.size || 0)); FL.sheet = null; msgApi('/v1/files/delete', flOf({ id })).catch(()=>{ showToast('Couldn’t delete it'); flLoad(); }); break;
     case 'newfolder': if(!msgAccount()){ showToast('Log in to keep your files'); return; } FL.sheet = { t:'newfolder' }; break;
-    case 'folder-save': { const n = val(); if(!n) return; if(!FL.folders.includes(n)) FL.folders = FL.folders.concat([n]).sort((x, y)=>x.localeCompare(y)); FL.folder = n; FL.sheet = null; msgApi('/v1/files/folder', { name:n }).catch(()=>showToast('Couldn’t make the folder')); break; }
+    case 'folder-save': { const n = val(); if(!n) return; if(!FL.folders.includes(n)) FL.folders = FL.folders.concat([n]).sort((x, y)=>x.localeCompare(y)); FL.folder = n; FL.sheet = null; msgApi('/v1/files/folder', flOf({ name:n })).catch(()=>showToast('Couldn’t make the folder')); break; }
     case 'folderopts': FL.sheet = { t:'folderopts' }; break;
     case 'folder-rename': FL.sheet = { t:'folderrename' }; break;
-    case 'folder-rename-save': { const n = val(), old = FL.folder; if(!n || !old) return; FL.folders = FL.folders.map(x=>x === old ? n : x).sort((x, y)=>x.localeCompare(y)); FL.files.forEach(x=>{ if(x.folder === old) x.folder = n; }); FL.folder = n; FL.sheet = null; msgApi('/v1/files/folder', { name:old, rename:n }).catch(()=>{ showToast('Couldn’t rename the folder'); flLoad(); }); break; }
-    case 'folder-del': { const old = FL.folder; FL.folders = FL.folders.filter(x=>x !== old); FL.files.forEach(x=>{ if(x.folder === old) x.folder = ''; }); FL.folder = ''; FL.sheet = null; msgApi('/v1/files/folder', { name:old, remove:true }).catch(()=>{ showToast('Couldn’t delete the folder'); flLoad(); }); break; }
+    case 'folder-rename-save': { const n = val(), old = FL.folder; if(!n || !old) return; FL.folders = FL.folders.map(x=>x === old ? n : x).sort((x, y)=>x.localeCompare(y)); FL.files.forEach(x=>{ if(x.folder === old) x.folder = n; }); FL.folder = n; FL.sheet = null; msgApi('/v1/files/folder', flOf({ name:old, rename:n })).catch(()=>{ showToast('Couldn’t rename the folder'); flLoad(); }); break; }
+    case 'folder-del': { const old = FL.folder; FL.folders = FL.folders.filter(x=>x !== old); FL.files.forEach(x=>{ if(x.folder === old) x.folder = ''; }); FL.folder = ''; FL.sheet = null; msgApi('/v1/files/folder', flOf({ name:old, remove:true })).catch(()=>{ showToast('Couldn’t delete the folder'); flLoad(); }); break; }
     default: return;
   }
   renderDevice();
@@ -22884,7 +22977,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

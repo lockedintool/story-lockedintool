@@ -396,4 +396,4 @@ commits, pushed as a new update) - nothing else changes.
 | 387 | 2026-11-14 | Lock In says Rank, not Rack: 'Rank by winning', 'Rank 145' | 46ced8a |
 | 388 | 2026-11-14 | Lock In: post a challenge to your status - anyone who sees it can tap Accept challenge and play you | 2d029d6 |
 | 389 | 2026-11-14 | Lock In status challenges: choose how many people can accept (the status disappears once they have), and the challenger's name shows on the card and the Accept button | 5b5e913 |
-| 390 | 2026-11-14 | Status challenges: once full, the status says 'Challenge full - can't accept anyone any more' for 10 minutes, then disappears |  |
+| 390 | 2026-11-14 | Status challenges: once full, the status says 'Challenge full - can't accept anyone any more' for 10 minutes, then disappears | f425788 |

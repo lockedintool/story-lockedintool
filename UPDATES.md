@@ -374,4 +374,4 @@ commits, pushed as a new update) - nothing else changes.
 | 365 | 2026-11-14 | The bottom switch's 'Lockedintool' no longer breaks onto two lines next to 'Business home' / 'Personal home'. | 433676d |
 | 366 | 2026-11-14 | One home: with companies set up, the company's home (or Personal home) is Lockedintool's only home. The bottom switch is Apps \| Lockedintool again, and Lockedintool opens that home. | 5db3d13 |
 | 367 | 2026-11-14 | Lockedintool becomes the phone's real Home app on Second system when companies are set up (Android asks once), so Home always lands on your company's home / Personal home and the phone's own home screen no longer shows. | fd7f6ee |
-| 368 | 2026-11-14 | The bottom switch with companies: Apps opens the company's home (or Personal home), Lockedintool opens your normal Lockedintool. |  |
+| 368 | 2026-11-14 | The bottom switch with companies: Apps opens the company's home (or Personal home), Lockedintool opens your normal Lockedintool. | a4c0329 |

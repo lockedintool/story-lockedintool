@@ -1477,6 +1477,22 @@
   .sp-logo-pick img{ width:100%; height:100%; object-fit:cover; display:block; }
   .sp-album{ display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; }
   /* #360 the business home */
+  /* #378 Files */
+  .fl-page{ padding-bottom:64px; }
+  .fl-head{ margin:4px 0 10px; } .fl-sum{ font-size:15px; font-weight:700; } .fl-note{ font-size:11px; color:#9a9a9a; margin-top:3px; }
+  .fl-chips{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:10px; scrollbar-width:none; } .fl-chips::-webkit-scrollbar{ display:none; }
+  .fl-chip{ flex:0 0 auto; background:transparent; color:#ddd; border:1px solid #333; border-radius:16px; padding:7px 13px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .fl-chip.on{ background:#fff; color:#000; border-color:#fff; } .fl-chip.fl-new{ border-style:dashed; }
+  .fl-add{ margin:0 0 10px; } .fl-busy{ font-size:12px; color:#9a9a9a; margin:0 0 8px; }
+  .fl-row{ display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:8px; cursor:pointer; }
+  .fl-ic{ width:38px; height:38px; flex:0 0 38px; border-radius:10px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; color:#ddd; }
+  .fl-ic svg{ width:20px; height:20px; }
+  .fl-tx{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; } .fl-tx b{ font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .fl-tx small{ font-size:11px; color:#9a9a9a; margin-top:2px; }
+  .fl-more{ background:transparent; border:0; color:#ddd; font-size:20px; padding:4px 8px; margin:-4px -6px -4px 0; }
+  .fl-empty{ font-size:13px; color:#9a9a9a; text-align:center; padding:30px 10px; line-height:1.5; }
+  .fl-sheet{ max-height:80%; overflow-y:auto; } .fl-sheet .btn-wide{ margin-top:8px; } .fl-sh-t{ font-size:16px; font-weight:700; margin-bottom:6px; word-break:break-word; } .fl-sh-s{ font-size:12px; color:#9a9a9a; margin-top:6px; }
+  .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
+  .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
   .bz-swpop{ position:absolute; left:0; top:calc(100% + 6px); z-index:61; white-space:nowrap; display:flex; background:#000; border-radius:14px; border:1px solid #303030; padding:4px 6px; box-shadow:0 4px 18px rgba(0,0,0,.45); }
   .bz-swpop button{ background:none; border:0; color:#fff; font-size:16px; font-weight:600; padding:10px 14px; }
@@ -6157,6 +6173,7 @@ function dashboardScreen(){
       <div class="story-body">
         <div class="story-sidebar">
           <div class="sidebar-item" data-nav="notes">NOTES</div>
+          <div class="sidebar-item" data-nav="files">FILES</div>
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
@@ -17083,6 +17100,7 @@ function renderScreenContent(){
     case 'apps': return appsScreen();
     case 'spaces-settings': return spacesSettingsScreen();
     case 'space-album': return spaceAlbumScreen();
+    case 'files': return filesScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -21668,6 +21686,7 @@ const LIT_ICON = {
   audio: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
   video: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7 5 12 7-12 7z"/></svg>'
 };
+LIT_ICON.photo = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>';   // #378 Files
 const LIT_MAX_FILES = 10;
 function litSize(n){ return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
 let litPickCb = null, litPickKind = null, litGridWant = null;
@@ -21800,6 +21819,118 @@ document.addEventListener('click', e=>{
   }
   if(NATIVE && window.StoryNative.chatOpenFile) window.StoryNative.chatOpenFile(MSG_API + '/v1/media/' + fm.m, fm.k || '', fm.iv || '', fm.name, fm.mime);
   else litFileBlob(fm).then(u=>{ const a = document.createElement('a'); a.href = u; a.download = fm.name; document.body.appendChild(a); a.click(); a.remove(); }).catch(()=>showToast('Couldn’t open it'));
+}, true);
+// ---- #378 FILES (owner, 14 Nov 2026: 'make lockedintool an app that helps businesses organize their stuff - run everything in
+// one app: business meetings, photos, store files'; 'Take over - build lockedintool to its fullest reach ... you can add stuff but
+// don't remove anything'): each account's own files and folders on Lockedintool's server - a company's account keeps its own.
+// Every file is locked on the phone (AES-GCM) before it goes up; opening it unlocks it on the phone (the chat file viewer).
+const FL = { files:[], folders:[], used:0, loaded:false, loading:false, folder:'', busy:0, sheet:null, pick:null, err:'' };
+function flLoad(){
+  if(FL.loading) return; if(!msgAccount()){ FL.err = 'signin'; return; }
+  FL.loading = true;
+  msgApi('/v1/files/list').then(r=>{ FL.files = r.files || []; FL.folders = r.folders || []; FL.used = r.used || 0; FL.loaded = true; FL.err = ''; })
+    .catch(e=>{ FL.err = e.code === 'signin' ? 'signin' : 'net'; })
+    .finally(()=>{ FL.loading = false; if(state.current === 'files') renderDevice(); });
+}
+function flDate(t){ const d = new Date(t), n = new Date(); return d.toDateString() === n.toDateString() ? d.toTimeString().slice(0, 5) : d.toLocaleDateString(undefined, { day:'numeric', month:'short', year: d.getFullYear() === n.getFullYear() ? undefined : 'numeric' }); }
+function flSub(f){ const ext = f.kind === 'photo' ? 'Picture' : f.kind === 'video' ? 'Video' : f.kind === 'audio' ? 'Audio' : ((f.name.split('.').pop() || 'File').toUpperCase().slice(0, 6)); return ext + (f.size ? ' · ' + litSize(f.size) : '') + ' · ' + flDate(f.at) + (FL.folder ? '' : (f.folder ? ' · ' + f.folder : '')); }
+function filesScreen(){
+  if(!FL.loaded && !FL.loading && !FL.err) setTimeout(flLoad, 0);
+  const list = FL.folder ? FL.files.filter(f=>f.folder === FL.folder) : FL.files;
+  const who = (typeof spaceName === 'function' && typeof litSpace === 'function' && bizOn && bizOn()) ? spaceName(litSpace()) : '';
+  const chip = (v, t)=>`<button class="fl-chip${FL.folder === v ? ' on' : ''}" data-fl="folder" data-v="${escText(v)}">${escText(t)}</button>`;
+  const row = f=>`<div class="row-card fl-row" data-fl="open" data-id="${escText(f.id)}">
+      <span class="fl-ic">${LIT_ICON[f.kind] || LIT_ICON.doc}</span>
+      <span class="fl-tx"><b>${escText(f.name)}</b><small>${escText(flSub(f))}</small></span>
+      <button class="fl-more" data-fl="more" data-id="${escText(f.id)}" aria-label="More">⋮</button></div>`;
+  const sheet = FL.sheet;
+  const fo = sheet && sheet.id ? FL.files.find(x=>x.id === sheet.id) : null;
+  const sheetHTML = !sheet ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${
+    sheet.t === 'add' ? `<div class="fl-sh-t">Add to ${escText(FL.folder || 'Files')}</div>
+      <button class="btn-wide" data-fl="add-photo">Pictures</button><button class="btn-wide" data-fl="add-video">Videos</button>
+      <button class="btn-wide" data-fl="add-doc">Document</button><button class="btn-wide" data-fl="add-audio">Audio</button>
+      <button class="btn-wide" data-fl="close">Cancel</button>`
+    : sheet.t === 'more' && fo ? `<div class="fl-sh-t">${escText(fo.name)}</div>
+      <button class="btn-wide" data-fl="open" data-id="${escText(fo.id)}">Open</button><button class="btn-wide" data-fl="rename" data-id="${escText(fo.id)}">Rename</button>
+      <button class="btn-wide" data-fl="move" data-id="${escText(fo.id)}">Move to folder</button><button class="btn-wide fl-del" data-fl="del" data-id="${escText(fo.id)}">Delete</button>
+      <button class="btn-wide" data-fl="close">Cancel</button>`
+    : sheet.t === 'rename' && fo ? `<div class="fl-sh-t">Rename</div><input id="fl-in" class="bz-in" value="${escText(fo.name).replace(/"/g, '&quot;')}" autocomplete="off">
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-fl="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-fl="rename-save" data-id="${escText(fo.id)}">Save</button></div>`
+    : sheet.t === 'move' && fo ? `<div class="fl-sh-t">Move “${escText(fo.name)}” to</div>
+      <button class="btn-wide${fo.folder ? '' : ' fl-cur'}" data-fl="move-to" data-id="${escText(fo.id)}" data-v="">No folder</button>
+      ${FL.folders.map(n=>`<button class="btn-wide${fo.folder === n ? ' fl-cur' : ''}" data-fl="move-to" data-id="${escText(fo.id)}" data-v="${escText(n)}">${escText(n)}</button>`).join('')}
+      <button class="btn-wide" data-fl="close">Cancel</button>`
+    : sheet.t === 'del' && fo ? `<div class="fl-sh-t">Delete “${escText(fo.name)}”?</div><div class="fl-sh-s">It’s removed from Lockedintool for good.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-fl="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-fl="del-yes" data-id="${escText(fo.id)}">Delete</button></div>`
+    : sheet.t === 'newfolder' ? `<div class="fl-sh-t">New folder</div><input id="fl-in" class="bz-in" placeholder="Folder name (for example Invoices)" autocomplete="off">
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-fl="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-fl="folder-save">Create</button></div>`
+    : sheet.t === 'folderopts' ? `<div class="fl-sh-t">${escText(FL.folder)}</div>
+      <button class="btn-wide" data-fl="folder-rename">Rename folder</button><button class="btn-wide fl-del" data-fl="folder-del">Delete folder</button>
+      <div class="fl-sh-s">Deleting a folder keeps its files - they move to All files.</div><button class="btn-wide" data-fl="close">Cancel</button>`
+    : sheet.t === 'folderrename' ? `<div class="fl-sh-t">Rename folder</div><input id="fl-in" class="bz-in" value="${escText(FL.folder).replace(/"/g, '&quot;')}" autocomplete="off">
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-fl="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-fl="folder-rename-save">Save</button></div>`
+    : sheet.t === 'view' && fo ? `<div class="fl-sh-t">${escText(fo.name)}</div><div class="fl-view">${litFileHTML({ m:fo.m, k:fo.k, iv:fo.iv, name:fo.name, mime:fo.mime, size:fo.size, kind:fo.kind })}</div>
+      <button class="btn-wide" data-fl="close">Close</button>` : ''
+  }</div></div>`;
+  return `
+    <div class="page-shell fl-page">
+    ${topBar('Files', false)}
+    <div class="fl-head"><div class="fl-sum">${FL.loaded ? FL.files.length + ' file' + (FL.files.length === 1 ? '' : 's') + (FL.used ? ' · ' + litSize(FL.used) : '') : FL.err === 'signin' ? 'Log in to keep your files' : FL.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>
+      <div class="fl-note">Kept privately on Lockedintool${who ? ' for ' + escText(who) : ''} - locked on this phone before they go up.</div></div>
+    <div class="fl-chips">${chip('', 'All files')}${FL.folders.map(n=>chip(n, n)).join('')}<button class="fl-chip fl-new" data-fl="newfolder">+ Folder</button>${FL.folder ? `<button class="fl-chip" data-fl="folderopts" aria-label="Folder options">⋯</button>` : ''}</div>
+    <button class="btn-wide btn-primary fl-add" data-fl="add">+ Add files${FL.folder ? ' to ' + escText(FL.folder) : ''}</button>
+    ${FL.busy ? `<div class="fl-busy">Uploading ${FL.busy} file${FL.busy === 1 ? '' : 's'}…</div>` : ''}
+    <div class="fl-list">${list.length ? list.map(row).join('') : FL.loaded ? `<div class="fl-empty">${FL.folder ? 'This folder is empty.' : 'No files yet. Add documents, pictures, videos and audio - they stay here for this account, on any phone you log in on.'}</div>` : ''}</div>
+    ${sheetHTML}
+    </div>`;
+}
+async function flUploadOne(f){
+  FL.busy++; if(state.current === 'files') renderDevice();
+  try{
+    let bytes = await f.get(); const size = bytes.length;
+    const key = await crypto.subtle.generateKey({ name:'AES-GCM', length:256 }, true, ['encrypt']), ivb = crypto.getRandomValues(new Uint8Array(12));
+    bytes = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv: ivb }, key, bytes));
+    const m = await upPutMedia({ bytes, mime:'application/octet-stream' });
+    const r = await msgApi('/v1/files/add', { m, k: B64.to(await crypto.subtle.exportKey('raw', key)), iv: B64.to(ivb), name: f.name, mime: f.mime, size, kind: f.kind, folder: FL.folder });
+    if(r.file) FL.files.unshift(r.file); FL.used += size;
+  }catch(e){ showToast(e.code === 'big' ? 'That file is too big (300 MB max)' : e.code === 'full' ? 'Your Files are full' : 'Couldn’t add ' + (f.name || 'that file') + ' - try again'); }
+  FL.busy--; if(state.current === 'files') renderDevice();
+}
+function flAdd(files){ (files || []).forEach(f=>flUploadOne(f)); }
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-fl]'); if(!b) return;
+  if(b.closest('.lit-file') && !b.matches('[data-fl]')) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-fl'), id = b.getAttribute('data-id'), f = id ? FL.files.find(x=>x.id === id) : null;
+  const val = ()=>((document.getElementById('fl-in') || {}).value || '').trim();
+  switch(a){
+    case 'folder': FL.folder = b.getAttribute('data-v') || ''; break;
+    case 'add': if(!msgAccount()){ showToast('Log in to keep your files'); return; } FL.sheet = { t:'add' }; break;
+    case 'add-photo': FL.sheet = null; renderDevice(); litGrid('photo', flAdd); return;
+    case 'add-video': FL.sheet = null; renderDevice(); litGrid('video', flAdd); return;
+    case 'add-doc': FL.sheet = null; renderDevice(); litPickFile('doc', flAdd); return;
+    case 'add-audio': FL.sheet = null; renderDevice(); litPickFile('audio', flAdd); return;
+    case 'open': if(!f) return;
+      if(f.kind === 'doc'){ FL.sheet = null; renderDevice(); if(NATIVE && window.StoryNative.chatOpenFile) window.StoryNative.chatOpenFile(MSG_API + '/v1/media/' + f.m, f.k || '', f.iv || '', f.name, f.mime); else litFileBlob(f).then(u=>{ const l = document.createElement('a'); l.href = u; l.download = f.name; document.body.appendChild(l); l.click(); l.remove(); }).catch(()=>showToast('Couldn’t open it')); return; }
+      FL.sheet = { t:'view', id }; renderDevice(); setTimeout(()=>{ litHydrate(document.querySelector('.fl-view')); const c = document.querySelector('.fl-view [data-lit-open]'); if(c) c.click(); }, 0); return;
+    case 'more': FL.sheet = { t:'more', id }; break;
+    case 'rename': FL.sheet = { t:'rename', id }; break;
+    case 'move': FL.sheet = { t:'move', id }; break;
+    case 'del': FL.sheet = { t:'del', id }; break;
+    case 'close': FL.sheet = null; break;
+    case 'rename-save': { const n = val(); if(!n || !f) return; f.name = n; FL.sheet = null; msgApi('/v1/files/update', { id, name:n }).catch(()=>showToast('Couldn’t rename it')); break; }
+    case 'move-to': if(!f) return; f.folder = b.getAttribute('data-v') || ''; FL.sheet = null; msgApi('/v1/files/update', { id, folder: f.folder }).catch(()=>showToast('Couldn’t move it')); break;
+    case 'del-yes': if(!f) return; FL.files = FL.files.filter(x=>x.id !== id); FL.used = Math.max(0, FL.used - (f.size || 0)); FL.sheet = null; msgApi('/v1/files/delete', { id }).catch(()=>{ showToast('Couldn’t delete it'); flLoad(); }); break;
+    case 'newfolder': if(!msgAccount()){ showToast('Log in to keep your files'); return; } FL.sheet = { t:'newfolder' }; break;
+    case 'folder-save': { const n = val(); if(!n) return; if(!FL.folders.includes(n)) FL.folders = FL.folders.concat([n]).sort((x, y)=>x.localeCompare(y)); FL.folder = n; FL.sheet = null; msgApi('/v1/files/folder', { name:n }).catch(()=>showToast('Couldn’t make the folder')); break; }
+    case 'folderopts': FL.sheet = { t:'folderopts' }; break;
+    case 'folder-rename': FL.sheet = { t:'folderrename' }; break;
+    case 'folder-rename-save': { const n = val(), old = FL.folder; if(!n || !old) return; FL.folders = FL.folders.map(x=>x === old ? n : x).sort((x, y)=>x.localeCompare(y)); FL.files.forEach(x=>{ if(x.folder === old) x.folder = n; }); FL.folder = n; FL.sheet = null; msgApi('/v1/files/folder', { name:old, rename:n }).catch(()=>{ showToast('Couldn’t rename the folder'); flLoad(); }); break; }
+    case 'folder-del': { const old = FL.folder; FL.folders = FL.folders.filter(x=>x !== old); FL.files.forEach(x=>{ if(x.folder === old) x.folder = ''; }); FL.folder = ''; FL.sheet = null; msgApi('/v1/files/folder', { name:old, remove:true }).catch(()=>{ showToast('Couldn’t delete the folder'); flLoad(); }); break; }
+    default: return;
+  }
+  renderDevice();
+  if(FL.sheet && /rename|newfolder|folderrename/.test(FL.sheet.t)) setTimeout(()=>{ const i = document.getElementById('fl-in'); if(i){ i.focus(); try{ if(NATIVE && window.StoryNative.setTyping) window.StoryNative.setTyping(true); }catch(err){} } }, 0);
 }, true);
 // Send picked files into a chat (people, groups, Your Community): each shows at once as "Sending", goes up, then
 // the message carrying it is sent (locked) like any other message.
@@ -22753,7 +22884,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

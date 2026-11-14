@@ -384,3 +384,4 @@ commits, pushed as a new update) - nothing else changes.
 | 375 | 2026-11-14 | CAMERA and GALLERY removed from the Dashboard menu (the app-only test). | 65e4b67 |
 | 376 | 2026-11-14 | Widgets: the Wallet (and Money / Focus page) widget shows its own page again, not the Dashboard. | d933716 |
 | 377 | 2026-11-14 | No big empty strip at the bottom of the Trading page (or any page): it fills the screen like Money each time you come to it. | 417dec9 |
+| 378 | 2026-11-14 | Files: every account (each company too) keeps its own files and folders in Lockedintool - add pictures, videos, documents and audio, open, rename, move and delete them. Dashboard menu > FILES. |  |

@@ -206,6 +206,11 @@ export class Hub {
     try { this.sql.exec(`ALTER TABLE tombs ADD COLUMN why TEXT`); } catch (e) {}   // 'deleted' (by its owner) | 'banned'
     this.sql.exec(`CREATE TABLE IF NOT EXISTS delreasons (reason TEXT, note TEXT, at INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS blockfix (k TEXT PRIMARY KEY, kind TEXT, value TEXT, n INTEGER, first INTEGER, last INTEGER, status TEXT)`);   // adult block 'This is a mistake' reports (owner) - no names
+    // #378 FILES (owner, 14 Nov 2026: 'make lockedintool an app that helps businesses organize their stuff - run everything in one
+    // app: business meetings, photos, store files'; 'Take over - build lockedintool to its fullest reach'): each account's own
+    // files and folders. The bytes are locked on the phone (AES-GCM) before upload; the key travels with the row.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, uid TEXT, name TEXT, mime TEXT, size INTEGER, kind TEXT, folder TEXT, media TEXT, k TEXT, iv TEXT, at INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS filefolders (uid TEXT, name TEXT, at INTEGER, PRIMARY KEY (uid, name))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS callrates (uid TEXT, stars INTEGER, note TEXT, video INTEGER, grp INTEGER, secs INTEGER, at INTEGER)`);   // the end-of-call rating (owner) - no names shown
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, uid TEXT, kind TEXT, target TEXT, owner TEXT, reason TEXT, text TEXT, at INTEGER, status TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS ucomments (id TEXT PRIMARY KEY, pid TEXT, uid TEXT, text TEXT, at INTEGER)`);
@@ -303,6 +308,7 @@ export class Hub {
       if (path === '/v1/blocks') return this.blocksOf(me);
       if (path === '/v1/report') return this.report(me, body);
       if (path === '/v1/reports') return this.reportsList(me);
+      if (path.startsWith('/v1/files/')) return this.files(me, path.slice(10), body);
       if (path === '/v1/callrate') return this.callRate(me, body);
       if (path === '/v1/callrates') return this.callRates(me);
       if (path === '/v1/blockfix/list') return this.blockFixList(me);
@@ -1160,7 +1166,60 @@ export class Hub {
   }
   // Delete account (owner; POPIA): everything Lockedintool's server keeps about you goes. Payment records stay, as
   // the law requires (they never hold your card or bank login).
+  // #378 FILES: list / add / update (rename, move) / delete, and folders (an empty folder is kept too).
+  files(me, act, b) {
+    b = b || {};
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n);
+    const view = r => ({ id: r.id, name: r.name, mime: r.mime, size: r.size, kind: r.kind, folder: r.folder || '', m: r.media, k: r.k, iv: r.iv, at: r.at });
+    if (act === 'list') {
+      const files = this.sql.exec('SELECT * FROM files WHERE uid = ? ORDER BY at DESC LIMIT 2000', me.id).toArray().map(view);
+      const named = this.sql.exec('SELECT name FROM filefolders WHERE uid = ? ORDER BY name', me.id).toArray().map(r => r.name);
+      const folders = [...new Set(named.concat(files.map(f => f.folder).filter(Boolean)))].sort((a, c) => a.localeCompare(c));
+      const used = this.one('SELECT COALESCE(SUM(size), 0) AS n FROM files WHERE uid = ?', me.id).n;
+      return json({ files, folders, used });
+    }
+    if (act === 'add') {
+      const media = clean(b.m, 80);
+      if (!media || !this.one('SELECT 1 AS x FROM media WHERE id = ? AND uid = ?', media, me.id)) return json({ error: 'media' }, 400);
+      if (this.one('SELECT COUNT(*) AS n FROM files WHERE uid = ?', me.id).n >= 5000) return json({ error: 'full' }, 400);
+      const id = 'f' + rand(10), kind = ['photo', 'video', 'audio', 'doc'].includes(b.kind) ? b.kind : 'doc';
+      this.sql.exec('INSERT INTO files (id, uid, name, mime, size, kind, folder, media, k, iv, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, me.id, clean(b.name, 120) || 'File', clean(b.mime, 100) || 'application/octet-stream', Math.max(0, +b.size || 0), kind, clean(b.folder, 60), media, clean(b.k, 200), clean(b.iv, 100), Date.now());
+      return json({ ok: true, file: view(this.one('SELECT * FROM files WHERE id = ?', id)) });
+    }
+    if (act === 'update') {
+      const f = this.one('SELECT * FROM files WHERE id = ? AND uid = ?', clean(b.id, 40), me.id);
+      if (!f) return json({ error: 'gone' }, 404);
+      if (b.name !== undefined && clean(b.name, 120)) this.sql.exec('UPDATE files SET name = ? WHERE id = ?', clean(b.name, 120), f.id);
+      if (b.folder !== undefined) this.sql.exec('UPDATE files SET folder = ? WHERE id = ?', clean(b.folder, 60), f.id);
+      return json({ ok: true, file: view(this.one('SELECT * FROM files WHERE id = ?', f.id)) });
+    }
+    if (act === 'delete') {
+      const f = this.one('SELECT * FROM files WHERE id = ? AND uid = ?', clean(b.id, 40), me.id);
+      if (!f) return json({ ok: true });
+      this.sql.exec('DELETE FROM files WHERE id = ?', f.id);
+      if (!this.one('SELECT 1 AS x FROM files WHERE media = ?', f.media)) this.mediaDel('id = ?', f.media);
+      return json({ ok: true });
+    }
+    if (act === 'folder') {
+      const name = clean(b.name, 60); if (!name) return json({ error: 'name' }, 400);
+      if (b.remove) {
+        this.sql.exec('DELETE FROM filefolders WHERE uid = ? AND name = ?', me.id, name);
+        this.sql.exec("UPDATE files SET folder = '' WHERE uid = ? AND folder = ?", me.id, name);   // its files stay, under All files
+      } else if (b.rename) {
+        const to = clean(b.rename, 60); if (!to) return json({ error: 'name' }, 400);
+        this.sql.exec('DELETE FROM filefolders WHERE uid = ? AND name = ?', me.id, name);
+        this.sql.exec('INSERT OR IGNORE INTO filefolders (uid, name, at) VALUES (?, ?, ?)', me.id, to, Date.now());
+        this.sql.exec('UPDATE files SET folder = ? WHERE uid = ? AND folder = ?', to, me.id, name);
+      } else this.sql.exec('INSERT OR IGNORE INTO filefolders (uid, name, at) VALUES (?, ?, ?)', me.id, name, Date.now());
+      return json({ ok: true });
+    }
+    return json({ error: 'unknown' }, 404);
+  }
   deleteUser(uid, why = 'deleted') {
+    // #378: the account's files go with it
+    for (const f of this.sql.exec('SELECT media FROM files WHERE uid = ?', uid).toArray()) this.mediaDel('id = ?', f.media);
+    this.sql.exec('DELETE FROM files WHERE uid = ?', uid); this.sql.exec('DELETE FROM filefolders WHERE uid = ?', uid);
     for (const r of this.sql.exec('SELECT gid FROM gcparts WHERE uid = ?', uid).toArray()) this.gcallLeave(r.gid, uid);
     for (const l of this.sql.exec('SELECT * FROM lives WHERE uid = ? AND ended IS NULL', uid).toArray()) this.liveEnd(l);
     this.sql.exec('DELETE FROM livewatch WHERE uid = ?', uid); this.sql.exec('DELETE FROM livecmt WHERE uid = ?', uid);

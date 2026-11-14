@@ -677,10 +677,12 @@ class OverlayService : Service(), StoryBridge.Host {
 
     // ---- Apps | Lockedintool switch (owner: 'rename the word Pages on the switch to Lockedintool') ----
     private var pickerAt = 0L
+    private var pickerFront: String? = null   // #344: what was in front when the switch opened
     private fun showPicker() {
         if (spacesHeld()) return   // #328: nothing skips the company screen
         hidePicker()
         pickerAt = SystemClock.uptimeMillis()
+        pickerFront = StoryAccessibilityService.frontPkg
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
             setPadding((22 * dp).toInt(), (12 * dp).toInt(), (22 * dp).toInt(), (12 * dp).toInt())
@@ -2040,8 +2042,13 @@ class OverlayService : Service(), StoryBridge.Host {
         if (spacesHolding() && pkg != packageName) return@post
         // The phone's own Home / Recents just came up: a switch that popped up with that same swipe goes away, so only
         // the phone's screen shows (a switch you opened with a real tap earlier stays).
+        // #344 (owner, 14 Nov 2026: 'the system switch buttons disappear very fast - as soon as I tap them they show up and
+        // disappear'): on the phone's own home screen (where you now are much more - #337) the home-screen app sends window
+        // events all the time, and each one closed the switch. Only a real Recents, or the home screen newly coming to the
+        // front (it wasn't in front when the switch opened), closes it now.
         if (picker != null && pkg != packageName && SystemClock.uptimeMillis() - pickerAt < 800 &&
-            (StoryAccessibilityService.RECENTS_CLASS.containsMatchIn(cls) || (recentsPkg != null && pkg == recentsPkg) || pkg == homePkg())) hidePicker()
+            (StoryAccessibilityService.RECENTS_CLASS.containsMatchIn(cls) || StoryAccessibilityService.recentsInFront() ||
+                ((pkg == recentsPkg || pkg == homePkg()) && pickerFront != pkg))) hidePicker()
         // The phone's bottom switch must ALWAYS work inside Lockedintool, whatever the plan or system option (owner, 29 Oct
         // 2026: 'the system switch button ... On lockedintool it's supposed to work. Doesn't matter what system the plans
         // is. This should be a permanent feature'). Lockedintool never does Home / Recents itself - it only steps aside so

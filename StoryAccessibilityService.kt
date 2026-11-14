@@ -197,6 +197,41 @@ class StoryAccessibilityService : AccessibilityService() {
             n.contentDescription?.toString()?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }?.let { out.add(it) }
             for (i in 0 until n.childCount) collectWords(runCatching { n.getChild(i) }.getOrNull(), depth + 1, out)
         }
+        /** #358 (owner, 14 Nov 2026: 'make them really close it'): closes an app's card in the phone's OWN Recents (under
+         *  Lockedintool's screen) the way the phone does - its card's own Close / Dismiss action. False when not found. */
+        fun recentsClose(label: String, recentsPkg: String?): Boolean {
+            val s = instance ?: return false
+            val want = label.trim().lowercase(); if (want.isEmpty()) return false
+            val ws = runCatching { s.windows }.getOrNull() ?: return false
+            for (w in ws) {
+                if (w.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION) continue
+                val r = runCatching { w.root }.getOrNull() ?: continue
+                val pk = runCatching { r.packageName?.toString() }.getOrNull() ?: continue
+                if (pk == s.packageName || pk == "com.android.systemui") continue
+                if (pk != recentsPkg && !pk.contains("launcher", true)) continue
+                if (closeIn(r, want, 0)) return true
+            }
+            return false
+        }
+        private val CLOSE_WORDS = Regex("(?i)^(close|remove|dismiss|clear)( app)?$")
+        private fun closeAction(n: android.view.accessibility.AccessibilityNodeInfo): Boolean {
+            for (a in n.actionList) {
+                val lbl = a.label?.toString()?.trim() ?: ""
+                if (a.id == android.view.accessibility.AccessibilityNodeInfo.ACTION_DISMISS || (lbl.isNotEmpty() && CLOSE_WORDS.matches(lbl)))
+                    if (runCatching { n.performAction(a.id) }.getOrDefault(false)) return true
+            }
+            return false
+        }
+        private fun closeIn(n: android.view.accessibility.AccessibilityNodeInfo?, want: String, depth: Int): Boolean {
+            if (n == null || depth > 14) return false
+            val t = ((n.contentDescription ?: "").toString() + " " + (n.text ?: "")).trim().lowercase()
+            if (t.isNotEmpty() && (t == want || t.startsWith(want))) {
+                var p: android.view.accessibility.AccessibilityNodeInfo? = n
+                for (k in 0..4) { val q = p ?: break; if (closeAction(q)) return true; p = runCatching { q.parent }.getOrNull() }
+            }
+            for (i in 0 until n.childCount) if (closeIn(runCatching { n.getChild(i) }.getOrNull(), want, depth + 1)) return true
+            return false
+        }
         fun recentsAppFront(recentsPkg: String?): Boolean {
             val s = instance ?: return false
             val ws = runCatching { s.windows }.getOrNull() ?: return false

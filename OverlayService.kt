@@ -3269,7 +3269,7 @@ class OverlayService : Service(), StoryBridge.Host {
                 setPadding((12 * dp).toInt(), 0, (8 * dp).toInt(), 0); layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) })
             row.addView(TextView(this).apply { text = "\u00D7"; setTextColor(sub); textSize = 22f; gravity = Gravity.CENTER
                 layoutParams = android.widget.LinearLayout.LayoutParams((44 * dp).toInt(), (44 * dp).toInt())
-                setOnClickListener { recCoverForget(pkg) } })
+                setOnClickListener { recCoverCloseApp(pkg) } })
             row.setOnClickListener { recCoverOpen(pkg) }
             col.addView(row)
         }
@@ -3284,6 +3284,12 @@ class OverlayService : Service(), StoryBridge.Host {
             setOnClickListener { recCoverCloseAll() }
         })
         return root
+    }
+    /** #358: × really closes the app - its card in the phone's Recents under the cover gets the phone's own Close. */
+    private fun recCoverCloseApp(pkg: String) {
+        val ok = StoryAccessibilityService.recentsClose(appLabel(pkg), recentsPkg)
+        if (!ok) ProblemLog.record(this, "recents", "couldn't close an app's card", "close")
+        ui.postDelayed({ recCoverRead(); recCoverRebuild() }, 350)
     }
     private fun recCoverForget(pkg: String) {
         val key = "space_apps_" + spaceCur()
@@ -3303,6 +3309,9 @@ class OverlayService : Service(), StoryBridge.Host {
     /** Close all: the list is emptied (the apps keep running - Android lets no app close another) and you leave Recents
      *  for the home screen, like the phone's own Close all. */
     private fun recCoverCloseAll() {
+        // #358: every app of this company / Personal still open is really closed (one by one, the phone's own Close);
+        // other companies' apps stay open. Then the list is emptied and you're on the home screen, like the phone's Close all.
+        for (pkg in recCoverApps()) runCatching { StoryAccessibilityService.recentsClose(appLabel(pkg), recentsPkg) }
         spPrefs().edit().putString("space_apps_" + spaceCur(), "[]").apply()
         spaceLastSet("")
         recCoverHide()

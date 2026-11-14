@@ -175,6 +175,28 @@ class StoryAccessibilityService : AccessibilityService() {
         }
         /** #350: the phone's Recents is the APP window in front (the launcher draws it on One UI / stock / Pixel) - never the
          *  notification panel, whose 'Clear all' would otherwise look like Recents. */
+        /** #355: every word the phone's Recents shows (its cards carry the app names) - so Lockedintool lists only the
+         *  apps that are really still open. Empty when it can't be read. */
+        fun recentsWords(recentsPkg: String?): Set<String> {
+            val s = instance ?: return emptySet()
+            val ws = runCatching { s.windows }.getOrNull() ?: return emptySet()
+            val out = HashSet<String>()
+            for (w in ws) {
+                if (w.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION) continue
+                val r = runCatching { w.root }.getOrNull() ?: continue
+                val pk = runCatching { r.packageName?.toString() }.getOrNull() ?: continue
+                if (pk == s.packageName || pk == "com.android.systemui") continue
+                if (pk != recentsPkg && !pk.contains("launcher", true)) continue
+                collectWords(r, 0, out)
+            }
+            return out
+        }
+        private fun collectWords(n: android.view.accessibility.AccessibilityNodeInfo?, depth: Int, out: MutableSet<String>) {
+            if (n == null || depth > 14 || out.size > 400) return
+            n.text?.toString()?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }?.let { out.add(it) }
+            n.contentDescription?.toString()?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }?.let { out.add(it) }
+            for (i in 0 until n.childCount) collectWords(runCatching { n.getChild(i) }.getOrNull(), depth + 1, out)
+        }
         fun recentsAppFront(recentsPkg: String?): Boolean {
             val s = instance ?: return false
             val ws = runCatching { s.windows }.getOrNull() ?: return false

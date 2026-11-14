@@ -3153,7 +3153,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  the home-screen app, which is only clear a moment later). */
     private fun recCoverCheck() {
         val up = recCoverWanted() && StoryAccessibilityService.recentsAppFront(recentsPkg)
-        if (up) { if (recCover == null) recCoverShow() }
+        if (up) { if (recCover == null) recCoverShow(); recCoverRead() }
         else if (recCover != null && !recCoverEarly) recCoverHide()
     }
     private fun recCoverLook() { for (d in longArrayOf(0, 50, 100, 160, 230, 320, 450, 700)) ui.postDelayed({ recCoverCheck() }, d) }
@@ -3172,9 +3172,25 @@ class OverlayService : Service(), StoryBridge.Host {
         runCatching { recCoverWm?.removeView(v) }
         recCoverWm = null
     }
+    private fun appLabel(pkg: String) = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+    /** #355 (owner, 14 Nov 2026: 'it doesn't show apps that are currently opened it shows all that I have opened today'):
+     *  only this company's apps that the phone's Recents still has open (read from the Recents screen under the cover).
+     *  Until the phone's Recents can be read (the cover goes up first), the last open set it read is used. */
+    @Volatile private var recOpenWords: Set<String>? = null
     private fun recCoverApps(): List<String> {
         val list = runCatching { org.json.JSONArray(spaceApps()) }.getOrNull() ?: return emptyList()
-        return (0 until list.length()).map { list.optString(it) }.filter { it.isNotEmpty() && packageManager.getLaunchIntentForPackage(it) != null }
+        val all = (0 until list.length()).map { list.optString(it) }.filter { it.isNotEmpty() && packageManager.getLaunchIntentForPackage(it) != null }
+        val words = recOpenWords ?: return all
+        return all.filter { pkg -> val l = appLabel(pkg).trim().lowercase(); l.isNotEmpty() && words.any { it == l || it.contains(l) } }
+    }
+    /** Reads the phone's Recents under the cover; redraws the list when what's open changed. */
+    private fun recCoverRead() {
+        if (recCover == null) return
+        val w = StoryAccessibilityService.recentsWords(recentsPkg)
+        if (w.isEmpty() || !w.any { StoryAccessibilityService.RECENTS_CLASS.containsMatchIn(it) || it.contains("close all") || it.contains("clear all") || it.contains("active app") || it.contains("no recent") }) return
+        val before = recCoverApps()
+        recOpenWords = w
+        if (recCoverApps() != before) recCoverRebuild()
     }
     private fun recCoverShow() {
         recCoverShownAt = SystemClock.uptimeMillis()
@@ -3224,7 +3240,7 @@ class OverlayService : Service(), StoryBridge.Host {
             }
             val icon = runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()
             row.addView(android.widget.ImageView(this).apply { setImageDrawable(icon); layoutParams = android.widget.LinearLayout.LayoutParams((44 * dp).toInt(), (44 * dp).toInt()) })
-            val label = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+            val label = appLabel(pkg)
             row.addView(TextView(this).apply { text = label; setTextColor(fg); textSize = 15f; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 setPadding((12 * dp).toInt(), 0, (8 * dp).toInt(), 0); layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) })
             row.addView(TextView(this).apply { text = "\u00D7"; setTextColor(sub); textSize = 22f; gravity = Gravity.CENTER

@@ -391,3 +391,4 @@ commits, pushed as a new update) - nothing else changes.
 | 382 | 2026-11-14 | Customers: keep the people you sell to - contact, notes, their @username and what they bought with the total. Managers on a team see their company's customers too. Dashboard menu > CUSTOMERS. | 80124ce |
 | 383 | 2026-11-14 | Lock In (Mode one): Dashboard menu > LOCK IN - play Reaction race, Quiz battle, Tic-tac-toe, Connect four and Memory match against people who follow you back, free or for a bet from the game wallet; practise, leaderboard, Public games / Private games | 70b950e |
 | 384 | 2026-11-14 | Lock In: the new LOCK IN! badge title, single player (play solo or against Lockedintool in every game) and racks - points you earn for playing and winning, shown on the leaderboard and your profile | bbe7dc5 |
+| 385 | 2026-11-14 | Lock In: sparks fly out from behind the LOCK IN! badge while you're on the page, win / loss screens animate, and 'Rack by winning' replaces 'Earn racks' |  |

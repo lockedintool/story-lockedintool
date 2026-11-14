@@ -1555,8 +1555,27 @@
   .lk-legend{ display:flex; justify-content:center; gap:18px; margin-top:12px; font-size:12px; color:#9a9a9a; } .lk-legend > span{ display:flex; align-items:center; gap:6px; }
   .lk-legend .lk-pc{ width:16px; height:16px; font-size:12px; } .lk-legend .lk-pc.me{ background:#fff; color:#000; } .lk-legend .lk-pc.them{ background:#ff9f0a; color:#000; }
   .lk-vs{ display:flex; gap:8px; } .lk-vs > span{ flex:1 1 0; border:1px solid #262626; border-radius:12px; padding:10px 4px; display:flex; flex-direction:column; } .lk-vs small{ color:#9a9a9a; font-size:12px; } .lk-vs b{ font-size:18px; }
-  .lk-logo{ display:flex; justify-content:center; margin:2px 0 18px; }
-  .lk-logo span{ display:inline-block; background:#ffd60a; color:#000; font-weight:900; font-style:italic; font-size:34px; line-height:1.1; letter-spacing:-1px; padding:6px 22px 4px; transform:skewX(-12deg) rotate(-3deg); box-shadow:5px 5px 0 #ff453a; }
+  .lk-logo{ position:relative; display:flex; justify-content:center; align-items:center; margin:0 0 14px; height:92px; }
+  .lk-b{ position:relative; z-index:1; display:inline-block; }
+  .lk-sparks{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  .lk-sparks i{ position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; }
+  @keyframes lkSpark{ 0%{ transform:translate(0, 0) scale(1); opacity:1; } 100%{ transform:translate(var(--x), var(--y)) scale(.3); opacity:0; } }
+  .lk-sparks i{ animation:lkSpark 1.4s ease-out infinite !important; animation-duration:1.4s !important; animation-delay:var(--d) !important; animation-iteration-count:infinite !important; }
+  .lk-b > span{ display:inline-block; background:#ffd60a; color:#000; font-weight:900; font-style:italic; font-size:34px; line-height:1.1; letter-spacing:-1px; padding:6px 22px 4px; transform:skewX(-12deg) rotate(-3deg); box-shadow:5px 5px 0 #ff453a; }
+  /* #385 the owner's own animations (an exception to NO MOTION, like the Apps wiggle): only while .lk-go is on */
+  .lk-res{ position:relative; flex:1 1 auto; display:flex; flex-direction:column; overflow:hidden; }
+  .lk-res-won .lk-big{ color:#ffd60a; } .lk-res-lost .lk-big{ color:#ff453a; }
+  .lk-conf{ position:absolute; inset:0; pointer-events:none; } .lk-conf i{ position:absolute; top:-12px; width:8px; height:14px; border-radius:2px; opacity:0; }
+  @keyframes lkConf{ 0%{ transform:translate(0, 0) rotate(0); opacity:1; } 85%{ opacity:1; } 100%{ transform:translate(var(--x), 620px) rotate(var(--r)); opacity:0; } }
+  @keyframes lkWin{ 0%{ transform:scale(.2); opacity:0; } 55%{ transform:scale(1.25); opacity:1; } 75%{ transform:scale(.94); } 100%{ transform:scale(1); opacity:1; } }
+  @keyframes lkLose{ 0%{ transform:translateY(-60px); opacity:0; } 40%{ transform:translateY(0); opacity:1; } 52%{ transform:translateX(-10px); } 64%{ transform:translateX(9px); } 76%{ transform:translateX(-6px); } 88%{ transform:translateX(3px); } 100%{ transform:translate(0, 0); opacity:1; } }
+  @keyframes lkDraw{ 0%{ transform:scale(.6); opacity:0; } 60%{ transform:scale(1.08); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  @keyframes lkRise{ 0%{ transform:translateY(24px); opacity:0; } 100%{ transform:translateY(0); opacity:1; } }
+  .lk-res.lk-go .lk-conf i{ animation:lkConf 1.8s ease-in both !important; animation-duration:1.8s !important; animation-delay:calc(var(--lk-o, 0ms) + var(--d)) !important; animation-iteration-count:1 !important; }
+  .lk-res-won.lk-go .lk-big{ animation:lkWin .7s cubic-bezier(.2,.9,.3,1.2) both !important; animation-duration:.7s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
+  .lk-res-lost.lk-go .lk-big{ animation:lkLose .8s ease-out both !important; animation-duration:.8s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
+  .lk-res-draw.lk-go .lk-big{ animation:lkDraw .5s ease-out both !important; animation-duration:.5s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
+  .lk-res.lk-go .lk-big ~ *{ animation:lkRise .4s ease-out both !important; animation-duration:.4s !important; animation-delay:calc(var(--lk-o, 0ms) + 450ms) !important; animation-iteration-count:1 !important; }
   .lk-racks b{ color:#ffd60a; }
   .lk-lb{ width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:10px; text-align:left; color:inherit; } .lk-lb > span:last-child{ font-size:20px; }
   .lk-earn{ color:#ffd60a !important; font-weight:700; }
@@ -22452,7 +22471,7 @@ function lockInScreen(){
     ${topBar('', false)}
     ${lkLogo()}
     <div class="lk-rec"><span class="lk-racks"><b>${LK.racks}</b><small>Racks</small></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
-    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Earn racks by playing and winning - solo, against Lockedintool or against people</small></span><span>›</span></button>
+    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Rack by winning - solo, against Lockedintool or against people</small></span><span>›</span></button>
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
@@ -22466,7 +22485,22 @@ function lockInScreen(){
     </div>`;
 }
 // #384 the Lock In title - the owner's pick F: a tilted yellow arcade badge, centred, nothing under it.
-function lkLogo(){ return '<div class="lk-logo"><span data-keep-color>LOCK IN!</span></div>'; }
+// #385 (owner, 14 Nov 2026: 'I think it should come with a animation like splash from behind'; 'Also the win and lose
+// screens should have animations') - the owner's own exceptions to 'no animations'. Each plays ONCE: the title when you come
+// to Lock In, a result when it first shows. A redraw in the middle keeps going from where it was (a negative delay = the time
+// already played), and after it has played the screen is drawn in its end state with no motion.
+function lkAnimOff(start, len){ const t = Date.now() - start; return t < len ? ' lk-go" style="--lk-o:-' + t + 'ms' : ''; }
+function lkLogo(){   // #385 the owner's pick: sparks flying out from behind the badge, moving the whole time Lock In is on screen
+  const cols = ['#ffd60a', '#ff9f0a', '#ff453a'];
+  const sp = Array.from({ length: 22 }, (_, i)=>{ const a = i * 2.4, d = 120 + (i * 31) % 80;
+    return '<i style="--x:' + (Math.cos(a) * d * 1.4).toFixed(1) + 'px;--y:' + (Math.sin(a) * d * 0.45).toFixed(1) + 'px;--d:' + (-((i * 0.13) % 1.4)).toFixed(2) + 's;background:' + cols[i % 3] + '"></i>'; }).join('');
+  return '<div class="lk-logo"><div class="lk-sparks" aria-hidden="true">' + sp + '</div><span class="lk-b"><span data-keep-color>LOCK IN!</span></span></div>';
+}
+function lkResWrap(key, kind, inner){   // kind: won / lost / draw
+  if(LK.resKey !== key){ LK.resKey = key; LK.resAt = Date.now(); }
+  const conf = kind === 'won' ? '<div class="lk-conf" aria-hidden="true">' + Array.from({ length: 26 }, (_, i)=>'<i style="left:' + ((i * 37) % 100) + '%;--d:' + ((i * 53) % 600) + 'ms;--x:' + (((i * 29) % 80) - 40) + 'px;--r:' + ((i * 97) % 720) + 'deg;background:' + ['#ffd60a', '#ff9f0a', '#ff453a', '#30d158', '#0a84ff', '#fff'][i % 6] + '"></i>').join('') + '</div>' : '';
+  return '<div class="lk-res lk-res-' + kind + lkAnimOff(LK.resAt, 2400) + '">' + conf + inner + '</div>';
+}
 function lkIcon(k){
   const p = { reaction:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', quiz:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
     ttt:'<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>', c4:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="10" r="1.6"/><circle cx="12" cy="14" r="1.6"/><circle cx="16" cy="10" r="1.6"/>',
@@ -22481,7 +22515,7 @@ function lkSheetHTML(sh){
     return `<div class="fl-sh-t">${LK_NAMES[k]}</div><div class="fl-sh-s">${escText(LK_ABOUT[k])}</div>
       <div class="section-title" style="margin-top:12px;">SINGLE PLAYER</div>
       ${LK_SCORE[k] ? `<div class="mt-two"><button class="btn-wide" style="margin-top:0;" data-lk="practice" data-k="${k}">Play solo</button><button class="btn-wide" style="margin-top:0;" data-lk="cpu" data-k="${k}">Beat Lockedintool</button></div>
-        <div class="fl-sh-s">${LK.best[k] != null ? 'Your best: ' + escText(lkScoreTxt(k, LK.best[k])) + ' · ' : ''}Every round earns racks - a new best earns more.</div>`
+        <div class="fl-sh-s">${LK.best[k] != null ? 'Your best: ' + escText(lkScoreTxt(k, LK.best[k])) + ' · ' : ''}Rack by winning - a new best racks more.</div>`
         : `<button class="btn-wide" data-lk="cpu" data-k="${k}">Play Lockedintool</button>`}
       ${biz ? '' : `<div class="section-title" style="margin-top:12px;">CHALLENGE SOMEONE</div>
       <div class="lk-seg"><button class="${sh.bet ? '' : 'on'}" data-lk="bet" data-v="0">Free</button><button class="${sh.bet ? 'on' : ''}" data-lk="bet" data-v="1">Bet</button></div>
@@ -22498,8 +22532,8 @@ function lkSheetHTML(sh){
       <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk="decline" data-id="${escText(g.id)}">Decline</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk="accept" data-id="${escText(g.id)}">Accept</button></div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'board'){ const b = LK.board;
-    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' with ' + b.myRacks + ' racks' : 'Play a game to earn racks and get on the board') : 'Loading…'}</div>
-      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.racks} racks · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has earned racks yet.</div>') : ''}</div>
+    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' with ' + b.myRacks + ' racks' : 'Win a game to rack and get on the board') : 'Loading…'}</div>
+      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.racks} racks · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has racked yet.</div>') : ''}</div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'wallet') return `<div class="fl-sh-t">Game wallet</div>
       <div class="fl-sh-s">Your game wallet is only used inside Lock In. Add money to it, then bet with it - when a game you both agreed to ends, the winner gets the money automatically.</div>
@@ -22542,10 +22576,10 @@ function lkPlayScreen(){
     ${LK.sheet ? `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${lkSheetHTML(LK.sheet)}</div></div>` : ''}</div>`;
 }
 function lkResultHTML(g){
-  return `<div class="lk-mid"><div class="lk-big">${g.draw ? 'Draw' : g.won ? 'You won!' : 'You lost'}</div>
+  return lkResWrap('g' + g.id, g.draw ? 'draw' : g.won ? 'won' : 'lost', `<div class="lk-mid"><div class="lk-big">${g.draw ? 'Draw' : g.won ? 'You won!' : 'You lost'}</div>
     ${LK_SCORE[g.kind] ? `<div class="lk-vs"><span><small>You</small><b>${escText(lkScoreTxt(g.kind, g.myScore))}</b></span><span><small>${escText(lkWho(g.other))}</small><b>${escText(lkScoreTxt(g.kind, g.theirScore))}</b></span></div>` : (g.kind === 'ttt' || g.kind === 'c4' ? lkBoardHTML(g, true) : '')}
     ${g.stake ? `<div class="fl-sh-s">${g.draw ? 'Your bet went back to your game wallet.' : g.won ? escText(lkMoney(g.stake * 2, g.cur)) + ' went to your game wallet.' : 'The bet went to ' + escText(lkWho(g.other)) + '.'}</div>` : ''}
-    <button class="btn-wide btn-primary" data-lk="again">Play ${escText(lkWho(g.other))} again</button></div>`;
+    <button class="btn-wide btn-primary" data-lk="again">Play ${escText(lkWho(g.other))} again</button></div>`);
 }
 function lkBoardHTML(g, frozen){
   const k = g.kind, bd = ((g.state && g.state.board) || (k === 'ttt' ? '.........' : '.'.repeat(42))).split(''), meX = g.iAmA ? 'X' : 'O';
@@ -22568,11 +22602,12 @@ function lkSoloResultHTML(p){
   const vs = p.cpu, k = p.k, turn = k === 'ttt' || k === 'c4';
   const won = p.res ? p.res === 'won' : vs && p.done != null && (LK_SCORE[k] === 'low' ? p.done < p.target : p.done > p.target);
   const draw = p.res === 'draw' || (vs && !turn && p.done === p.target);
-  return `<div class="lk-mid"><div class="lk-big">${vs ? (draw ? 'Draw' : won ? 'You beat Lockedintool!' : 'Lockedintool won') : escText(lkScoreTxt(k, p.done))}</div>
+  if(!p.key) p.key = 's' + Math.random();
+  return lkResWrap(p.key + (p.newBest ? 'b' : ''), vs ? (draw ? 'draw' : won ? 'won' : 'lost') : (p.newBest ? 'won' : 'draw'), `<div class="lk-mid"><div class="lk-big">${vs ? (draw ? 'Draw' : won ? 'You beat Lockedintool!' : 'Lockedintool won') : escText(lkScoreTxt(k, p.done))}</div>
     ${vs && !turn ? `<div class="lk-vs"><span><small>You</small><b>${escText(lkScoreTxt(k, p.done))}</b></span><span><small>Lockedintool</small><b>${escText(lkScoreTxt(k, p.target))}</b></span></div>` : ''}
     ${vs && turn ? lkBoardHTML(lkCpuGame(p), true) : ''}
-    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your racks…' : 'Log in to earn racks') : p.earned ? '+' + p.earned + ' racks' + (p.newBest ? ' · new best!' : '') + ' · ' + LK.racks + ' in total' : 'You’ve earned today’s solo racks - play people for more'}</div>
-    <button class="btn-wide btn-primary" data-lk="${vs ? 'cpu' : 'practice'}" data-k="${k}">Play again</button></div>`;
+    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your racks…' : 'Log in to rack') : p.earned ? '+' + p.earned + ' racks' + (p.newBest ? ' · new best!' : '') + ' · ' + LK.racks + ' in total' : 'You’ve earned today’s solo racks - play people for more'}</div>
+    <button class="btn-wide btn-primary" data-lk="${vs ? 'cpu' : 'practice'}" data-k="${k}">Play again</button></div>`);
 }
 function lkSoloSend(p, body){
   if(!msgAccount()) return;

@@ -1514,6 +1514,48 @@
   .cu-amt{ flex:0 0 112px !important; }
   .cu-sale{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #222; font-size:13px; } .cu-sale > span:first-child{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
   .cu-sale small{ font-size:11px; color:#9a9a9a; } .cu-sale button{ background:transparent; border:0; color:#9a9a9a; font-size:18px; padding:0 4px; }
+  .lk-rec{ display:flex; align-items:center; gap:8px; margin:4px 0 10px; } .lk-rec > span{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; border:1px solid #262626; border-radius:12px; padding:8px 0; }
+  .lk-rec b{ font-size:20px; } .lk-rec small{ font-size:11px; color:#9a9a9a; }
+  .lk-board-btn{ flex:1.3 1 0; background:transparent; border:1px solid #333; border-radius:12px; color:#fff; font-size:12px; font-weight:700; padding:14px 6px; }
+  .lk-wallet{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:12px; cursor:pointer; } .lk-add{ font-size:12px; font-weight:700; border:1px solid #444; border-radius:14px; padding:6px 10px; white-space:nowrap; }
+  .lk-tiles{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px; }
+  .lk-tile{ background:transparent; border:1px solid #262626; border-radius:14px; color:#fff; padding:12px 4px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .lk-tile b{ font-size:12px; font-weight:600; } .lk-tile.lk-soon{ opacity:0.55; }
+  .lk-ico{ display:inline-flex; width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; background:#161616; flex:0 0 36px; }
+  .lk-note{ margin:0 0 12px !important; }
+  .lk-tabs, .lk-seg{ display:flex; gap:6px; margin:4px 0 10px; } .lk-tabs button, .lk-seg button{ flex:1 1 0; background:transparent; border:1px solid #333; border-radius:12px; color:#9a9a9a; padding:9px 4px; font-size:13px; font-weight:600; }
+  .lk-tabs button.on, .lk-seg button.on{ color:#fff; border-color:#fff; }
+  .lk-row{ display:flex; align-items:center; gap:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+  .lk-mini{ background:#fff; color:#000; border:0; border-radius:14px; padding:7px 12px; font-size:12px; font-weight:700; }
+  .lk-people{ max-height:240px; overflow-y:auto; scrollbar-width:none; margin:6px 0; } .lk-people::-webkit-scrollbar{ display:none; }
+  .lk-person{ width:100%; display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:6px; text-align:left; color:inherit; background:transparent; border:1px solid #262626; }
+  .lk-person.on{ border-color:#fff; } .lk-rank{ width:26px; text-align:center; font-weight:700; }
+  .lk-play{ display:flex; flex-direction:column; min-height:100%; }
+  .lk-ph{ display:flex; align-items:center; gap:10px; padding:6px 0 12px; } .lk-ph b{ font-size:18px; } .lk-ph span{ margin-left:auto; font-size:12px; color:#9a9a9a; }
+  .lk-back{ background:transparent; border:1px solid #333; color:#fff; border-radius:10px; width:34px; height:34px; font-size:20px; line-height:30px; padding:0; }
+  .lk-stage{ flex:1 1 auto; display:flex; flex-direction:column; }
+  .lk-mid{ flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:8px; text-align:center; padding:12px 4px; }
+  .lk-big{ font-size:30px; font-weight:800; }
+  .lk-react{ flex:1 1 auto; min-height:360px; border:0; border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#fff; }
+  .lk-react b{ font-size:30px; } .lk-react small{ font-size:13px; opacity:0.85; }
+  .lk-react.wait{ background:#7a1d1d; } .lk-react.go{ background:#1f9d4a; } .lk-react.early{ background:#6b4a00; } .lk-react.shown{ background:#1a1a1a; border:1px solid #333; }
+  .lk-q{ display:flex; flex-direction:column; gap:10px; padding-top:10px; } .lk-q small{ color:#9a9a9a; font-size:12px; } .lk-q b{ font-size:19px; margin-bottom:6px; }
+  .lk-opt{ background:transparent; border:1px solid #333; border-radius:14px; color:#fff; padding:14px 12px; font-size:15px; text-align:left; }
+  .lk-mem-top{ text-align:center; font-size:13px; color:#9a9a9a; margin-bottom:10px; }
+  .lk-mem{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; } .lk-card{ aspect-ratio:1; border:1px solid #333; border-radius:12px; background:#161616; color:#fff; font-size:26px; font-weight:800; }
+  .lk-card.up{ background:#000; border-color:#fff; } .lk-card.found{ opacity:0.35; }
+  .lk-turn{ text-align:center; font-size:14px; margin-bottom:10px; }
+  .lk-ttt{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; width:min(100%, 300px); margin:0 auto; }
+  .lk-c4{ display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; width:100%; margin:0 auto; background:#111; border:1px solid #262626; border-radius:12px; padding:6px; }
+  .lk-cell{ aspect-ratio:1; border:1px solid #333; border-radius:10px; background:transparent; display:flex; align-items:center; justify-content:center; padding:0; color:#fff; }
+  .lk-c4 .lk-cell{ border-radius:50%; } .lk-cell.last{ border-color:#fff; }
+  .lk-pc{ display:inline-flex; align-items:center; justify-content:center; width:72%; height:72%; border-radius:50%; font-size:28px; font-weight:800; }
+  .lk-ttt .lk-pc{ background:transparent !important; } .lk-ttt .lk-pc.me{ color:#fff; } .lk-ttt .lk-pc.them{ color:#ff9f0a; }
+  .lk-c4 .lk-pc{ width:100%; height:100%; } .lk-c4 .lk-pc.me{ background:#fff; } .lk-c4 .lk-pc.them{ background:#ff9f0a; }
+  .lk-legend{ display:flex; justify-content:center; gap:18px; margin-top:12px; font-size:12px; color:#9a9a9a; } .lk-legend > span{ display:flex; align-items:center; gap:6px; }
+  .lk-legend .lk-pc{ width:16px; height:16px; font-size:12px; } .lk-legend .lk-pc.me{ background:#fff; color:#000; } .lk-legend .lk-pc.them{ background:#ff9f0a; color:#000; }
+  .lk-vs{ display:flex; gap:8px; } .lk-vs > span{ flex:1 1 0; border:1px solid #262626; border-radius:12px; padding:10px 4px; display:flex; flex-direction:column; } .lk-vs small{ color:#9a9a9a; font-size:12px; } .lk-vs b{ font-size:18px; }
+  .lk-forfeit{ align-self:center; background:transparent; border:0; color:#ff453a; font-size:13px; padding:12px; margin-top:6px; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
@@ -6211,6 +6253,7 @@ function dashboardScreen(){
           <div class="sidebar-item" data-nav="meetings">MEETINGS</div>
           <div class="sidebar-item" data-nav="shop">SHOP</div>
           <div class="sidebar-item" data-nav="customers">CUSTOMERS</div>
+          <div class="sidebar-item" data-nav="lockin">LOCK IN</div>
           ${dashCommunityOn() ? '<div class="sidebar-item" data-nav="community">COMMUNITY</div>' : ''}
           <div class="sidebar-item" data-nav="settings">SETTINGS</div>
           <div class="sidebar-item" data-nav="information">INFORMATION</div>
@@ -12555,6 +12598,8 @@ function actLine(a){
   if(k === 'meetno') return 'can’t make “' + escText(t) + '”';
   if(k === 'meetoff') return 'cancelled “' + escText(t) + '”';
   if(k === 'meetmove') return 'moved “' + escText(t) + '” to a new time';
+  if(k === 'lkchal') return 'challenged you to ' + escText(LK_NAMES[t] || 'a game') + ' - open LOCK IN in the Dashboard menu';   // #383
+  if(k === 'lkyes') return 'accepted your ' + escText(LK_NAMES[t] || 'game') + ' challenge';
   if(k === 'like') return t === 'status' ? 'liked your status' : 'liked your post';
   if(k === 'share') return 'shared your post';
   if(k === 'comment'){ const st = t.indexOf('s:') === 0; return 'commented on your ' + (st ? 'status' : 'post') + ': “' + escText(st ? t.slice(2) : t) + '”'; }
@@ -13617,6 +13662,17 @@ async function msgOnServer(m){
       try{ localStorage.setItem('story-meet-ping', String(Date.now())); }catch(e){}
       if(m.seq) msgSend({ t:'ack', seq:m.seq });
       setTimeout(mtRemindAll, 1500);
+      return;
+    }
+    if(['lkchal', 'lkyes', 'lkno', 'lkturn', 'lkdone'].includes(m.kind)){   // #383 Lock In
+      const g = LK_NAMES[m.game] || 'Lock In';
+      const txt = m.kind === 'lkchal' ? who + ' challenged you to ' + g + (m.stake ? ' for ' + fmtCur(m.stake / 100, m.cur || 'USD', false) : '') + ' - open LOCK IN to answer'
+        : m.kind === 'lkyes' ? who + ' accepted your ' + g + ' challenge - your move'
+        : m.kind === 'lkno' ? who + ' declined your ' + g + ' challenge'
+        : m.kind === 'lkturn' ? (g === 'Tic-tac-toe' || g === 'Connect four' ? 'Your turn against ' + who : who + ' played their round - your turn')
+        : m.draw ? 'Your ' + g + ' game ended in a draw' : m.won ? 'You won your ' + g + ' game!' : 'You lost your ' + g + ' game';
+      if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify('Lock In', txt); }catch(e){}
+      try{ localStorage.setItem('story-lk-ping', String(Date.now())); }catch(e){}
       return;
     }
     if(m.kind === 'team' || m.kind === 'teamok'){   // #379 Team
@@ -17178,6 +17234,7 @@ function renderScreenContent(){
     case 'meetings': return meetingsScreen();
     case 'shop': return shopScreen();
     case 'customers': return customersScreen();
+    case 'lockin': return lockInScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -22293,6 +22350,327 @@ document.addEventListener('click', e=>{
   }
   renderDevice();
 }, true);
+// ---- #383 LOCK IN (owner, 14 Nov 2026 - Mode one: the built-in games): games between two people who follow each other,
+// free or for a bet from the GAME WALLET (only inside Lock In; adding real money waits for the payment partner), the
+// leaderboard, and Public games | Private games. Score games (Reaction race, Quiz battle, Memory match) are played one round
+// each and the better score wins; Tic-tac-toe and Connect four are played turn by turn. Pose comes next.
+const LK_NAMES = { reaction:'Reaction race', quiz:'Quiz battle', ttt:'Tic-tac-toe', c4:'Connect four', memory:'Memory match', pose:'Pose' };
+const LK_ABOUT = { reaction:'Five rounds. Wait for green, then tap as fast as you can. The lowest total time wins.',
+  quiz:'Ten questions, the same for both of you. The most right answers wins; ties go to the faster player.',
+  ttt:'Three in a row. You play X and go first when you challenge.',
+  c4:'Drop your pieces - four in a row wins. You go first when you challenge.',
+  memory:'Find the eight pairs. The fastest time wins; every wrong pair adds 2 seconds.',
+  pose:'Copy the poses on the screen - the more you pass, the faster it gets.' };
+const LK_SCORE = { reaction:'low', quiz:'high', memory:'low', pose:'high' };
+const LK = { games:[], record:{ wins:0, losses:0, draws:0 }, wallet:[], loaded:false, loading:false, err:'', tab:'private',
+  board:null, people:null, sheet:null, play:null, poll:0 };
+const LK_QUIZ = [
+  ['What is the largest planet in our solar system?', 'Jupiter', 'Saturn', 'Neptune', 'Earth'],
+  ['How many continents are there?', '7', '5', '6', '8'],
+  ['What is the capital of Japan?', 'Tokyo', 'Kyoto', 'Osaka', 'Seoul'],
+  ['Which gas do plants take in from the air?', 'Carbon dioxide', 'Oxygen', 'Nitrogen', 'Helium'],
+  ['How many sides does a hexagon have?', '6', '5', '7', '8'],
+  ['What is the boiling point of water at sea level?', '100 °C', '90 °C', '120 °C', '80 °C'],
+  ['Which ocean is the largest?', 'Pacific', 'Atlantic', 'Indian', 'Arctic'],
+  ['What is 12 × 12?', '144', '124', '132', '154'],
+  ['Which planet is known as the Red Planet?', 'Mars', 'Venus', 'Mercury', 'Jupiter'],
+  ['What is the capital of South Africa’s government (executive)?', 'Pretoria', 'Cape Town', 'Durban', 'Johannesburg'],
+  ['How many minutes are in a day?', '1440', '1240', '1600', '1080'],
+  ['What is the hardest natural substance?', 'Diamond', 'Gold', 'Iron', 'Quartz'],
+  ['Which is the longest river in Africa?', 'Nile', 'Congo', 'Niger', 'Zambezi'],
+  ['How many players does a football (soccer) team have on the field?', '11', '10', '9', '12'],
+  ['What is the chemical symbol for gold?', 'Au', 'Ag', 'Go', 'Gd'],
+  ['Which country has the most people?', 'India', 'China', 'USA', 'Indonesia'],
+  ['What is the square root of 81?', '9', '8', '7', '11'],
+  ['Which animal is the largest on Earth?', 'Blue whale', 'Elephant', 'Giraffe', 'Great white shark'],
+  ['How many days are in a leap year?', '366', '365', '364', '367'],
+  ['What is the smallest prime number?', '2', '1', '3', '5'],
+  ['Which instrument has 88 keys?', 'Piano', 'Guitar', 'Violin', 'Trumpet'],
+  ['What is the capital of Kenya?', 'Nairobi', 'Mombasa', 'Kampala', 'Addis Ababa'],
+  ['How many hours are in a week?', '168', '148', '172', '160'],
+  ['Which part of the plant makes food from sunlight?', 'Leaf', 'Root', 'Stem', 'Flower'],
+  ['What is 15% of 200?', '30', '15', '20', '35'],
+  ['Which is the closest star to Earth?', 'The Sun', 'Sirius', 'Polaris', 'Alpha Centauri'],
+  ['What do bees make?', 'Honey', 'Milk', 'Silk', 'Wax only'],
+  ['How many bones does an adult human have?', '206', '186', '226', '256'],
+  ['Which currency is used in the United Kingdom?', 'Pound sterling', 'Euro', 'Dollar', 'Franc'],
+  ['What is the freezing point of water?', '0 °C', '10 °C', '-10 °C', '4 °C'],
+  ['Which continent is Egypt in?', 'Africa', 'Asia', 'Europe', 'Australia'],
+  ['What is 9 × 7?', '63', '56', '72', '67'],
+  ['Which shape has three sides?', 'Triangle', 'Square', 'Circle', 'Pentagon'],
+  ['What colour do you get by mixing blue and yellow?', 'Green', 'Purple', 'Orange', 'Brown'],
+  ['How many seconds are in an hour?', '3600', '6000', '360', '1200'],
+  ['Which is the tallest mountain in the world?', 'Mount Everest', 'Kilimanjaro', 'K2', 'Mont Blanc'],
+  ['What is the capital of France?', 'Paris', 'Lyon', 'Marseille', 'Brussels'],
+  ['Which organ pumps blood around the body?', 'Heart', 'Lungs', 'Liver', 'Kidneys'],
+  ['How many cents make one US dollar?', '100', '10', '50', '1000'],
+  ['What is the largest desert in the world (hot)?', 'Sahara', 'Kalahari', 'Gobi', 'Namib'],
+  ['Which month has the fewest days?', 'February', 'April', 'June', 'November'],
+  ['What is half of 250?', '125', '120', '150', '115']
+];
+function lkRng(seed){ let a = (seed >>> 0) || 1; return ()=>{ a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function lkShuffle(arr, r){ const a = arr.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function lkSpace(){ try{ return localStorage.getItem('story-space') || ''; }catch(e){ return ''; } }
+function lkLoad(){
+  if(LK.loading || !msgAccount()) return; LK.loading = true;
+  msgApi('/v1/lk/list').then(r=>{ LK.games = r.games || []; LK.record = r.record || LK.record; LK.wallet = r.wallet || []; LK.loaded = true; LK.err = '';
+    if(LK.play && LK.play.g){ const n = LK.games.find(g=>g.id === LK.play.g.id); if(n) LK.play.g = n; } })
+    .catch(e=>{ LK.err = e.code === 'signin' ? 'signin' : 'net'; })
+    .finally(()=>{ LK.loading = false; if(state.current === 'lockin' && !LK.sheet && !(LK.play && LK.play.live)) renderDevice(); });
+}
+window.addEventListener('storage', e=>{ if(e.key === 'story-lk-ping'){ LK.loaded = false; if(state.current === 'lockin'){ if(LK.play && LK.play.g) lkRefreshGame(); else lkLoad(); } } });
+function lkMoney(n, cur){ try{ return fmtCur(n / 100, cur || 'USD', false); }catch(e){ return (cur || '') + ' ' + (n / 100).toFixed(2); } }
+function lkWho(u){ return u ? (u.name || '@' + u.username) : 'Someone'; }
+function lkScoreTxt(kind, v){ if(v == null) return '-'; if(v < 0) return 'Played'; if(kind === 'quiz') return Math.floor(v / 1000) + '/10'; if(kind === 'pose') return v + ' poses'; return (v / 1000).toFixed(3) + ' s'; }
+function lkStatus(g){
+  if(g.status === 'invited') return g.mine ? 'Waiting for them to accept' : 'Challenged you' + (g.stake ? ' · ' + lkMoney(g.stake, g.cur) : '');
+  if(g.status === 'declined') return 'Declined';
+  if(g.status === 'cancelled') return 'Cancelled';
+  if(g.status === 'done') return g.draw ? 'Draw' : g.won ? 'You won' + (g.stake ? ' · +' + lkMoney(g.stake * 2, g.cur) : '') : 'You lost';
+  if(LK_SCORE[g.kind]) return g.myScore == null ? 'Your round - tap to play' : 'Waiting for their round';
+  return g.myTurn ? 'Your turn' : 'Their turn';
+}
+function lockInScreen(){
+  if(!LK.loaded && !LK.loading && !LK.err) setTimeout(lkLoad, 0);
+  if(LK.play) return lkPlayScreen();
+  const biz = !!lkSpace(), sh = LK.sheet;
+  const tile = k=>`<button class="lk-tile${k === 'pose' ? ' lk-soon' : ''}" data-lk="game" data-k="${k}">${lkIcon(k)}<b>${LK_NAMES[k]}</b></button>`;
+  const open = LK.games.filter(g=>g.status === 'invited' || g.status === 'active'), done = LK.games.filter(g=>!(g.status === 'invited' || g.status === 'active'));
+  const row = g=>`<div class="row-card lk-row" data-lk="open" data-id="${escText(g.id)}">${lkIcon(g.kind)}
+      <span class="fl-tx"><b>${escText(LK_NAMES[g.kind] || 'Game')} · ${escText(lkWho(g.other))}</b><small>${escText(lkStatus(g))}</small></span>
+      ${g.status === 'invited' && !g.mine ? `<button class="lk-mini" data-lk="accept" data-id="${escText(g.id)}">Accept</button>` : ''}</div>`;
+  const wal = LK.wallet.filter(w=>w.bal || w.held);
+  const sheetHTML = !sh ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${lkSheetHTML(sh)}</div></div>`;
+  return `
+    <div class="page-shell fl-page lk-page">
+    ${topBar('Lock In', false)}
+    <div class="lk-rec"><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span>
+      <button class="lk-board-btn" data-lk="board">Leaderboard ›</button></div>
+    <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
+    <div class="section-title">BUILT-IN GAMES</div>
+    <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
+    ${biz ? '<div class="fl-note lk-note">Business accounts play Lock In in person - in-person play is coming next. Built-in games against others are for Personal accounts; you can still practise here.</div>' : ''}
+    <div class="lk-tabs"><button class="${LK.tab === 'public' ? 'on' : ''}" data-lk="tab" data-v="public">Public games</button><button class="${LK.tab === 'private' ? 'on' : ''}" data-lk="tab" data-v="private">Private games</button></div>
+    ${LK.tab === 'public' ? '<div class="fl-empty">Public games are played live for everyone to watch - coming soon with Lock In live.</div>'
+      : !LK.loaded ? `<div class="fl-empty">${LK.err === 'signin' ? 'Log in to play Lock In' : LK.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>`
+      : (open.length || done.length) ? (open.map(row).join('') + (done.length ? '<div class="section-title">FINISHED</div>' + done.map(row).join('') : ''))
+      : '<div class="fl-empty">No games yet. Tap a game above to challenge someone who follows you back - or practise first.</div>'}
+    ${sheetHTML}
+    </div>`;
+}
+function lkIcon(k){
+  const p = { reaction:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', quiz:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
+    ttt:'<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>', c4:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="10" r="1.6"/><circle cx="12" cy="14" r="1.6"/><circle cx="16" cy="10" r="1.6"/>',
+    memory:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
+    pose:'<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 22l3-8 3 8"/>' }[k] || '';
+  return `<span class="lk-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg></span>`;
+}
+function lkSheetHTML(sh){
+  if(sh.t === 'game'){
+    const k = sh.k, biz = !!lkSpace();
+    const ppl = LK.people;
+    return `<div class="fl-sh-t">${LK_NAMES[k]}</div><div class="fl-sh-s">${escText(LK_ABOUT[k])}</div>
+      ${LK_SCORE[k] ? `<button class="btn-wide" data-lk="practice" data-k="${k}">Practise</button>` : ''}
+      ${biz ? '' : `<div class="section-title" style="margin-top:12px;">CHALLENGE SOMEONE</div>
+      <div class="lk-seg"><button class="${sh.bet ? '' : 'on'}" data-lk="bet" data-v="0">Free</button><button class="${sh.bet ? 'on' : ''}" data-lk="bet" data-v="1">Bet</button></div>
+      ${sh.bet ? `<div class="mt-two"><input id="lk-amt" class="bz-in" inputmode="decimal" placeholder="Amount" value="${escText(sh.amt || '')}"><input id="lk-cur" class="bz-in sh-cur" maxlength="3" autocapitalize="characters" value="${escText(sh.cur || 'USD')}"></div>
+        <div class="fl-sh-s">The amount is held from both game wallets when they accept, and the winner gets it all automatically.</div>` : ''}
+      <div class="lk-people">${ppl == null ? '<div class="fl-sh-s">Loading…</div>' : ppl.length ? ppl.map(u=>`<button class="row-card lk-person${sh.to === u.id ? ' on' : ''}" data-lk="pick" data-id="${escText(u.id)}"><span class="tm-pic">${u.photo ? `<img alt="" src="${escText(u.photo)}">` : `<b>${escText((u.name || u.username || '?').charAt(0).toUpperCase())}</b>`}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.username ? '@' + escText(u.username) : ''}</small></span></button>`).join('')
+        : '<div class="fl-sh-s">You can play people who follow you and whom you follow back. Follow each other in Updates first.</div>'}</div>
+      <button class="btn-wide btn-primary" data-lk="send">Send challenge</button>`}
+      <button class="btn-wide" data-lk="close">Close</button>`;
+  }
+  if(sh.t === 'invite'){ const g = LK.games.find(x=>x.id === sh.id); if(!g) return '<button class="btn-wide" data-lk="close">Close</button>';
+    return `<div class="fl-sh-t">${escText(lkWho(g.other))} challenged you</div><div class="fl-sh-s">${escText(LK_NAMES[g.kind])} · ${g.stake ? 'Bet ' + escText(lkMoney(g.stake, g.cur)) + ' - held from your game wallet when you accept' : 'Free game'}</div>
+      <div class="fl-sh-s">${escText(LK_ABOUT[g.kind])}</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk="decline" data-id="${escText(g.id)}">Decline</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk="accept" data-id="${escText(g.id)}">Accept</button></div>
+      <button class="btn-wide" data-lk="close">Close</button>`; }
+  if(sh.t === 'board'){ const b = LK.board;
+    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' with ' + b.myWins + ' win' + (b.myWins === 1 ? '' : 's') : 'Win a game to get on the board') : 'Loading…'}</div>
+      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has won a game yet.</div>') : ''}</div>
+      <button class="btn-wide" data-lk="close">Close</button>`; }
+  if(sh.t === 'wallet') return `<div class="fl-sh-t">Game wallet</div>
+      <div class="fl-sh-s">Your game wallet is only used inside Lock In. Add money to it, then bet with it - when a game you both agreed to ends, the winner gets the money automatically.</div>
+      ${LK.wallet.length ? LK.wallet.map(w=>`<div class="cu-sale"><span><b>${escText(w.cur)}</b><small>${w.held ? escText(lkMoney(w.held, w.cur)) + ' held in games' : 'Nothing held'}</small></span><span>${escText(lkMoney(w.bal, w.cur))}</span></div>`).join('') : '<div class="fl-sh-s">Balance: $0.00</div>'}
+      <button class="btn-wide btn-primary" data-lk="addmoney">Add money</button>
+      <div class="fl-sh-s">Adding money comes once Lockedintool’s payment partner is connected. Until then every game is free to play.</div>
+      <button class="btn-wide" data-lk="close">Close</button>`;
+  if(sh.t === 'forfeit') return `<div class="fl-sh-t">Forfeit this game?</div><div class="fl-sh-s">The other player wins${sh.stake ? ' and gets the bet' : ''}.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-lk="forfeit-yes">Forfeit</button></div>`;
+  return '<button class="btn-wide" data-lk="close">Close</button>';
+}
+// ---- playing ----
+function lkRefreshGame(){ const p = LK.play; if(!p || !p.g) return;
+  msgApi('/v1/lk/get', { id: p.g.id }).then(r=>{ if(LK.play !== p || !r.game) return; const ch = JSON.stringify(r.game) !== JSON.stringify(p.g); p.g = r.game; const i = LK.games.findIndex(g=>g.id === r.game.id); if(i >= 0) LK.games[i] = r.game; if(ch && !p.live && state.current === 'lockin') renderDevice(); }).catch(()=>{}); }
+function lkPollTick(){
+  const p = LK.play;
+  const want = p && p.g && !p.live && state.current === 'lockin' && document.visibilityState === 'visible' &&
+    ((p.g.status === 'active' && (LK_SCORE[p.g.kind] ? p.g.myScore != null : !p.g.myTurn)) || (p.g.status === 'invited' && p.g.mine));
+  if(!want){ clearInterval(LK.poll); LK.poll = 0; return; }
+  lkRefreshGame();
+}
+function lkPollArm(){ if(!LK.poll) LK.poll = setInterval(lkPollTick, 1500); }
+function lkPlayScreen(){
+  const p = LK.play, g = p.g;
+  setTimeout(lkPollArm, 0);
+  const head = `<div class="lk-ph"><button class="lk-back" data-lk="quit" aria-label="Back">‹</button><b>${escText(LK_NAMES[p.k])}</b><span>${g ? 'vs ' + escText(lkWho(g.other)) : 'Practice'}</span></div>`;
+  let body = '';
+  if(g && g.status === 'done') body = lkResultHTML(g);
+  else if(g && g.status === 'invited') body = `<div class="lk-mid"><div class="lk-big">${g.mine ? 'Challenge sent' : 'You were challenged'}</div><div class="fl-sh-s">${g.mine ? 'Waiting for ' + escText(lkWho(g.other)) + ' to accept.' : ''}</div>
+      ${g.mine ? `<button class="btn-wide" data-lk="takeback" data-id="${escText(g.id)}">Take it back</button>` : `<button class="btn-wide btn-primary" data-lk="accept" data-id="${escText(g.id)}">Accept</button>`}</div>`;
+  else if(g && (g.status === 'declined' || g.status === 'cancelled')) body = `<div class="lk-mid"><div class="lk-big">${g.status === 'declined' ? 'They declined' : 'Cancelled'}</div></div>`;
+  else if(p.k === 'ttt' || p.k === 'c4') body = lkBoardHTML(g);
+  else if(p.done != null) body = lkRoundDoneHTML(p);
+  else if(g && g.myScore != null) body = `<div class="lk-mid"><div class="lk-big">${escText(lkScoreTxt(p.k, g.myScore))}</div><div class="fl-sh-s">Your round is in. Waiting for ${escText(lkWho(g.other))} to play theirs.</div></div>`;
+  else body = `<div id="lk-stage" class="lk-stage">${lkStageStartHTML(p)}</div>`;
+  const canForfeit = g && g.status === 'active';
+  return `<div class="page-shell lk-play">${head}${body}
+    ${canForfeit ? '<button class="lk-forfeit" data-lk="forfeit">Forfeit</button>' : ''}
+    ${LK.sheet ? `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${lkSheetHTML(LK.sheet)}</div></div>` : ''}</div>`;
+}
+function lkResultHTML(g){
+  return `<div class="lk-mid"><div class="lk-big">${g.draw ? 'Draw' : g.won ? 'You won!' : 'You lost'}</div>
+    ${LK_SCORE[g.kind] ? `<div class="lk-vs"><span><small>You</small><b>${escText(lkScoreTxt(g.kind, g.myScore))}</b></span><span><small>${escText(lkWho(g.other))}</small><b>${escText(lkScoreTxt(g.kind, g.theirScore))}</b></span></div>` : (g.kind === 'ttt' || g.kind === 'c4' ? lkBoardHTML(g, true) : '')}
+    ${g.stake ? `<div class="fl-sh-s">${g.draw ? 'Your bet went back to your game wallet.' : g.won ? escText(lkMoney(g.stake * 2, g.cur)) + ' went to your game wallet.' : 'The bet went to ' + escText(lkWho(g.other)) + '.'}</div>` : ''}
+    <button class="btn-wide btn-primary" data-lk="again">Play ${escText(lkWho(g.other))} again</button></div>`;
+}
+function lkBoardHTML(g, frozen){
+  const k = g.kind, bd = ((g.state && g.state.board) || (k === 'ttt' ? '.........' : '.'.repeat(42))).split(''), meX = g.iAmA ? 'X' : 'O';
+  const live = !frozen && g.status === 'active' && g.myTurn;
+  const piece = c=>c === '.' ? '' : `<span class="lk-pc ${c === meX ? 'me' : 'them'}">${k === 'ttt' ? c : ''}</span>`;
+  const grid = k === 'ttt' ? `<div class="lk-ttt">${bd.map((c, i)=>`<button class="lk-cell${g.state && g.state.last === i ? ' last' : ''}" ${live && c === '.' ? `data-lk="move" data-c="${i}"` : 'disabled'}>${piece(c)}</button>`).join('')}</div>`
+    : `<div class="lk-c4">${bd.map((c, i)=>`<button class="lk-cell${g.state && g.state.last === i ? ' last' : ''}" ${live ? `data-lk="move" data-c="${i % 7}"` : 'disabled'}>${piece(c)}</button>`).join('')}</div>`;
+  if(frozen) return grid;
+  return `<div class="lk-turn">${g.myTurn ? 'Your turn' + (k === 'ttt' ? ' - you are ' + meX : ' - tap a column') : 'Waiting for ' + escText(lkWho(g.other)) + '…'}</div>${grid}
+    <div class="lk-legend"><span><span class="lk-pc me">${k === 'ttt' ? meX : ''}</span> You</span><span><span class="lk-pc them">${k === 'ttt' ? (meX === 'X' ? 'O' : 'X') : ''}</span> ${escText(lkWho(g.other))}</span></div>`;
+}
+function lkRoundDoneHTML(p){
+  return `<div class="lk-mid"><div class="lk-big">${escText(lkScoreTxt(p.k, p.done))}</div>
+    <div class="fl-sh-s">${p.g ? (p.sending ? 'Sending your round…' : p.sendErr ? 'Couldn’t send your round - check your connection.' : 'Your round is in.') : 'Practice round.'}</div>
+    ${p.g && p.sendErr ? '<button class="btn-wide btn-primary" data-lk="resend">Try again</button>' : ''}
+    ${!p.g ? `<button class="btn-wide btn-primary" data-lk="practice" data-k="${p.k}">Play again</button>` : ''}</div>`;
+}
+function lkStageStartHTML(p){
+  return `<div class="lk-mid"><div class="fl-sh-s">${escText(LK_ABOUT[p.k])}</div><button class="btn-wide btn-primary lk-go" data-lk="start">Start</button>
+    <div class="fl-sh-s">${p.g ? 'You get one round - make it count.' : ''}</div></div>`;
+}
+function lkFinishRound(score){
+  const p = LK.play; if(!p) return; p.live = false; p.done = Math.max(0, Math.round(score));
+  if(p.g){ p.sending = true; lkSendScore(); }
+  renderDevice();
+}
+function lkSendScore(){
+  const p = LK.play; if(!p || !p.g) return; p.sending = true; p.sendErr = false;
+  msgApi('/v1/lk/score', { id: p.g.id, score: p.done }).then(r=>{ if(LK.play !== p) return; p.sending = false; if(r.game){ p.g = r.game; p.done = null; } if(state.current === 'lockin') renderDevice(); })
+    .catch(()=>{ if(LK.play !== p) return; p.sending = false; p.sendErr = true; if(state.current === 'lockin') renderDevice(); });
+}
+function lkStage(){ return document.getElementById('lk-stage'); }
+// Reaction race: 5 rounds; a tap before green = +1 s for that round.
+function lkReaction(p){
+  const r = lkRng(p.seed), waits = [0, 1, 2, 3, 4].map(()=>1200 + Math.floor(r() * 2600));
+  let round = 0, total = 0, t0 = 0, timer = 0, phase = 'wait';
+  const st = lkStage(); if(!st) return;
+  const draw = (cls, big, small)=>{ st.innerHTML = `<button class="lk-react ${cls}" data-lkr="1"><b>${big}</b><small>${small}</small></button>`; };
+  const next = ()=>{ phase = 'wait'; draw('wait', 'Wait for green', 'Round ' + (round + 1) + ' of 5'); clearTimeout(timer); timer = setTimeout(()=>{ phase = 'go'; t0 = performance.now(); draw('go', 'TAP!', 'Round ' + (round + 1) + ' of 5'); }, waits[round]); };
+  p.tap = ()=>{
+    if(phase === 'wait'){ clearTimeout(timer); total += 1000; phase = 'shown'; draw('early', 'Too soon! +1.000 s', 'Tap to go on'); return; }
+    if(phase === 'go'){ const ms = performance.now() - t0; total += ms; phase = 'shown'; draw('shown', (ms / 1000).toFixed(3) + ' s', round < 4 ? 'Tap for the next round' : 'Tap to finish'); return; }
+    if(phase === 'shown'){ round++; if(round >= 5){ phase = 'end'; p.tap = null; lkFinishRound(total); return; } next(); }
+  };
+  next();
+}
+// Quiz battle: 10 questions from the seed; score = right answers x 1000 + a speed bonus (under 1000).
+function lkQuiz(p){
+  const r = lkRng(p.seed), qs = lkShuffle(LK_QUIZ, r).slice(0, 10).map(q=>({ q: q[0], right: q[1], opts: lkShuffle(q.slice(1), r) }));
+  let i = 0, right = 0; const t0 = performance.now(); const st = lkStage(); if(!st) return;
+  const draw = ()=>{ const q = qs[i]; st.innerHTML = `<div class="lk-q"><small>Question ${i + 1} of 10</small><b>${escText(q.q)}</b>${q.opts.map((o, j)=>`<button class="lk-opt" data-lkq="${j}">${escText(o)}</button>`).join('')}</div>`; };
+  p.answer = j=>{ if(qs[i].opts[j] === qs[i].right) right++; i++; if(i >= 10){ p.answer = null; const secs = (performance.now() - t0) / 1000; lkFinishRound(right * 1000 + Math.max(0, Math.min(999, Math.round(999 - secs * 5)))); return; } draw(); };
+  draw();
+}
+// Memory match: 8 pairs; score = time in ms + 2 s per wrong pair. Two wrong cards stay up until the next tap (no waiting).
+function lkMemory(p){
+  const r = lkRng(p.seed), cards = lkShuffle('AABBCCDDEEFFGGHH'.split(''), r);
+  const up = cards.map(()=>false), found = cards.map(()=>false); let a = -1, b = -1, misses = 0, pairs = 0; const t0 = performance.now();
+  const st = lkStage(); if(!st) return;
+  const draw = ()=>{ st.innerHTML = `<div class="lk-mem-top">Pairs ${pairs}/8 · Misses ${misses}</div><div class="lk-mem">${cards.map((c, i)=>`<button class="lk-card${up[i] || found[i] ? ' up' : ''}${found[i] ? ' found' : ''}" data-lkm="${i}">${up[i] || found[i] ? c : ''}</button>`).join('')}</div>`; };
+  p.flip = i=>{
+    if(found[i] || up[i]) return;
+    if(a >= 0 && b >= 0){ up[a] = false; up[b] = false; a = -1; b = -1; }   // a wrong pair turns back with the next tap
+    up[i] = true;
+    if(a < 0){ a = i; draw(); return; }
+    b = i;
+    if(cards[a] === cards[b]){ found[a] = found[b] = true; up[a] = up[b] = false; a = b = -1; pairs++;
+      if(pairs === 8){ draw(); p.flip = null; lkFinishRound(performance.now() - t0 + misses * 2000); return; } }
+    else misses++;
+    draw();
+  };
+  draw();
+}
+function lkStart(){
+  const p = LK.play; if(!p) return; p.live = true;
+  if(p.k === 'reaction') lkReaction(p); else if(p.k === 'quiz') lkQuiz(p); else if(p.k === 'memory') lkMemory(p);
+}
+document.addEventListener('pointerdown', e=>{   // game taps act on touch-down: no click delay
+  if(!LK.play) return;
+  const t = e.target.closest && e.target.closest('[data-lkr],[data-lkq],[data-lkm]'); if(!t) return;
+  e.preventDefault();
+  if(t.hasAttribute('data-lkr') && LK.play.tap) LK.play.tap();
+  else if(t.hasAttribute('data-lkq') && LK.play.answer) LK.play.answer(+t.getAttribute('data-lkq'));
+  else if(t.hasAttribute('data-lkm') && LK.play.flip) LK.play.flip(+t.getAttribute('data-lkm'));
+}, true);
+function lkOpenGame(g){ LK.play = { k: g.kind, g, seed: g.seed, done: null }; LK.sheet = null; }
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-lk]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-lk'), id = b.getAttribute('data-id');
+  const put = g=>{ if(!g) return; const i = LK.games.findIndex(x=>x.id === g.id); if(i >= 0) LK.games[i] = g; else LK.games.unshift(g); if(LK.play && LK.play.g && LK.play.g.id === g.id) LK.play.g = g; };
+  const keep = ()=>{ const s = LK.sheet; if(s && s.t === 'game'){ const am = document.getElementById('lk-amt'), cu = document.getElementById('lk-cur'); if(am) s.amt = am.value; if(cu) s.cur = (cu.value || 'USD').toUpperCase(); } };
+  switch(a){
+    case 'tab': LK.tab = b.getAttribute('data-v'); break;
+    case 'game': { const k = b.getAttribute('data-k');
+      if(k === 'pose'){ showToast('Pose is coming next'); return; }
+      LK.sheet = { t:'game', k, bet:false, cur: (typeof moneyMainCur === 'function' && moneyMainCur()) || 'USD' };
+      if(LK.people == null && msgAccount()) msgApi('/v1/lk/people').then(r=>{ LK.people = r.people || []; if(LK.sheet && LK.sheet.t === 'game'){ keep(); renderDevice(); } }).catch(()=>{ LK.people = []; });
+      break; }
+    case 'bet': keep(); LK.sheet.bet = b.getAttribute('data-v') === '1'; break;
+    case 'pick': keep(); LK.sheet.to = id; break;
+    case 'send': { keep(); const s = LK.sheet; if(!msgAccount()){ showToast('Log in to play Lock In'); return; }
+      if(!s.to){ showToast('Choose who to play'); return; }
+      let stake = 0;
+      if(s.bet){ stake = Math.round(parseFloat(String(s.amt || '').replace(',', '.')) * 100) || 0; if(stake <= 0){ showToast('Enter the bet amount'); return; } if(!/^[A-Z]{3}$/.test(s.cur || '')){ showToast('The currency is 3 letters, like USD or ZAR'); return; } }
+      msgApi('/v1/lk/challenge', { to: s.to, kind: s.k, stake, cur: s.cur }).then(r=>{ put(r.game); LK.sheet = null; LK.tab = 'private'; showToast('Challenge sent'); if(state.current === 'lockin') renderDevice(); })
+        .catch(err=>showToast(err.code === 'funds' ? 'Not enough in your game wallet for that bet' : err.code === 'mutual' ? 'You can only play people who follow you and whom you follow back' : 'Couldn’t send the challenge - try again'));
+      return; }
+    case 'practice': LK.sheet = null; LK.play = { k: b.getAttribute('data-k'), g: null, seed: Math.floor(Math.random() * 2147483647), done: null }; break;
+    case 'open': { const g = LK.games.find(x=>x.id === id); if(!g) return;
+      if(g.status === 'invited' && !g.mine){ LK.sheet = { t:'invite', id }; break; }
+      lkOpenGame(g); break; }
+    case 'accept': msgApi('/v1/lk/respond', { id, accept:true }).then(r=>{ put(r.game); LK.sheet = null; if(r.game) lkOpenGame(r.game); if(state.current === 'lockin') renderDevice(); })
+      .catch(err=>showToast(err.code === 'funds' ? 'Not enough in your game wallet for this bet' : 'Couldn’t accept - try again')); return;
+    case 'decline': msgApi('/v1/lk/respond', { id, accept:false }).then(()=>{ LK.sheet = null; lkLoad(); }).catch(()=>showToast('Couldn’t decline - try again')); return;
+    case 'takeback': msgApi('/v1/lk/respond', { id, accept:false }).then(()=>{ LK.play = null; lkLoad(); }).catch(()=>showToast('Couldn’t take it back - try again')); return;
+    case 'start': lkStart(); return;
+    case 'resend': lkSendScore(); break;
+    case 'move': { const p = LK.play; if(!p || !p.g || !p.g.myTurn) return; const c = +b.getAttribute('data-c');
+      p.g.myTurn = false; renderDevice();
+      msgApi('/v1/lk/move', { id: p.g.id, cell: c }).then(r=>{ put(r.game); if(state.current === 'lockin') renderDevice(); })
+        .catch(err=>{ if(err.info && err.info.game) put(err.info.game); else showToast('Couldn’t make that move - try again'); lkRefreshGame(); });
+      return; }
+    case 'forfeit': LK.sheet = { t:'forfeit', stake: LK.play && LK.play.g ? LK.play.g.stake : 0 }; break;
+    case 'forfeit-yes': { const p = LK.play; LK.sheet = null; if(!p || !p.g) break; msgApi('/v1/lk/forfeit', { id: p.g.id }).then(r=>{ put(r.game); if(state.current === 'lockin') renderDevice(); }).catch(()=>showToast('Couldn’t forfeit - try again')); break; }
+    case 'again': { const g = LK.play && LK.play.g; if(!g) break; LK.play = null; LK.sheet = { t:'game', k: g.kind, bet:false, to: g.other && g.other.id, cur: g.cur || 'USD' };
+      if(LK.people == null) msgApi('/v1/lk/people').then(r=>{ LK.people = r.people || []; if(LK.sheet) renderDevice(); }).catch(()=>{ LK.people = []; });
+      break; }
+    case 'quit': { const p = LK.play; if(p && p.live && p.g){ showToast('Finish your round first - you get one round'); return; } LK.play = null; LK.sheet = null; lkLoad(); break; }
+    case 'board': LK.sheet = { t:'board' }; LK.board = null; msgApi('/v1/lk/board').then(r=>{ LK.board = r; if(LK.sheet && LK.sheet.t === 'board') renderDevice(); }).catch(()=>{ LK.board = { board:[], myRank:0, myWins:0 }; if(LK.sheet) renderDevice(); }); break;
+    case 'wallet': LK.sheet = { t:'wallet' }; break;
+    case 'addmoney': showToast('Adding money to your game wallet comes once Lockedintool’s payment partner is connected - play free until then'); return;
+    case 'close': LK.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
+}, true);
+
 async function flUploadOne(f){
   FL.busy++; if(state.current === 'files') renderDevice();
   try{
@@ -23294,7 +23672,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['customers','shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['lockin','customers','shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

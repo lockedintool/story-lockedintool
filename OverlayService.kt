@@ -959,7 +959,7 @@ class OverlayService : Service(), StoryBridge.Host {
         // Never shown on a locked phone without its unlock (#273), except a call's screen.
         if (shown && (p === profilePane || p === dialPane) && !callActive && keyguardLocked()) return
         if (p === pagesPane && shown) { parkedDash = false; if (homeUp) homeShotSoon() }
-        if (p === pagesPane && shown && !p.shown && !spacesHolding() && !keyguardLocked()) spaceLastSet("")   // #336: you came back to Lockedintool itself
+        if (p === pagesPane && shown && !p.shown && !spacesHolding() && !keyguardLocked()) spaceLastSet("~lit")   // #336 / #339: you came back to Lockedintool itself
         if (shown && p === pagesPane && pagesInHome() && LockedintoolHome.current?.visibleNow != true) homeDetach()
         p.shown = shown
         if (p === pagesPane) { if (shown) SystemMode.reset() else if (SystemMode.on(this)) { ui.removeCallbacks(systemCheckRun); ui.postDelayed(systemCheckRun, 700) } }
@@ -2065,6 +2065,7 @@ class OverlayService : Service(), StoryBridge.Host {
             val fromPages = pagesPane?.shown == true
             if (fromPages && (StoryAccessibilityService.RECENTS_CLASS.containsMatchIn(cls) || StoryAccessibilityService.recentsInFront())) backToLit = true
             stepAsideForPhoneNav()
+            if (home && !recents) ui.postDelayed({ if (!StoryAccessibilityService.recentsInFront() && pagesPane?.shown != true && !spacesHolding()) spaceLastSet("") }, 900)   // #339: you went to the phone's home screen
             if (fromPages) for (d in longArrayOf(150, 350, 700)) ui.postDelayed({ if (StoryAccessibilityService.recentsInFront()) backToLit = true }, d)
         }
     } }
@@ -3039,8 +3040,13 @@ class OverlayService : Service(), StoryBridge.Host {
     private fun spacesArm() {
         if (sysQuiet() || callActive || createActive) return
         val p = pagesPane ?: return
+        // #339 (owner, 14 Nov 2026: 'the company screen sometimes gets gapped and the home screen or recent open apps show
+        // first'): hidden Pages REST (WebView.onPause), and a resting page runs no script - so the chooser was sometimes
+        // only built later, after the unlock. It's woken first now, then put to rest again if nothing is shown.
+        if (!p.shown) runCatching { p.web.onResume() }
         p.web.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()") { r ->
             val res = (r ?: "").trim('"')
+            if (res != "ok" && !p.shown && !pagesInHome() && !spacesWarm) runCatching { p.web.onPause() }
             spLog("screen off: chooser " + res + (if (p.shown) ", Pages already up" else "") + (if (pagesInHome()) ", in Home" else "") + (if (Security.lit(this)) ", Lockedintool security" else ""))
             if (res != "ok" || p.shown || pagesInHome()) return@evaluateJavascript
             if (!Security.lit(this)) { setShown(p, true); spacesPreShown = true }
@@ -3093,7 +3099,19 @@ class OverlayService : Service(), StoryBridge.Host {
         val want = id.ifEmpty { "personal" }
         spPrefs().edit().putString("space_cur", want).apply()
         val last = spPrefs().getString("space_last_$want", "") ?: ""
-        if (last.isEmpty() || last == packageName) return false
+        if (last == "~lit" || last == packageName) return false
+        // #339 (owner, 14 Nov 2026: 'I still start on lockedintool idk why'): you weren't in Lockedintool there - the
+        // phone's own home screen, as the phone works (Only system / the app: Lockedintool IS where you land).
+        if (last.isEmpty()) {
+            if (SystemMode.on(this) || sysQuiet()) return false
+            val h = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ui.post {
+                spacesUpFlag = false; spacesPreShown = false
+                if (runCatching { startActivity(h) }.isFailure) return@post
+                hidePanelFor(homePkg(), "your home screen")
+            }
+            return true
+        }
         val i = packageManager.getLaunchIntentForPackage(last) ?: return false
         ui.post {
             spacesUpFlag = false; spacesPreShown = false

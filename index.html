@@ -171,7 +171,7 @@
     if(window.StoryNative !== live) Object.defineProperty(window, 'StoryNative', { value:live, configurable:true });
     return;
   }
-  const READ = new Set(['getApps','appVersion','getTheme','getProfilePhoto','photoAccess','secretGet','moneyList','moneyAccess','notifList','getCalls','mediaAccess','getQuickAccess','listPhotos','widgetsOnlyState','systemModeState']);
+  const READ = new Set(['getApps','appVersion','getTheme','getProfilePhoto','photoAccess','secretGet','moneyList','moneyAccess','notifList','getCalls','mediaAccess','getQuickAccess','listPhotos','widgetsOnlyState','systemModeState','appGenuine']);   // #376: appGenuine - without it the plan read as none and Wallet / Money / Focus widgets drew the Dashboard
   const safe = new Proxy({}, { get(t, k){
     if(k === 'http') return (id, method, url, h, body)=> String(method).toUpperCase() === 'DELETE' ? undefined : real.http(id, method, url, h, body);
     if(READ.has(k)) return (...a)=>real[k](...a);

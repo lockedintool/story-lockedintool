@@ -40,6 +40,10 @@ class LockedintoolApp : Activity() {
     private fun showShot() { runCatching {
         if (android.os.Build.VERSION.SDK_INT < 34) return   // only the exact screen copy (Android 14+), never a drawn picture
         val svc = OverlayService.instance
+        // #374 (owner's video, 14 Nov 2026: 'this not supposed to be happening - see the flash'): when the company screen is
+        // what opens, the Dashboard's picture never shows first (it flashed, then black, then the company screen).
+        if (svc?.chooserOnOpen() == true || (svc == null && getSharedPreferences("story", MODE_PRIVATE).getBoolean("spaces_on", false))) {
+            shot?.setImageDrawable(null); return }
         val prefs = getSharedPreferences("story", MODE_PRIVATE)
         if (svc?.homeShot == null && !prefs.getBoolean("home_shot_exact", false)) return
         val b = svc?.homeShot ?: android.graphics.BitmapFactory.decodeFile(java.io.File(filesDir, "home_shot.jpg").path) ?: return

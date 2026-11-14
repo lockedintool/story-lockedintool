@@ -2310,6 +2310,8 @@ class OverlayService : Service(), StoryBridge.Host {
         appLeft = false
         secGate(p) { showPagesOn(p, js) { updateBubble() } }
     }
+    /** #374: the company screen opens with the app this time - LockedintoolApp then shows no picture of the Dashboard first. */
+    fun chooserOnOpen(): Boolean = appLeft && spacesWanted()
     /** The app went out of sight: everything of Lockedintool goes with it (never left over another app). */
     fun appStopped(act: android.app.Activity) {
         val attached = homeHostWm === act.windowManager

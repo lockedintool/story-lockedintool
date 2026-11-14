@@ -3000,10 +3000,19 @@ class OverlayService : Service(), StoryBridge.Host {
         if (sysQuiet() || callActive) return
         val p = pagesPane ?: return
         p.web.evaluateJavascript("window.litSpacesPrep&&window.litSpacesPrep()") { r ->
-            if ((r ?: "").trim('"') == "ok" && !p.shown && !pagesInHome()) { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
+            if ((r ?: "").trim('"') != "ok" || p.shown || pagesInHome() || keyguardLocked().not()) return@evaluateJavascript
+            // #329 (owner, 14 Nov 2026: 'when I didn't use the company screen ... it's there every single time instantly, no
+            // delay no gaps. But once I use it, it's slow'): an unanswered chooser stayed ON SCREEN under the lock screen, so
+            // the unlock just revealed it. Now it's always like that: the Pages with the chooser are put on screen under the
+            // lock screen (Lockedintool's normal layer is below the lock screen - nothing shows while locked). With Lockedintool
+            // security on it only draws hidden, so company names never show before Lockedintool is unlocked.
+            if (!Security.lit(this)) { setShown(p, true); spacesPreShown = true }
+            else { runCatching { p.web.onResume() }; p.frame.alpha = 1f; spacesWarm = true }
         }
     }
+    private var spacesPreShown = false
     private fun spacesUnwarm() {
+        if (spacesPreShown && !spacesUpFlag) { spacesPreShown = false; pagesPane?.takeIf { it.shown }?.let { hideOne(it) } }   // not unlocked: back as it was
         if (!spacesWarm) return
         spacesWarm = false
         val p = pagesPane ?: return
@@ -3014,7 +3023,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Lockedintool's bottom button does nothing, its swipe doesn't step aside, and if the phone's Home / Recents or any app
      *  comes up anyway, the chooser comes straight back over it (never over a call). */
     @Volatile private var spacesUpFlag = false
-    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (!on) spacesUnwarm() } }
+    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (on) spacesPreShown = false; if (!on) spacesUnwarm() } }
     private fun spacesReshow() {
         if (!spacesUpFlag || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return
         val p = pagesPane ?: return

@@ -3057,23 +3057,14 @@ class OverlayService : Service(), StoryBridge.Host {
     }
     private fun spacesWhy(why: String) {
         ProblemLog.record(this, "spaces", "chooser not shown: " + why, "unlock")
-        if (Release.isOwner(this)) showToast("Company screen didn’t open: " + why)   // the owner's phone says why straight away
     }
-    /** #318 TEMPORARY (owner's phone only): says where the company screen stopped after an unlock - remove once fixed. */
+    /** #318 / #319 removed (#332 - the company screen works; its messages came late and confused): no message, no log. */
     private fun spDiag(m: String) {
-        if (!Release.isOwner(this)) return
-        showToast("Company screen: " + m)
-        spLog(m)
     }
-    /** #319 TEMPORARY: the same steps written down (last 14), shown at the bottom of Business settings on the owner's phone. */
+    /** #319 removed with #318 (#332). */
     private fun spLog(m: String) {
-        if (!Release.isOwner(this)) return
-        val p = getSharedPreferences("story", MODE_PRIVATE)
-        val t = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
-        val lines = (p.getString("spaces_trace", "") ?: "").split("\n").filter { it.isNotBlank() }.takeLast(13) + ("$t  $m")
-        p.edit().putString("spaces_trace", lines.joinToString("\n")).apply()
     }
-    override fun spacesTrace(): String = getSharedPreferences("story", MODE_PRIVATE).getString("spaces_trace", "") ?: ""
+    override fun spacesTrace(): String = ""
     private fun spacesAfterUnlock() {
         // #317: the saved 'companies are on' flag may never have been written - ask the page itself.
         if (!spacesWanted()) {

@@ -109,7 +109,7 @@ class OverlayService : Service(), StoryBridge.Host {
     // so whichever comes first wins; the other one is ignored.
     @Volatile private var aodStartedAt = 0L
     private fun onScreenOff() {
-        spacesUpFlag = false; spacesPreShown = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
+        backToLit = false; spacesUpFlag = false; spacesPreShown = false; spacesArm()   // #328: a new unlock asks again; #330: and the chooser is put up NOW
         ContentGuard.clearForNow()   // 'This is a mistake' lets you carry on only until the screen goes off
         val now = System.currentTimeMillis()
         if (now - aodStartedAt < 800) return               // the same screen-off, reported twice
@@ -1395,6 +1395,7 @@ class OverlayService : Service(), StoryBridge.Host {
     @Volatile private var litAppPkg: String? = null
     fun foregroundChanged(pkg: String) { widgetLiveEvent(pkg != homePkg()); ui.post {
         spaceSeen(pkg)   // #336: the app you're in belongs to the company / Personal in focus
+        if (pkg != packageName && pkg != "com.android.systemui" && pkg != homePkg() && pkg != recentsPkg) backToLit = false   // #338: you picked an app
         if (spacesHeld() && pkg != packageName && pkg != "com.android.systemui") ui.postDelayed({ spacesReshow() }, 200)   // #328
         litAppPkg?.let { a -> if (pkg != a && pkg != "com.android.systemui" && pkg != packageName) {   // Lockedintool's own screens (unlock, call setup) keep it
             litAppPkg = null
@@ -1662,9 +1663,11 @@ class OverlayService : Service(), StoryBridge.Host {
     // 'stay in Lockedintool' rule is gone - the phone's Home / closing Recents show the phone's own home screen as normal.
     @Suppress("UNUSED") private fun inLitOld(): Boolean = inLitCache ?: getSharedPreferences("story", MODE_PRIVATE).getBoolean("in_lit", false).also { inLitCache = it }
     private fun inLit(): Boolean = false
+    /** #338: the phone's Recents was opened from inside Lockedintool - closing it brings you back to Lockedintool. */
+    @Volatile private var backToLit = false
     private fun setInLit(on: Boolean) { if (inLit() != on) { inLitCache = on; getSharedPreferences("story", MODE_PRIVATE).edit().putBoolean("in_lit", on).apply() } }
     private fun litHomeCheck() {
-        if (!inLit() || pagesPane == null || pagesPane?.shown == true || keyguardLocked() || sysQuiet() || SystemMode.on(this)) return
+        if (!(inLit() || backToLit) || pagesPane == null || pagesPane?.shown == true || keyguardLocked() || sysQuiet() || SystemMode.on(this)) return
         if (pickerHid.isNotEmpty() || openingPkg != null || createActive || callActive || picker != null) return
         // Only the phone's OWN home screen counts: the last app Android brought to the front must be the home-screen app
         // (owner's recording, 29 Oct 2026: Lockedintool opened by itself while they were in another app).
@@ -1672,7 +1675,7 @@ class OverlayService : Service(), StoryBridge.Host {
         if (StoryAccessibilityService.frontPkg != home) return
         // The phone went Home because you swiped the bottom button up (#257): that's switching to Apps - stay there.
         if (SystemClock.uptimeMillis() - swipeUpAt < 1500) { if (!StoryAccessibilityService.recentsInFront()) setInLit(false); return }
-        if (StoryAccessibilityService.homeInFront(home) && !StoryAccessibilityService.recentsInFront()) showPanel(station3Only = false)
+        if (StoryAccessibilityService.homeInFront(home) && !StoryAccessibilityService.recentsInFront()) { backToLit = false; showPanel(station3Only = false) }
     }
     private val panelCheck = Runnable {
         val over = !keyguardLocked() && StoryAccessibilityService.panelInFront() == true
@@ -2056,7 +2059,14 @@ class OverlayService : Service(), StoryBridge.Host {
             for (d in longArrayOf(150, 350, 700)) ui.postDelayed({ if (pagesPane?.shown == true && StoryAccessibilityService.recentsInFront()) stepAsideForPhoneNav() }, d)
             return@post
         }
-        if (recents || home) stepAsideForPhoneNav()
+        if (recents || home) {
+            // #338 (owner, 14 Nov 2026: 'If I was in lockedintool it will go back to lockedintool - it works like that'):
+            // like any app, leaving the phone's Recents without picking an app (or Close all) goes back to where you were.
+            val fromPages = pagesPane?.shown == true
+            if (fromPages && (StoryAccessibilityService.RECENTS_CLASS.containsMatchIn(cls) || StoryAccessibilityService.recentsInFront())) backToLit = true
+            stepAsideForPhoneNav()
+            if (fromPages) for (d in longArrayOf(150, 350, 700)) ui.postDelayed({ if (StoryAccessibilityService.recentsInFront()) backToLit = true }, d)
+        }
     } }
     /** The app Android itself uses to draw Recents (config_recentsComponentName - on One UI the home-screen app). It keeps
      *  drawing Recents even when Lockedintool is the Home app (Only system), so Recents is caught there too. */

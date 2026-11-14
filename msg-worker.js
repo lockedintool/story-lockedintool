@@ -226,6 +226,8 @@ export class Hub {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS custsales (id TEXT PRIMARY KEY, cid TEXT, uid TEXT, what TEXT, amount INTEGER, cur TEXT, at INTEGER)`);
     // #383 LOCK IN (the game): games between two people who follow each other, and the game wallet (only inside Lock In).
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkgames (id TEXT PRIMARY KEY, kind TEXT, a TEXT, b TEXT, status TEXT, stake INTEGER DEFAULT 0, cur TEXT, seed INTEGER, state TEXT, sa INTEGER, sb INTEGER, turn TEXT, winner TEXT, at INTEGER, done_at INTEGER)`);
+    // #384 RACKS: Lock In points earned by playing and winning (not money); best single-player scores per game.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS lkracks (uid TEXT PRIMARY KEY, racks INTEGER DEFAULT 0, best TEXT, day TEXT, dayn INTEGER DEFAULT 0)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkwallet (uid TEXT, cur TEXT, bal INTEGER DEFAULT 0, held INTEGER DEFAULT 0, PRIMARY KEY (uid, cur))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS teams (oid TEXT, mid TEXT, role TEXT, status TEXT, at INTEGER, PRIMARY KEY (oid, mid))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS callrates (uid TEXT, stars INTEGER, note TEXT, video INTEGER, grp INTEGER, secs INTEGER, at INTEGER)`);   // the end-of-call rating (owner) - no names shown
@@ -628,7 +630,7 @@ export class Hub {
     if (!this.canSeeProfile(me, u)) return json(this.personView(u, me));  // private: only who it is
     this.dropOldStatuses();
     const posts = this.sql.exec("SELECT * FROM uposts WHERE uid = ? AND kind = 'post' ORDER BY at DESC LIMIT 90", u.id).toArray().map(p => this.postView(p, me));
-    return json(Object.assign(this.personView(u, me), { postList: posts, statuses: this.statusesOf(u, me), highlights: this.highlightsOf(u, me), shop: this.shopOf(u.id, false) }));
+    return json(Object.assign(this.personView(u, me), { postList: posts, statuses: this.statusesOf(u, me), highlights: this.highlightsOf(u, me), shop: this.shopOf(u.id, false), racks: this.lkRacks(u.id) }));
   }
   updates(me) {
     this.dropOldStatuses();
@@ -1250,6 +1252,17 @@ export class Hub {
   // #383 LOCK IN
   lkWallet(uid, cur) { this.sql.exec('INSERT OR IGNORE INTO lkwallet (uid, cur, bal, held) VALUES (?, ?, 0, 0)', uid, cur); return this.one('SELECT * FROM lkwallet WHERE uid = ? AND cur = ?', uid, cur); }
   lkMove(uid, cur, dBal, dHeld) { this.lkWallet(uid, cur); this.sql.exec('UPDATE lkwallet SET bal = bal + ?, held = held + ? WHERE uid = ? AND cur = ?', dBal, dHeld, uid, cur); }
+  lkRacks(uid) { const r = this.one('SELECT racks FROM lkracks WHERE uid = ?', uid); return r ? r.racks : 0; }
+  lkEarn(uid, n, solo) {   // solo racks are capped at 200 a day so they can't be farmed; games against people aren't
+    this.sql.exec('INSERT OR IGNORE INTO lkracks (uid, racks, best, day, dayn) VALUES (?, 0, ?, ?, 0)', uid, '{}', '');
+    if (solo) {
+      const day = new Date().toISOString().slice(0, 10), r = this.one('SELECT day, dayn FROM lkracks WHERE uid = ?', uid);
+      const used = r.day === day ? r.dayn : 0; n = Math.max(0, Math.min(n, 200 - used));
+      this.sql.exec('UPDATE lkracks SET day = ?, dayn = ? WHERE uid = ?', day, used + n, uid);
+    }
+    if (n > 0) this.sql.exec('UPDATE lkracks SET racks = racks + ? WHERE uid = ?', n, uid);
+    return n;
+  }
   lkFinish(g, winner) {
     if (g.status === 'done') return;
     this.sql.exec("UPDATE lkgames SET status = 'done', winner = ?, done_at = ? WHERE id = ?", winner || '', Date.now(), g.id);
@@ -1257,6 +1270,7 @@ export class Hub {
       if (winner) { const lose = winner === g.a ? g.b : g.a; this.lkMove(winner, g.cur, g.stake * 2, -g.stake); this.lkMove(lose, g.cur, 0, -g.stake); }
       else { this.lkMove(g.a, g.cur, g.stake, -g.stake); this.lkMove(g.b, g.cur, g.stake, -g.stake); }
     }
+    for (const uid of [g.a, g.b]) this.lkEarn(uid, !winner ? 10 : winner === uid ? 30 : 5, false);   // #384: win 30, draw 10, played 5
     for (const uid of [g.a, g.b]) this.deliver(uid, { t: 'fnote', kind: 'lkdone', id: g.id, from: uid === g.a ? g.b : g.a, game: g.kind, won: !!winner && winner === uid, draw: !winner, at: Date.now() });
   }
   lockin(me, act, b) {
@@ -1278,19 +1292,34 @@ export class Hub {
       const games = this.sql.exec("SELECT * FROM lkgames WHERE (a = ? OR b = ?) AND (status != 'done' OR done_at > ?) ORDER BY at DESC LIMIT 100", me.id, me.id, Date.now() - 30 * 86400000).toArray().map(view);
       const rec = this.one("SELECT SUM(CASE WHEN winner = ? THEN 1 ELSE 0 END) AS w, SUM(CASE WHEN winner != '' AND winner != ? THEN 1 ELSE 0 END) AS l, SUM(CASE WHEN winner = '' THEN 1 ELSE 0 END) AS d FROM lkgames WHERE status = 'done' AND (a = ? OR b = ?)", me.id, me.id, me.id, me.id);
       const wallet = this.sql.exec('SELECT cur, bal, held FROM lkwallet WHERE uid = ?', me.id).toArray();
-      return json({ games, record: { wins: rec.w || 0, losses: rec.l || 0, draws: rec.d || 0 }, wallet, walletOpen: false });
+      let best = {}; try { best = JSON.parse((this.one('SELECT best FROM lkracks WHERE uid = ?', me.id) || {}).best || '{}'); } catch (e) {}
+      return json({ games, record: { wins: rec.w || 0, losses: rec.l || 0, draws: rec.d || 0 }, wallet, walletOpen: false, racks: this.lkRacks(me.id), best });
     }
     if (act === 'people') {   // who you can play: people who follow you and you follow back
       const rows = this.sql.exec('SELECT u.* FROM follows f JOIN follows g ON g.uid = f.fid AND g.fid = f.uid JOIN users u ON u.id = f.fid WHERE f.uid = ? AND (f.ok IS NULL OR f.ok = 1) AND (g.ok IS NULL OR g.ok = 1) ORDER BY u.name COLLATE NOCASE LIMIT 500', me.id).toArray();
       return json({ people: rows.filter(u => !this.blocked(me.id, u.id) && !u.deactivated).map(card) });
     }
-    if (act === 'board') {
-      const rows = this.sql.exec("SELECT winner AS uid, COUNT(*) AS w FROM lkgames WHERE status = 'done' AND winner != '' GROUP BY winner ORDER BY w DESC LIMIT 100").toArray();
+    if (act === 'board') {   // #384: ranked by racks
+      const wins = uid => this.one("SELECT COUNT(*) AS w FROM lkgames WHERE status = 'done' AND winner = ?", uid).w;
+      const rows = this.sql.exec('SELECT uid, racks FROM lkracks WHERE racks > 0 ORDER BY racks DESC LIMIT 100').toArray();
       const out = [];
-      for (const r of rows) { const u = this.one('SELECT * FROM users WHERE id = ?', r.uid); if (u && this.canSeeProfile(me, u)) out.push(Object.assign(card(u), { wins: r.w, me: u.id === me.id })); if (out.length >= 50) break; }
-      const mine = this.one("SELECT COUNT(*) AS w FROM lkgames WHERE status = 'done' AND winner = ?", me.id).w;
-      const rank = mine ? this.one("SELECT COUNT(*) AS n FROM (SELECT winner, COUNT(*) AS w FROM lkgames WHERE status = 'done' AND winner != '' GROUP BY winner HAVING w > ?)", mine).n + 1 : 0;
-      return json({ board: out, myWins: mine, myRank: rank });
+      for (const r of rows) { const u = this.one('SELECT * FROM users WHERE id = ?', r.uid); if (u && this.canSeeProfile(me, u)) out.push(Object.assign(card(u), { racks: r.racks, wins: wins(u.id), me: u.id === me.id })); if (out.length >= 50) break; }
+      const mine = this.lkRacks(me.id);
+      const rank = mine ? this.one('SELECT COUNT(*) AS n FROM lkracks WHERE racks > ?', mine).n + 1 : 0;
+      return json({ board: out, myRacks: mine, myWins: wins(me.id), myRank: rank });
+    }
+    if (act === 'solo') {   // #384 single player: a solo round or a game against Lockedintool
+      const kind = String(b.kind || ''); if (!KINDS[kind]) return json({ error: 'kind' }, 400);
+      const score = Math.max(0, Math.min(1e9, Math.round(+b.score || 0))), vs = !!b.vs, won = !!b.won, draw = !!b.draw;
+      this.lkEarn(me.id, 0, false);
+      let best = {}; try { best = JSON.parse(this.one('SELECT best FROM lkracks WHERE uid = ?', me.id).best || '{}'); } catch (e) {}
+      let n = vs ? (won ? 15 : draw ? 5 : 2) : 5, newBest = false;
+      if (KINDS[kind] !== 'turn' && !vs && score > 0) {
+        const old = best[kind]; const better = old == null || (KINDS[kind] === 'low' ? score < old : score > old);
+        if (better) { best[kind] = score; newBest = old != null; if (newBest) n += 10; this.sql.exec('UPDATE lkracks SET best = ? WHERE uid = ?', JSON.stringify(best), me.id); }
+      }
+      const got = this.lkEarn(me.id, n, true);
+      return json({ ok: true, earned: got, racks: this.lkRacks(me.id), best, newBest });
     }
     if (act === 'wallet') return json({ error: 'partner' }, 400);   // adding money needs Lockedintool's payment partner (not connected yet)
     if (act === 'challenge') {
@@ -1556,7 +1585,7 @@ export class Hub {
       if (g.status === 'active') this.lkFinish(g, g.a === uid ? g.b : g.a);
       else if (g.stake > 0) this.lkMove(g.a, g.cur, g.stake, -g.stake);
     }
-    this.sql.exec('DELETE FROM lkgames WHERE a = ? OR b = ?', uid, uid); this.sql.exec('DELETE FROM lkwallet WHERE uid = ?', uid);
+    this.sql.exec('DELETE FROM lkgames WHERE a = ? OR b = ?', uid, uid); this.sql.exec('DELETE FROM lkwallet WHERE uid = ?', uid); this.sql.exec('DELETE FROM lkracks WHERE uid = ?', uid);
     for (const r of this.sql.exec('SELECT photos FROM products WHERE uid = ?', uid).toArray()) { let ph = []; try { ph = JSON.parse(r.photos || '[]'); } catch (e) {} for (const m of ph) this.mediaDel('id = ?', m); }   // #381
     this.sql.exec('DELETE FROM products WHERE uid = ?', uid);
     this.sql.exec('DELETE FROM custsales WHERE uid = ?', uid); this.sql.exec('DELETE FROM customers WHERE uid = ?', uid);   // #382

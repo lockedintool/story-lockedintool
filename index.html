@@ -1531,7 +1531,7 @@
   .lk-person{ width:100%; display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:6px; text-align:left; color:inherit; background:transparent; border:1px solid #262626; }
   .lk-person.on{ border-color:#fff; } .lk-rank{ width:26px; text-align:center; font-weight:700; }
   .lk-play{ display:flex; flex-direction:column; min-height:100%; }
-  .lk-ph{ display:flex; align-items:center; gap:10px; padding:6px 0 12px; } .lk-ph b{ font-size:18px; } .lk-ph span{ margin-left:auto; font-size:12px; color:#9a9a9a; }
+  .lk-ph{ display:flex; align-items:center; gap:10px; padding:6px 0 12px; } .lk-ph b{ font-size:18px; white-space:nowrap; } .lk-ph span{ margin-left:auto; font-size:12px; color:#9a9a9a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
   .lk-back{ background:transparent; border:1px solid #333; color:#fff; border-radius:10px; width:34px; height:34px; font-size:20px; line-height:30px; padding:0; }
   .lk-stage{ flex:1 1 auto; display:flex; flex-direction:column; }
   .lk-mid{ flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:8px; text-align:center; padding:12px 4px; }
@@ -1555,6 +1555,11 @@
   .lk-legend{ display:flex; justify-content:center; gap:18px; margin-top:12px; font-size:12px; color:#9a9a9a; } .lk-legend > span{ display:flex; align-items:center; gap:6px; }
   .lk-legend .lk-pc{ width:16px; height:16px; font-size:12px; } .lk-legend .lk-pc.me{ background:#fff; color:#000; } .lk-legend .lk-pc.them{ background:#ff9f0a; color:#000; }
   .lk-vs{ display:flex; gap:8px; } .lk-vs > span{ flex:1 1 0; border:1px solid #262626; border-radius:12px; padding:10px 4px; display:flex; flex-direction:column; } .lk-vs small{ color:#9a9a9a; font-size:12px; } .lk-vs b{ font-size:18px; }
+  .lk-logo{ display:flex; justify-content:center; margin:2px 0 18px; }
+  .lk-logo span{ display:inline-block; background:#ffd60a; color:#000; font-weight:900; font-style:italic; font-size:34px; line-height:1.1; letter-spacing:-1px; padding:6px 22px 4px; transform:skewX(-12deg) rotate(-3deg); box-shadow:5px 5px 0 #ff453a; }
+  .lk-racks b{ color:#ffd60a; }
+  .lk-lb{ width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:10px; text-align:left; color:inherit; } .lk-lb > span:last-child{ font-size:20px; }
+  .lk-earn{ color:#ffd60a !important; font-weight:700; }
   .lk-forfeit{ align-self:center; background:transparent; border:0; color:#ff453a; font-size:13px; padding:12px; margin-top:6px; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
@@ -4299,7 +4304,7 @@
   // A note's own colours (its paper, cover, ink and the swatches that pick them) are the owner's writing,
   // not STORY's look -- they never swap (nor anything marked data-keep-color).
   // The payment cards in Wallet are printed like the real cards, so they keep their own look too.
-  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block/;
+  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block|\.lk-logo/;
   const KEEP_EL = '[data-keep-color], .note-card, .note-content-wrap, .canvas-page-wrap, .notes-swatch, .canvas-swatch, .notes-preview-page, .realcard-chase, .realcard-amex';
   function flip(t){
     const k = t.toLowerCase();
@@ -12930,6 +12935,7 @@ function upRenderPerson(){
     '<div class="pf-stats">' + [['following', 'Following'], ['followers', 'Followers'], ['posts', 'Posts']].map(([k, l])=>'<div class="pf-stat"><div class="pf-stat-n">' + (p[k] === undefined ? '—' : fmtCount(p[k])) + '</div><div class="pf-stat-l">' + l + '</div></div>').join('') + '</div>' +
     (p.about && !p.isFollowing && !isMe ? '<div class="up-p-about">' + escText(p.about) + '</div>' : '') +
     (p.bio ? '<div class="up-p-bio">' + escText(p.bio) + '</div>' : '') +
+    (p.racks ? '<div class="up-shop-t">LOCK IN · ' + p.racks + ' RACKS</div>' : '') +
     ((p.highlights || []).length ? '<div class="pf-hls up-p-hls">' + p.highlights.map((h, i)=>'<button class="pf-hl" data-pf="up-hl" data-i="' + i + '"><span class="pf-hl-c"><img alt="" loading="lazy" src="' + escText(h.cover || '') + '"></span><span class="pf-hl-n">' + escText(h.name) + '</span></button>').join('') + '</div>' : '') +
     (isMe ? '' : '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing || p.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : p.requested ? 'Requested' : 'Follow') + '</button>' +
       (p.canMsg === false ? '' : '<button class="up-follow up-follow-lg" data-pf="up-message">Message</button>') + '</div>') +
@@ -22362,7 +22368,7 @@ const LK_ABOUT = { reaction:'Five rounds. Wait for green, then tap as fast as yo
   memory:'Find the eight pairs. The fastest time wins; every wrong pair adds 2 seconds.',
   pose:'Copy the poses on the screen - the more you pass, the faster it gets.' };
 const LK_SCORE = { reaction:'low', quiz:'high', memory:'low', pose:'high' };
-const LK = { games:[], record:{ wins:0, losses:0, draws:0 }, wallet:[], loaded:false, loading:false, err:'', tab:'private',
+const LK = { games:[], record:{ wins:0, losses:0, draws:0 }, racks:0, best:{}, wallet:[], loaded:false, loading:false, err:'', tab:'private',
   board:null, people:null, sheet:null, play:null, poll:0 };
 const LK_QUIZ = [
   ['What is the largest planet in our solar system?', 'Jupiter', 'Saturn', 'Neptune', 'Earth'],
@@ -22413,7 +22419,7 @@ function lkShuffle(arr, r){ const a = arr.slice(); for(let i = a.length - 1; i >
 function lkSpace(){ try{ return localStorage.getItem('story-space') || ''; }catch(e){ return ''; } }
 function lkLoad(){
   if(LK.loading || !msgAccount()) return; LK.loading = true;
-  msgApi('/v1/lk/list').then(r=>{ LK.games = r.games || []; LK.record = r.record || LK.record; LK.wallet = r.wallet || []; LK.loaded = true; LK.err = '';
+  msgApi('/v1/lk/list').then(r=>{ LK.games = r.games || []; LK.record = r.record || LK.record; LK.wallet = r.wallet || []; LK.racks = r.racks || 0; LK.best = r.best || {}; LK.loaded = true; LK.err = '';
     if(LK.play && LK.play.g){ const n = LK.games.find(g=>g.id === LK.play.g.id); if(n) LK.play.g = n; } })
     .catch(e=>{ LK.err = e.code === 'signin' ? 'signin' : 'net'; })
     .finally(()=>{ LK.loading = false; if(state.current === 'lockin' && !LK.sheet && !(LK.play && LK.play.live)) renderDevice(); });
@@ -22443,9 +22449,10 @@ function lockInScreen(){
   const sheetHTML = !sh ? '' : `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${lkSheetHTML(sh)}</div></div>`;
   return `
     <div class="page-shell fl-page lk-page">
-    ${topBar('Lock In', false)}
-    <div class="lk-rec"><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span>
-      <button class="lk-board-btn" data-lk="board">Leaderboard ›</button></div>
+    ${topBar('', false)}
+    ${lkLogo()}
+    <div class="lk-rec"><span class="lk-racks"><b>${LK.racks}</b><small>Racks</small></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
+    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Earn racks by playing and winning - solo, against Lockedintool or against people</small></span><span>›</span></button>
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
@@ -22458,6 +22465,8 @@ function lockInScreen(){
     ${sheetHTML}
     </div>`;
 }
+// #384 the Lock In title - the owner's pick F: a tilted yellow arcade badge, centred, nothing under it.
+function lkLogo(){ return '<div class="lk-logo"><span data-keep-color>LOCK IN!</span></div>'; }
 function lkIcon(k){
   const p = { reaction:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', quiz:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
     ttt:'<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>', c4:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="10" r="1.6"/><circle cx="12" cy="14" r="1.6"/><circle cx="16" cy="10" r="1.6"/>',
@@ -22470,7 +22479,10 @@ function lkSheetHTML(sh){
     const k = sh.k, biz = !!lkSpace();
     const ppl = LK.people;
     return `<div class="fl-sh-t">${LK_NAMES[k]}</div><div class="fl-sh-s">${escText(LK_ABOUT[k])}</div>
-      ${LK_SCORE[k] ? `<button class="btn-wide" data-lk="practice" data-k="${k}">Practise</button>` : ''}
+      <div class="section-title" style="margin-top:12px;">SINGLE PLAYER</div>
+      ${LK_SCORE[k] ? `<div class="mt-two"><button class="btn-wide" style="margin-top:0;" data-lk="practice" data-k="${k}">Play solo</button><button class="btn-wide" style="margin-top:0;" data-lk="cpu" data-k="${k}">Beat Lockedintool</button></div>
+        <div class="fl-sh-s">${LK.best[k] != null ? 'Your best: ' + escText(lkScoreTxt(k, LK.best[k])) + ' · ' : ''}Every round earns racks - a new best earns more.</div>`
+        : `<button class="btn-wide" data-lk="cpu" data-k="${k}">Play Lockedintool</button>`}
       ${biz ? '' : `<div class="section-title" style="margin-top:12px;">CHALLENGE SOMEONE</div>
       <div class="lk-seg"><button class="${sh.bet ? '' : 'on'}" data-lk="bet" data-v="0">Free</button><button class="${sh.bet ? 'on' : ''}" data-lk="bet" data-v="1">Bet</button></div>
       ${sh.bet ? `<div class="mt-two"><input id="lk-amt" class="bz-in" inputmode="decimal" placeholder="Amount" value="${escText(sh.amt || '')}"><input id="lk-cur" class="bz-in sh-cur" maxlength="3" autocapitalize="characters" value="${escText(sh.cur || 'USD')}"></div>
@@ -22486,8 +22498,8 @@ function lkSheetHTML(sh){
       <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk="decline" data-id="${escText(g.id)}">Decline</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk="accept" data-id="${escText(g.id)}">Accept</button></div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'board'){ const b = LK.board;
-    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' with ' + b.myWins + ' win' + (b.myWins === 1 ? '' : 's') : 'Win a game to get on the board') : 'Loading…'}</div>
-      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has won a game yet.</div>') : ''}</div>
+    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' with ' + b.myRacks + ' racks' : 'Play a game to earn racks and get on the board') : 'Loading…'}</div>
+      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.racks} racks · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has earned racks yet.</div>') : ''}</div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'wallet') return `<div class="fl-sh-t">Game wallet</div>
       <div class="fl-sh-s">Your game wallet is only used inside Lock In. Add money to it, then bet with it - when a game you both agreed to ends, the winner gets the money automatically.</div>
@@ -22513,12 +22525,13 @@ function lkPollArm(){ if(!LK.poll) LK.poll = setInterval(lkPollTick, 1500); }
 function lkPlayScreen(){
   const p = LK.play, g = p.g;
   setTimeout(lkPollArm, 0);
-  const head = `<div class="lk-ph"><button class="lk-back" data-lk="quit" aria-label="Back">‹</button><b>${escText(LK_NAMES[p.k])}</b><span>${g ? 'vs ' + escText(lkWho(g.other)) : 'Practice'}</span></div>`;
+  const head = `<div class="lk-ph"><button class="lk-back" data-lk="quit" aria-label="Back">‹</button><b>${escText(LK_NAMES[p.k])}</b><span>${g ? 'vs ' + escText(lkWho(g.other)) : p.cpu ? 'vs Lockedintool' : 'Single player'}</span></div>`;
   let body = '';
   if(g && g.status === 'done') body = lkResultHTML(g);
   else if(g && g.status === 'invited') body = `<div class="lk-mid"><div class="lk-big">${g.mine ? 'Challenge sent' : 'You were challenged'}</div><div class="fl-sh-s">${g.mine ? 'Waiting for ' + escText(lkWho(g.other)) + ' to accept.' : ''}</div>
       ${g.mine ? `<button class="btn-wide" data-lk="takeback" data-id="${escText(g.id)}">Take it back</button>` : `<button class="btn-wide btn-primary" data-lk="accept" data-id="${escText(g.id)}">Accept</button>`}</div>`;
   else if(g && (g.status === 'declined' || g.status === 'cancelled')) body = `<div class="lk-mid"><div class="lk-big">${g.status === 'declined' ? 'They declined' : 'Cancelled'}</div></div>`;
+  else if(p.cpu && (p.k === 'ttt' || p.k === 'c4')) body = p.res ? lkSoloResultHTML(p) : lkBoardHTML(lkCpuGame(p));
   else if(p.k === 'ttt' || p.k === 'c4') body = lkBoardHTML(g);
   else if(p.done != null) body = lkRoundDoneHTML(p);
   else if(g && g.myScore != null) body = `<div class="lk-mid"><div class="lk-big">${escText(lkScoreTxt(p.k, g.myScore))}</div><div class="fl-sh-s">Your round is in. Waiting for ${escText(lkWho(g.other))} to play theirs.</div></div>`;
@@ -22545,18 +22558,75 @@ function lkBoardHTML(g, frozen){
     <div class="lk-legend"><span><span class="lk-pc me">${k === 'ttt' ? meX : ''}</span> You</span><span><span class="lk-pc them">${k === 'ttt' ? (meX === 'X' ? 'O' : 'X') : ''}</span> ${escText(lkWho(g.other))}</span></div>`;
 }
 function lkRoundDoneHTML(p){
+  if(!p.g) return lkSoloResultHTML(p);
   return `<div class="lk-mid"><div class="lk-big">${escText(lkScoreTxt(p.k, p.done))}</div>
-    <div class="fl-sh-s">${p.g ? (p.sending ? 'Sending your round…' : p.sendErr ? 'Couldn’t send your round - check your connection.' : 'Your round is in.') : 'Practice round.'}</div>
-    ${p.g && p.sendErr ? '<button class="btn-wide btn-primary" data-lk="resend">Try again</button>' : ''}
-    ${!p.g ? `<button class="btn-wide btn-primary" data-lk="practice" data-k="${p.k}">Play again</button>` : ''}</div>`;
+    <div class="fl-sh-s">${p.sending ? 'Sending your round…' : p.sendErr ? 'Couldn’t send your round - check your connection.' : 'Your round is in.'}</div>
+    ${p.sendErr ? '<button class="btn-wide btn-primary" data-lk="resend">Try again</button>' : ''}</div>`;
+}
+// #384 single player: the result of a solo round or a game against Lockedintool, and the racks it earned.
+function lkSoloResultHTML(p){
+  const vs = p.cpu, k = p.k, turn = k === 'ttt' || k === 'c4';
+  const won = p.res ? p.res === 'won' : vs && p.done != null && (LK_SCORE[k] === 'low' ? p.done < p.target : p.done > p.target);
+  const draw = p.res === 'draw' || (vs && !turn && p.done === p.target);
+  return `<div class="lk-mid"><div class="lk-big">${vs ? (draw ? 'Draw' : won ? 'You beat Lockedintool!' : 'Lockedintool won') : escText(lkScoreTxt(k, p.done))}</div>
+    ${vs && !turn ? `<div class="lk-vs"><span><small>You</small><b>${escText(lkScoreTxt(k, p.done))}</b></span><span><small>Lockedintool</small><b>${escText(lkScoreTxt(k, p.target))}</b></span></div>` : ''}
+    ${vs && turn ? lkBoardHTML(lkCpuGame(p), true) : ''}
+    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your racks…' : 'Log in to earn racks') : p.earned ? '+' + p.earned + ' racks' + (p.newBest ? ' · new best!' : '') + ' · ' + LK.racks + ' in total' : 'You’ve earned today’s solo racks - play people for more'}</div>
+    <button class="btn-wide btn-primary" data-lk="${vs ? 'cpu' : 'practice'}" data-k="${k}">Play again</button></div>`;
+}
+function lkSoloSend(p, body){
+  if(!msgAccount()) return;
+  msgApi('/v1/lk/solo', Object.assign({ kind: p.k }, body)).then(r=>{ if(LK.play !== p) return; p.earned = r.earned || 0; p.newBest = !!r.newBest; LK.racks = r.racks || LK.racks; LK.best = r.best || LK.best; if(state.current === 'lockin') renderDevice(); })
+    .catch(()=>{ if(LK.play !== p) return; p.earned = 0; });
+}
+// Lockedintool as the other player: targets for score games, a computer player for Tic-tac-toe and Connect four.
+function lkTarget(k, seed){ const r = lkRng(seed ^ 0x5bd1e995);
+  if(k === 'reaction') return 1500 + Math.floor(r() * 900);
+  if(k === 'quiz') return (6 + Math.floor(r() * 3)) * 1000 + 400 + Math.floor(r() * 400);
+  if(k === 'memory') return 28000 + Math.floor(r() * 18000);
+  return 0; }
+function lkCpuGame(p){ return { kind: p.k, status: p.res ? 'done' : 'active', state: { board: p.board.join(''), last: p.last }, myTurn: !p.res && p.turn === 'X', iAmA: true, other: { name: 'Lockedintool' } }; }
+function lkLines(k){
+  if(k === 'ttt') return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const L = []; for(let r = 0; r < 6; r++) for(let c = 0; c < 7; c++) for(const [dr, dc] of [[0,1],[1,0],[1,1],[1,-1]]){ const cells = []; for(let i = 0; i < 4; i++){ const rr = r + dr * i, cc = c + dc * i; if(rr < 0 || rr > 5 || cc < 0 || cc > 6) break; cells.push(rr * 7 + cc); } if(cells.length === 4) L.push(cells); }
+  return L; }
+function lkWinner(k, bd){ for(const l of lkLines(k)){ const m = bd[l[0]]; if(m !== '.' && l.every(i=>bd[i] === m)) return m; } return bd.includes('.') ? '' : 'draw'; }
+function lkDrop(bd, col){ for(let r = 5; r >= 0; r--) if(bd[r * 7 + col] === '.') return r * 7 + col; return -1; }
+function lkCpuMove(p){   // wins if it can, blocks a win, else a good move - and sometimes a random one, so it can be beaten
+  const k = p.k, bd = p.board;
+  const moves = k === 'ttt' ? bd.map((c, i)=>c === '.' ? i : -1).filter(i=>i >= 0) : [0,1,2,3,4,5,6].map(c=>lkDrop(bd, c)).filter(i=>i >= 0);
+  const tryM = (m, mark)=>{ const b2 = bd.slice(); b2[m] = mark; return lkWinner(k, b2) === mark; };
+  let m = moves.find(x=>tryM(x, 'O'));
+  if(m == null) m = moves.find(x=>tryM(x, 'X'));
+  if(m == null || Math.random() < 0.15){
+    const pref = k === 'ttt' ? [4, 0, 2, 6, 8, 1, 3, 5, 7] : [3, 2, 4, 1, 5, 0, 6];
+    const safe = k === 'c4' ? moves.filter(x=>{ const b2 = bd.slice(); b2[x] = 'O'; const above = x - 7; if(above < 0) return true; b2[above] = 'X'; return lkWinner(k, b2) !== 'X'; }) : moves;
+    const pool = safe.length ? safe : moves;
+    if(m == null) m = Math.random() < 0.3 ? pool[Math.floor(Math.random() * pool.length)] : (k === 'ttt' ? pref.find(i=>pool.includes(i)) : pool.slice().sort((a, b)=>pref.indexOf(a % 7) - pref.indexOf(b % 7))[0]);
+  }
+  bd[m] = 'O'; p.last = m;
+}
+function lkCpuPlay(p, cell){
+  if(p.res || p.turn !== 'X') return;
+  const k = p.k, idx = k === 'ttt' ? cell : lkDrop(p.board, cell);
+  if(idx < 0 || p.board[idx] !== '.') return;
+  p.board[idx] = 'X'; p.last = idx;
+  let w = lkWinner(k, p.board);
+  if(!w){ lkCpuMove(p); w = lkWinner(k, p.board); }
+  if(w){ p.res = w === 'X' ? 'won' : w === 'O' ? 'lost' : 'draw'; lkSoloSend(p, { vs:true, won: p.res === 'won', draw: p.res === 'draw' }); }
+  renderDevice();
 }
 function lkStageStartHTML(p){
-  return `<div class="lk-mid"><div class="fl-sh-s">${escText(LK_ABOUT[p.k])}</div><button class="btn-wide btn-primary lk-go" data-lk="start">Start</button>
+  return `<div class="lk-mid"><div class="fl-sh-s">${escText(LK_ABOUT[p.k])}</div>
+    ${p.cpu ? `<div class="lk-vs"><span><small>Lockedintool’s score to beat</small><b>${escText(lkScoreTxt(p.k, p.target))}</b></span></div>` : ''}
+    <button class="btn-wide btn-primary lk-go" data-lk="start">Start</button>
     <div class="fl-sh-s">${p.g ? 'You get one round - make it count.' : ''}</div></div>`;
 }
 function lkFinishRound(score){
   const p = LK.play; if(!p) return; p.live = false; p.done = Math.max(0, Math.round(score));
   if(p.g){ p.sending = true; lkSendScore(); }
+  else if(p.cpu){ const won = LK_SCORE[p.k] === 'low' ? p.done < p.target : p.done > p.target; lkSoloSend(p, { vs:true, won, draw: p.done === p.target, score: p.done }); }
+  else lkSoloSend(p, { score: p.done });
   renderDevice();
 }
 function lkSendScore(){
@@ -22642,6 +22712,10 @@ document.addEventListener('click', e=>{
         .catch(err=>showToast(err.code === 'funds' ? 'Not enough in your game wallet for that bet' : err.code === 'mutual' ? 'You can only play people who follow you and whom you follow back' : 'Couldn’t send the challenge - try again'));
       return; }
     case 'practice': LK.sheet = null; LK.play = { k: b.getAttribute('data-k'), g: null, seed: Math.floor(Math.random() * 2147483647), done: null }; break;
+    case 'cpu': { const k = b.getAttribute('data-k'), seed = Math.floor(Math.random() * 2147483647); LK.sheet = null;
+      LK.play = { k, g: null, cpu: true, seed, done: null, target: lkTarget(k, seed) };
+      if(k === 'ttt' || k === 'c4'){ LK.play.board = (k === 'ttt' ? '.........' : '.'.repeat(42)).split(''); LK.play.turn = 'X'; LK.play.last = -1; }
+      break; }
     case 'open': { const g = LK.games.find(x=>x.id === id); if(!g) return;
       if(g.status === 'invited' && !g.mine){ LK.sheet = { t:'invite', id }; break; }
       lkOpenGame(g); break; }
@@ -22651,7 +22725,7 @@ document.addEventListener('click', e=>{
     case 'takeback': msgApi('/v1/lk/respond', { id, accept:false }).then(()=>{ LK.play = null; lkLoad(); }).catch(()=>showToast('Couldn’t take it back - try again')); return;
     case 'start': lkStart(); return;
     case 'resend': lkSendScore(); break;
-    case 'move': { const p = LK.play; if(!p || !p.g || !p.g.myTurn) return; const c = +b.getAttribute('data-c');
+    case 'move': { const p = LK.play; if(p && p.cpu){ lkCpuPlay(p, +b.getAttribute('data-c')); return; } if(!p || !p.g || !p.g.myTurn) return; const c = +b.getAttribute('data-c');
       p.g.myTurn = false; renderDevice();
       msgApi('/v1/lk/move', { id: p.g.id, cell: c }).then(r=>{ put(r.game); if(state.current === 'lockin') renderDevice(); })
         .catch(err=>{ if(err.info && err.info.game) put(err.info.game); else showToast('Couldn’t make that move - try again'); lkRefreshGame(); });

@@ -339,3 +339,4 @@ commits, pushed as a new update) - nothing else changes.
 | 330 | 2026-11-14 | The company screen goes up the moment the screen turns off and stays until you choose - no app or home screen shows first, however you unlock | 75f23ad |
 | 331 | 2026-11-14 | The lock screen / Always On Display Wallet page button no longer disappears when a company has no account yet | 6e1d80a |
 | 332 | 2026-11-14 | The company screen's temporary 'Company screen: …' messages and the unlock log are gone - it works now | 0785f94 |
+| 333 | 2026-11-14 | The Wallet page button no longer shows on the company screen - it goes the moment the phone unlocks | PENDING |

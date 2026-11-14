@@ -68,6 +68,7 @@ class OverlayService : Service(), StoryBridge.Host {
     private val unlocked = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             userPresentAt = System.currentTimeMillis()
+            showWalletBtn(false)   // #333: unlocked - the lock screen's Wallet page button goes at once (never over the company screen)
             ui.post { secWaitUnlocked(); endLockWallet() }
             ui.postDelayed({ spDiag("unlocked"); spacesAfterUnlock() }, 250)   // #302: Business - choose your focus after every unlock
             widgetLiveEvent(false)  // unlocked onto the home screen: live widgets come back
@@ -2897,7 +2898,7 @@ class OverlayService : Service(), StoryBridge.Host {
         return natural.coerceAtMost(maxOf(max, (paint.measureText("Wallet page") + 16 * dp).toInt()))
     }
     /** Could it show now (the lock screen, nothing of Lockedintool's open over it)? */
-    private fun walletBtnCan(locked: Boolean) = locked && QuickAccess.walletLock(this) && walletOk() && walletBtn != null && !sysQuiet() && !walletOpening && !callActive && !createActive &&
+    private fun walletBtnCan(locked: Boolean) = locked && !spacesUpFlag && QuickAccess.walletLock(this) && walletOk() && walletBtn != null && !sysQuiet() && !walletOpening && !callActive && !createActive &&
         s3Pane?.shown != true && !(lockWallet && pagesPane?.shown == true) && profilePane?.let { it.shown && it.wm === layerWm } != true   // (the Pages / a normal-layer Profile are under the lock screen)
     private fun showWalletBtn(on: Boolean) {
         val v = walletBtn ?: return; val lp = walletBtnLp ?: return
@@ -3039,7 +3040,7 @@ class OverlayService : Service(), StoryBridge.Host {
      *  Lockedintool's bottom button does nothing, its swipe doesn't step aside, and if the phone's Home / Recents or any app
      *  comes up anyway, the chooser comes straight back over it (never over a call). */
     @Volatile private var spacesUpFlag = false
-    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (on) spacesPreShown = false; if (!on) spacesUnwarm() } }
+    override fun spacesUp(on: Boolean) { ui.post { spacesUpFlag = on; if (on) { spacesPreShown = false; showWalletBtn(false) }; if (!on) spacesUnwarm() } }
     private fun spacesReshow() {
         if (!spacesUpFlag || callActive || keyguardLocked() || sysQuiet() || createActive || pickerHid.isNotEmpty()) return
         val p = pagesPane ?: return

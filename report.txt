@@ -1,0 +1,190 @@
+open: 27
+---
+sig: slow|pages|where you were in this company took over #.# s to open
+kind: slow | 4 times | 1 phones | fixed: 0 
+where: pages
+what: where you were in this company took over 1.5 s to open
+latest: app 1.489 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-14T09:44:56Z last: 2026-11-14T14:00:02Z
+---
+sig: fit|pages fit on wallet|wallet z#.# a#x# w#x# lim# top# bot# visv row-card:#r section-title:#r membership-grid:#s
+kind: fit | 8 times | 1 phones | fixed: 0 1.302
+where: pages fit on wallet
+what: wallet z0.50 a832x356 w832x355 lim191 top0 bot703 visv row-card:699r section-title:680r membership-grid:668s
+latest: app 1.486 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-03T20:37:50Z last: 2026-11-14T13:24:25Z
+---
+sig: fit|pages fit on wallet|money U z#.# a#x# w#x# lim# top# bot# visv grid#:#s row-card:#r section-title:#s
+kind: fit | 2 times | 1 phones | fixed: 0 
+where: pages fit on wallet
+what: money U z0.50 a832x356 w832x355 lim308 top0 bot475 visv grid2:480s row-card:444r section-title:389s
+latest: app 1.486 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-12T21:26:08Z last: 2026-11-14T13:24:25Z
+---
+sig: window|profile|page stopped (closed by Android for memory)
+kind: window | 84 times | 3 phones | fixed: 0 1.394
+where: profile
+what: page stopped (closed by Android for memory)
+latest: app 1.479 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-22T15:56:43Z last: 2026-11-14T12:29:56Z
+---
+sig: window|profile gap|page stopped (closed by Android for memory)
+kind: window | 84 times | 3 phones | fixed: 0 1.394
+where: profile gap
+what: page stopped (closed by Android for memory)
+latest: app 1.479 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-22T15:56:43Z last: 2026-11-14T12:29:56Z
+---
+sig: window|station3|page stopped (closed by Android for memory)
+kind: window | 84 times | 3 phones | fixed: 0 1.394
+where: station3
+what: page stopped (closed by Android for memory)
+latest: app 1.479 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-22T15:56:43Z last: 2026-11-14T12:29:56Z
+---
+sig: window|pages|page stopped (closed by Android for memory)
+kind: window | 84 times | 3 phones | fixed: 0 1.394
+where: pages
+what: page stopped (closed by Android for memory)
+latest: app 1.479 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-22T15:56:43Z last: 2026-11-14T12:29:56Z
+---
+sig: window|dial pad|page stopped (closed by Android for memory)
+kind: window | 84 times | 3 phones | fixed: 0 1.394
+where: dial pad
+what: page stopped (closed by Android for memory)
+latest: app 1.479 / screens main 0d52e2c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-22T15:56:43Z last: 2026-11-14T12:29:56Z
+---
+sig: slow|pages|Lockedintool took over #.# s to open
+kind: slow | 4 times | 1 phones | fixed: 0 
+where: pages
+what: Lockedintool took over 1.5 s to open
+latest: app 1.470 / screens main ffb6acf / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-13T19:37:39Z last: 2026-11-14T09:22:00Z
+---
+sig: slow|pages|your app in this company took over #.# s to open
+kind: slow | 1 times | 1 phones | fixed: 0 
+where: pages
+what: your app in this company took over 1.5 s to open
+latest: app 1.466 / screens main ffb6acf / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-14T08:56:46Z last: 2026-11-14T08:56:46Z
+---
+sig: update|updater|Quiet update failed (INSTALL_FAILED_DUPLICATE_PACKAGE: Scanning Failed.: Duplicate package com.story.launcher in pending install requests.) - it will try again
+kind: update | 1 times | 1 phones | fixed: 0 
+where: updater
+what: Quiet update failed (INSTALL_FAILED_DUPLICATE_PACKAGE: Scanning Failed.: Duplicate package com.story.launcher in pending install requests.) - it will try again
+latest: app 1.466 / screens main ffb6acf / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-14T08:55:08Z last: 2026-11-14T08:55:08Z
+---
+sig: fit|pages fit on notes|notes z#.# a#x# w#x# lim# top# bot# visv notes-fab-stack:#r notes-hub:#s page-top:#s
+kind: fit | 1 times | 1 phones | fixed: 0 
+where: pages fit on notes
+what: notes z0.66 a384x804 w384x803 lim756 top0 bot804 visv notes-fab-stack:804r notes-hub:706s page-top:53s
+latest: app 1.443 / screens main 7ecbc83 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-13T19:24:47Z last: 2026-11-13T19:24:47Z
+---
+sig: lockscreen|lock screen|no Home Screen picture: mem=false file=false exact=true last=null
+kind: lockscreen | 14 times | 14 phones | fixed: 0 
+where: lock screen
+what: no Home Screen picture: mem=false file=false exact=true last=null
+latest: app 1.428 / screens  / OnePlus OnePlus8Pro · Android 11 (API 30)
+first: 2026-11-12T12:54:09Z last: 2026-11-13T17:03:50Z
+---
+sig: fit|pages fit on dashboard|money U z#.# a#x# w#x# lim# top# bot# visv grid#:#s row-card:#r section-title:#s
+kind: fit | 3 times | 1 phones | fixed: 0 
+where: pages fit on dashboard
+what: money U z0.50 a832x356 w832x355 lim308 top0 bot462 visv grid2:935s row-card:864r section-title:754s
+latest: app 1.428 / screens main 0b16e9b / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-11T22:33:43Z last: 2026-11-12T21:26:22Z
+---
+sig: fit|pages fit on dashboard|trading U z#.# a#x# w#x# lim# top# bot# visv live-pl-zone:#s chart-wrap:#r page-top:#s
+kind: fit | 3 times | 1 phones | fixed: 0 
+where: pages fit on dashboard
+what: trading U z0.50 a832x356 w832x355 lim308 top0 bot455 visv live-pl-zone:911s chart-wrap:336r page-top:67s
+latest: app 1.428 / screens main 0b16e9b / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-11T22:33:43Z last: 2026-11-12T21:26:22Z
+---
+sig: fit|pages fit on dashboard|wallet U z#.# a#x# w#x# lim# top# bot# visv row-card:#r section-title:#r membership-grid:#s
+kind: fit | 2 times | 1 phones | fixed: 0 
+where: pages fit on dashboard
+what: wallet U z0.50 a832x356 w832x355 lim191 top0 bot431 visv row-card:853r section-title:815r membership-grid:791s
+latest: app 1.428 / screens main 40bedc9 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-11T22:33:43Z last: 2026-11-12T21:05:19Z
+---
+sig: fit|pages fit on dashboard|money U z#.# a#x# w#x# lim# top# bot# vish grid#:#s row-card:#r section-title:#s
+kind: fit | 1 times | 1 phones | fixed: 0 
+where: pages fit on dashboard
+what: money U z0.50 a832x356 w832x355 lim308 top0 bot464 vish grid2:938s row-card:866r section-title:755s
+latest: app 1.422 / screens main 40bedc9 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-12T19:07:16Z last: 2026-11-12T19:07:16Z
+---
+sig: fit|pages fit on dashboard|wallet U z#.# a#x# w#x# lim# top# bot# vish row-card:#r section-title:#r membership-grid:#s
+kind: fit | 1 times | 1 phones | fixed: 0 
+where: pages fit on dashboard
+what: wallet U z0.50 a832x356 w832x355 lim191 top0 bot431 vish row-card:853r section-title:815r membership-grid:791s
+latest: app 1.422 / screens main 40bedc9 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-12T19:07:16Z last: 2026-11-12T19:07:16Z
+---
+sig: fit|pages fit on dashboard|trading U z#.# a#x# w#x# lim# top# bot# vish live-pl-zone:#s chart-wrap:#r page-top:#s
+kind: fit | 1 times | 1 phones | fixed: 0 
+where: pages fit on dashboard
+what: trading U z0.50 a832x356 w832x355 lim308 top0 bot459 vish live-pl-zone:918s chart-wrap:336r page-top:67s
+latest: app 1.422 / screens main 40bedc9 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-12T19:07:16Z last: 2026-11-12T19:07:16Z
+---
+sig: slow|pages|an app took over #.# s to open
+kind: slow | 36 times | 2 phones | fixed: 0 1.302
+where: pages
+what: an app took over 1.5 s to open
+latest: app 1.417 / screens main 980fc15 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-25T13:51:26Z last: 2026-11-12T18:05:34Z
+---
+sig: music|dashboard music card|play not done (refused) by com.google.android.apps.youtube.music
+kind: music | 2 times | 1 phones | fixed: 0 
+where: dashboard music card
+what: play not done (refused) by com.google.android.apps.youtube.music
+latest: app 1.400 / screens main da2f469 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-04T16:38:25Z last: 2026-11-11T18:46:16Z
+---
+sig: slow|pages|CAMERA took over #.# s to open
+kind: slow | 5 times | 2 phones | fixed: 0 1.302
+where: pages
+what: CAMERA took over 1.5 s to open
+latest: app 1.396 / screens main 7b1d6f3 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-25T13:46:42Z last: 2026-11-11T17:06:23Z
+---
+sig: fit|pages fit on trading|trading z#.# a#x# w#x# lim# top# bot# visv live-pl-zone:#s chart-wrap:#r page-top:#s
+kind: fit | 2 times | 1 phones | fixed: 0 
+where: pages fit on trading
+what: trading z0.50 a832x356 w832x355 lim356 top0 bot466 visv live-pl-zone:804s chart-wrap:302r page-top:68s
+latest: app 1.392 / screens main cce329c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-09T22:17:30Z last: 2026-11-10T18:40:28Z
+---
+sig: lockscreen|lock screen|Lockedintool"…"t open
+kind: lockscreen | 3 times | 1 phones | fixed: 0 
+where: lock screen
+what: Lockedintool"…"t open
+latest: app 1.392 / screens main cce329c / samsung SM-A155F · Android 16 (API 36)
+first: 2026-11-07T20:51:09Z last: 2026-11-08T03:50:41Z
+---
+sig: slow|pages|GALLERY took over #.# s to open
+kind: slow | 6 times | 2 phones | fixed: 0 1.302
+where: pages
+what: GALLERY took over 1.5 s to open
+latest: app 1.385 / screens main 85fdfae / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-24T17:02:11Z last: 2026-11-05T18:27:02Z
+---
+sig: music|dashboard music card|play not done (refused) by com.spotify.music
+kind: music | 2 times | 2 phones | fixed: 0 1.302
+where: dashboard music card
+what: play not done (refused) by com.spotify.music
+latest: app 1.347 / screens main be6d7f5 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-22T12:14:24Z last: 2026-11-05T10:12:41Z
+---
+sig: slow|pages|ALARM took over #.# s to open
+kind: slow | 4 times | 2 phones | fixed: 0 1.302
+where: pages
+what: ALARM took over 1.5 s to open
+latest: app 1.325 / screens main 363f156 / samsung SM-A155F · Android 16 (API 36)
+first: 2026-10-25T13:48:57Z last: 2026-11-04T18:37:42Z

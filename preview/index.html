@@ -1495,6 +1495,7 @@
   .bz-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px 8px; }
   .bz-app{ display:flex; flex-direction:column; align-items:center; gap:6px; background:transparent; border:0; padding:0; color:#ddd; min-width:0; }
   .bz-ic{ width:54px; height:54px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; }
+  .bz-ic.bz-pic{ background:transparent; overflow:hidden; }
   .bz-tool{ background:#1c1c1c; border:1px solid #333; color:#fff; }
   .bz-add{ border:1.5px dashed #555; color:#888; background:transparent; }
   .bz-nm{ font-size:11px; color:#ddd; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -5941,7 +5942,7 @@ const SAVED_SETTINGS = { homeScreen:v=>['dashboard','wallet','money','trading'].
   Object.keys(SAVED_SETTINGS).forEach(k=>{ const ok = SAVED_SETTINGS[k], v = s[k]; if(v !== undefined && v !== null && (typeof ok === 'function' ? ok(v) : typeof v === ok)) state[k] = v; });
   if(!/[?&](s3|widget)=/.test(location.search)) state.current = state.homeScreen;   // the Pages start on your Home Screen
   // #362 (owner, 14 Nov 2026: 'Where is the business home? Im on lockedintool'): a business in focus starts on its business home.
-  try{ if(!/[?&](s3|widget)=/.test(location.search) && bizHere()) state.current = 'biz-home'; }catch(e){}
+  try{ if(!/[?&](s3|widget)=/.test(location.search) && spaceHomeHere()) state.current = spaceHomeKey(); }catch(e){}   // #364: Personal too
 })();
 let savedSettingsJSON = null;
 // Settings > SECURITY (owner): "Phone's security" (default - Lockedintool works anywhere the phone is unlocked; it uses
@@ -11135,7 +11136,8 @@ window.storyShow = function(page, station3, back){
   state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null;
   // Opening Lockedintool = your Home Screen (Layouts > Home Screen, owner); back from an app page = where you were.
   if(page === '~home') page = state.homeScreen || 'wallet';   // #363: Lockedintool on the bottom switch in a business = your Home Screen
-  state.current = page || (back ? state.current : '') || (bizHere() ? 'biz-home' : '') || state.homeScreen || 'wallet';   // #360: a business lands on its business home
+  if(page === '~space') page = spaceHomeHere() ? spaceHomeKey() : '';   // #364: the switch's Business home / Personal home
+  state.current = page || (back ? state.current : '') || (spaceHomeHere() ? spaceHomeKey() : '') || state.homeScreen || 'wallet';   // #360 / #364: a focus lands on its own home
   if(['money','wallet','trading'].includes(state.current)) state.lastPage = state.current;
   state.station3Open = !!station3;
   renderDevice();
@@ -14693,7 +14695,7 @@ document.addEventListener('click', (e)=>{
 }, true);
 // A contact picked with the dial pad's Search contact: its number goes into the dial pad (OverlayService.contactDone).
 window.storyDialSet = function(n){ state.station3DialInput = String(n || '').replace(/[^0-9+*#]/g, '').slice(0, 24); renderDevice(); };
-window.storyGoHome = function(){ state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null; state.current = (bizHere() ? 'biz-home' : '') || state.homeScreen || 'wallet'; renderDevice(); };   // #362
+window.storyGoHome = function(){ state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null; state.current = (spaceHomeHere() ? spaceHomeKey() : '') || state.homeScreen || 'wallet'; renderDevice(); };   // #362 / #364
 document.addEventListener('click', (e)=>{
   const el = e.target.closest && e.target.closest('[data-native-pkg]');
   if(!el || !NATIVE) return;
@@ -15122,6 +15124,30 @@ function bizTodayHTML(){
 function bizTile(a){
   return `<button class="bz-app" data-bz="${a.extra ? 'extra' : 'app'}" data-id="${escText(a.id)}"><span class="bz-ic" data-keep-color style="background:${a.bg};color:${a.fg}">${escText(a.g)}</span><span class="bz-nm">${escText(a.name)}</span></button>`;
 }
+// #364: Personal's own home - the phone's own apps (every app that isn't one of your companies') and Lockedintool's tools.
+function personalHomeScreen(){
+  if(NATIVE && !state.installedApps.some(a=>a.pkg)) setTimeout(()=>{ loadNativeApps(); if(state.current === 'personal-home') renderDevice(); }, 0);
+  const apps = state.installedApps.filter(a=>a.section === 'PHONE APPS' && a.pkg && appInSpace(a)).sort((x, y)=>(x.name || '').localeCompare(y.name || ''));
+  const tile = a=>`<button class="bz-app" data-native-pkg="${escText(a.pkg)}"><span class="bz-ic bz-pic">${appIconHTML(a)}</span><span class="bz-nm">${escText(a.name)}</span></button>`;
+  const tool = (act, ico, nm)=>`<button class="bz-app" data-bz="${act}"><span class="bz-ic bz-tool">${ico}</span><span class="bz-nm">${nm}</span></button>`;
+  return `
+    <div class="page-shell bz-home">
+      <div class="bz-hd"><span class="bz-logo"><b>P</b></span>
+        <div class="bz-hn"><div class="bz-tag">PERSONAL</div><div class="bz-name">Personal</div></div>
+        <button class="bz-sw" data-bz="switch">Switch focus</button></div>
+      ${bizTodayHTML()}
+      <div class="bz-sec">LOCKEDINTOOL</div>
+      <div class="bz-grid">
+        ${tool('messages', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', 'Messages')}
+        ${tool('money', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 'Money')}
+        ${tool('notes', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>', 'Notes')}
+        ${tool('gallery', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>', 'Gallery')}
+        ${tool('dashboard', '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>', 'Dashboard')}
+      </div>
+      <div class="bz-sec">YOUR APPS</div>
+      <div class="bz-grid">${apps.length ? apps.map(tile).join('') : `<div class="bz-sh-s" style="grid-column:1/-1;">${NATIVE ? 'Loading your apps…' : 'Your phone’s apps show here in the Lockedintool app'}</div>`}</div>
+    </div>`;
+}
 function bizHomeScreen(){
   const c = spaceOf(litSpace()) || { name:'Business' }, d = bizData();
   const extras = (d.extra || []).map((x, i)=>({ id:String(i), name:x.name, bg:'#1c1c1c', fg:'#ffffff', g:(x.name || '?').charAt(0).toUpperCase(), extra:true }));
@@ -15159,10 +15185,16 @@ function bizHomeScreen(){
       </div></div>` : ''}
     </div>`;
 }
+// #364 (owner, 14 Nov 2026: 'Also put in personal'; 'the business account option - has its home screen replacing the
+// devices one'): with the Business account and companies set up, EVERY focus has its own home - a business its business
+// home, Personal its Personal home (the phone's own apps + Lockedintool) - in place of the phone's home screen.
+function spaceHomeHere(){ try{ return bizOn() && spaceList().length > 0; }catch(e){ return false; } }
+function spaceHomeKey(){ return litSpace() === 'personal' || !spaceOf(litSpace()) ? 'personal-home' : 'biz-home'; }
+function spaceHomeName(){ return spaceHomeKey() === 'personal-home' ? 'Personal home' : 'Business home'; }
 // #363: on Only system there's no bottom switch, so in a business the pages' ‹ offers both ways back.
-function bizBack2(){ try{ return bizHere() && sysOn(); }catch(e){ return false; } }
+function bizBack2(){ try{ return spaceHomeHere() && sysOn(); }catch(e){ return false; } }
 function bizBack2Pop(){
-  return `<div class="bz-swpop-bg" data-bz="back2-close"></div><div class="bz-swpop"><button data-bz="back2-biz">Business home</button><button data-bz="back2-dash">Dashboard</button></div>`;
+  return `<div class="bz-swpop-bg" data-bz="back2-close"></div><div class="bz-swpop"><button data-bz="back2-biz">${spaceHomeName()}</button><button data-bz="back2-dash">Dashboard</button></div>`;
 }
 function bizUrl(v){ v = String(v || '').trim(); if(!v) return ''; if(!/^https?:\/\//i.test(v)) v = 'https://' + v; try{ const u = new URL(v); return /\./.test(u.hostname) ? u.href : ''; }catch(e){ return ''; } }
 document.addEventListener('click', e=>{
@@ -15189,10 +15221,11 @@ document.addEventListener('click', e=>{
     case 'money': state.current = 'money'; break;
     case 'notes': state.current = 'notes'; break;
     case 'album': state.current = 'space-album'; break;
+    case 'gallery': if(NATIVE && window.StoryNative.openGallery) window.StoryNative.openGallery(); else showToast('Gallery opens in the Lockedintool app'); return;
     case 'dashboard': state.current = 'dashboard'; break;
     case 'back2': state.bzBack2 = true; break;
     case 'back2-close': if(e.target !== b) return; state.bzBack2 = false; break;   // only a tap on the space around it (#305)
-    case 'back2-biz': state.bzBack2 = false; state.current = 'biz-home'; break;
+    case 'back2-biz': state.bzBack2 = false; state.current = spaceHomeKey(); break;
     case 'back2-dash': state.bzBack2 = false; state.current = 'dashboard'; break;
     default: return;
   }
@@ -17038,6 +17071,7 @@ function renderScreenContent(){
     case 'spaces-settings': return spacesSettingsScreen();
     case 'space-album': return spaceAlbumScreen();
     case 'biz-home': return bizHomeScreen();
+    case 'personal-home': return personalHomeScreen();
   }
 }
 
@@ -22705,7 +22739,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 const FIT_MIN_SCALE = 0.5;
 const FIT_MAX_SCALE = 1.35;

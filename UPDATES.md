@@ -329,4 +329,4 @@ commits, pushed as a new update) - nothing else changes.
 | 320 | 2026-11-13 | Scan card: sharp camera view that keeps focusing (tap to focus), and the scan is a real full-size photo, so the card reads and looks clear | 19e2d7d |
 | 321 | 2026-11-13 | Business: Personal and each company are their own Lockedintool account (own profile, messages, followers), sharing the main account's plan; Lockedintool keeps the official account | a6e3d96 |
 | 322 | 2026-11-14 | Your Personal account is the main one (the Welcome screen says so); each company asks for its own account; switching systems only by paying a plan for the other system | a6e3d96 |
-| 323 | 2026-11-14 | Lockedintool notices the unlock itself (the phone never told it), so the company screen and everything else that waits for the unlock works | (this) |
+| 323 | 2026-11-14 | Lockedintool notices the unlock itself (the phone never told it), so the company screen and everything else that waits for the unlock works | 14e2831 |

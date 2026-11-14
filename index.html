@@ -6017,7 +6017,11 @@ let walletBtnLast = null;
 function walletBtnTell(){
   try{
     if(!window.StoryNative || !window.StoryNative.walletButtonOk || /[?&](s3|widget)=/.test(location.search)) return;
-    const ok = litSignedIn() && !planFree() && !hiddenPages().includes('wallet');
+    // #331 (owner, 14 Nov 2026: 'my wallet page button disappears - and its always on display'): since every company /
+    // Personal is its own account (#321), a space without its account yet switched the button off for the whole phone.
+    // It shows while ANY account on this phone is signed in.
+    const anySigned = litSignedIn() || Object.keys(localStorage).some(k=>{ if(!/^story-msg-account(@a-.+)?$/.test(k)) return false; try{ return !!(JSON.parse(litLsRaw(k) || '{}') || {}).pw; }catch(e){ return false; } });
+    const ok = anySigned && !planFree() && !hiddenPages().includes('wallet');
     if(ok === walletBtnLast) return;
     walletBtnLast = ok;
     window.StoryNative.walletButtonOk(ok);

@@ -334,4 +334,4 @@ commits, pushed as a new update) - nothing else changes.
 | 325 | 2026-11-14 | The company screen has no background pictures - it follows the System theme (black or white) | 6bc3218 |
 | 326 | 2026-11-14 | The company screen always stays black, in both themes | 872c7b8 |
 | 327 | 2026-11-14 | Undoes #326: the company screen follows the System theme again (black or white) | 2715ed2 |
-| 328 | 2026-11-14 | The company screen can't be skipped until you choose (bottom button off; it comes back over Home / Recents / apps) and it's drawn before the unlock so it appears faster | (this) |
+| 328 | 2026-11-14 | The company screen can't be skipped until you choose (bottom button off; it comes back over Home / Recents / apps) and it's drawn before the unlock so it appears faster | a9c012f |

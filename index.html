@@ -4175,7 +4175,7 @@
   // A note's own colours (its paper, cover, ink and the swatches that pick them) are the owner's writing,
   // not STORY's look -- they never swap (nor anything marked data-keep-color).
   // The payment cards in Wallet are printed like the real cards, so they keep their own look too.
-  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block|#lit-spaces/;
+  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block/;
   const KEEP_EL = '[data-keep-color], .note-card, .note-content-wrap, .canvas-page-wrap, .notes-swatch, .canvas-swatch, .notes-preview-page, .realcard-chase, .realcard-amex';
   function flip(t){
     const k = t.toLowerCase();
@@ -14836,7 +14836,7 @@ function spacesShow(){
   spacesClose();
   const now = list.findIndex(c=>c.id === litSpace());
   spIdx = now >= 0 ? now : Math.min(spIdx, list.length - 1);
-  const el = document.createElement('div'); el.id = 'lit-spaces'; el.setAttribute('data-keep-color', '');   // #326: always black (both themes), no picture
+  const el = document.createElement('div'); el.id = 'lit-spaces';   // #325 / #327: follows the System theme (Black / White), no picture
   el.innerHTML = '<div class="sp-name"></div><div class="sp-track"></div>' +
     '<div class="sp-dots">' + list.map((c, i)=>'<span class="sp-dot" data-i="' + i + '"><i></i>' + (i + 1) + '</span>').join('') + '</div>' +
     '<div class="sp-bottom"><button class="sp-personal" data-sp="personal">View Personal account</button>' +

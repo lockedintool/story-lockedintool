@@ -5937,6 +5937,8 @@ const SAVED_SETTINGS = { homeScreen:v=>['dashboard','wallet','money','trading'].
   let s = {}; try{ s = JSON.parse(localStorage.getItem('story-settings') || '{}') || {}; }catch(e){}
   Object.keys(SAVED_SETTINGS).forEach(k=>{ const ok = SAVED_SETTINGS[k], v = s[k]; if(v !== undefined && v !== null && (typeof ok === 'function' ? ok(v) : typeof v === ok)) state[k] = v; });
   if(!/[?&](s3|widget)=/.test(location.search)) state.current = state.homeScreen;   // the Pages start on your Home Screen
+  // #362 (owner, 14 Nov 2026: 'Where is the business home? Im on lockedintool'): a business in focus starts on its business home.
+  try{ if(!/[?&](s3|widget)=/.test(location.search) && bizHere()) state.current = 'biz-home'; }catch(e){}
 })();
 let savedSettingsJSON = null;
 // Settings > SECURITY (owner): "Phone's security" (default - Lockedintool works anywhere the phone is unlocked; it uses
@@ -14683,7 +14685,7 @@ document.addEventListener('click', (e)=>{
 }, true);
 // A contact picked with the dial pad's Search contact: its number goes into the dial pad (OverlayService.contactDone).
 window.storyDialSet = function(n){ state.station3DialInput = String(n || '').replace(/[^0-9+*#]/g, '').slice(0, 24); renderDevice(); };
-window.storyGoHome = function(){ state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null; state.current = state.homeScreen || 'wallet'; renderDevice(); };
+window.storyGoHome = function(){ state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null; state.current = (bizHere() ? 'biz-home' : '') || state.homeScreen || 'wallet'; renderDevice(); };   // #362
 document.addEventListener('click', (e)=>{
   const el = e.target.closest && e.target.closest('[data-native-pkg]');
   if(!el || !NATIVE) return;

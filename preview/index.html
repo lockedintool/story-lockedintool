@@ -14831,11 +14831,15 @@ function spaceTell(){ try{ if(NATIVE && window.StoryNative.spacesOn) window.Stor
 // Focus on a company (or Personal): the Pages start again in that space, on its Home Screen.
 function spaceGo(id, noSave){
   try{ if(NATIVE && window.StoryNative.spacesUp) window.StoryNative.spacesUp(false); }catch(e){}   // #328: chosen - the phone is free again
-  spacesClose();
   const want = id && id !== 'personal' && spaceOf(id) ? id : '';
   // #336: back into the app you were in there (the phone opens it; the Pages step aside), else its Home Screen as before.
   let toApp = false; try{ if(NATIVE && window.StoryNative.spaceSwitch) toApp = !!window.StoryNative.spaceSwitch(want || 'personal'); }catch(e){}
-  if((litSpace() === 'personal' ? '' : litSpace()) === want){ if(!toApp && window.storyShow) window.storyShow(null); return; }
+  const sameSp = (litSpace() === 'personal' ? '' : litSpace()) === want;
+  // #341: going back into an app / the home screen - the chooser stays up until the phone is really there; the app then
+  // hides the Pages and either closes the chooser (same company) or reloads them as the new company (litSpacesClose / reload).
+  if(toApp){ if(!sameSp){ if(!noSave){ try{ saveSettings && saveSettings(); }catch(e){} } window.__spWant = want; } return; }
+  spacesClose();
+  if(sameSp){ if(window.storyShow) window.storyShow(null); return; }
   if(!noSave){ try{ saveSettings && saveSettings(); }catch(e){} }
   localStorage.setItem('story-space', want);
   try{ sessionStorage.setItem('lit-space-home', '1'); }catch(e){}
@@ -14860,6 +14864,13 @@ window.litSpacesOpen = function(){
   if(ready && ready.dataset.at && Date.now() - (+ready.dataset.at) < 10 * 60000){ delete ready.dataset.at; try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){} return 'ok'; }
   spacesShow(); try{ if(NATIVE && window.StoryNative.spacesDone) window.StoryNative.spacesDone(); }catch(e){}
   return document.getElementById('lit-spaces') ? 'ok' : 'not drawn';
+};
+window.litSpacesClose = function(){ spacesClose(); };
+// #341: the Pages are out of sight - only now become the chosen company (nothing renders in between).
+window.litSpaceCommit = function(){
+  if(typeof window.__spWant !== 'string'){ spacesClose(); return; }
+  localStorage.setItem('story-space', window.__spWant); try{ sessionStorage.setItem('lit-space-home', '1'); }catch(e){}
+  location.reload();
 };
 function spacesClose(){ document.querySelectorAll('#lit-spaces').forEach(x=>x.remove()); }
 function spacesShow(){

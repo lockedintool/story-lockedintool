@@ -399,3 +399,4 @@ commits, pushed as a new update) - nothing else changes.
 | 390 | 2026-11-14 | Status challenges: once full, the status says 'Challenge full - can't accept anyone any more' for 10 minutes, then disappears | f425788 |
 | 391 | 2026-11-15 | Lock In: a loss takes rank away - against a person -15 (win +30, draw +10), against Lockedintool -5 (win +15, draw +5); never below 0 | 49aca10 |
 | 392 | 2026-11-15 | Lock In: 7 rank badges (Rookie to Legend) - tap the Rank box to see them; each Leaderboard row shows the badge; Lock In no longer shows on any profile | 3d4784b |
+| 393 | 2026-11-15 | Lock In: on the Leaderboard each badge shows its name on a ribbon (GOLD, DIAMOND...) | 4a8b76b |

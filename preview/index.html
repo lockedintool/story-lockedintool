@@ -22484,7 +22484,7 @@ function lockInScreen(){
     ${topBar('', false)}
     ${lkLogo()}
     <div class="lk-rec"><span class="lk-racks"><small>Rank</small><b>${LK.racks}</b></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
-    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Rank by winning - solo, against Lockedintool or against people</small></span><span>›</span></button>
+    <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Rank by winning - a loss takes some rank away</small></span><span>›</span></button>
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
@@ -22650,7 +22650,7 @@ function lkSoloResultHTML(p){
   return lkResWrap(p.key + (p.newBest ? 'b' : ''), vs ? (draw ? 'draw' : won ? 'won' : 'lost') : (p.newBest ? 'won' : 'draw'), `<div class="lk-mid"><div class="lk-big">${vs ? (draw ? 'Draw' : won ? 'You beat Lockedintool!' : 'Lockedintool won') : escText(lkScoreTxt(k, p.done))}</div>
     ${vs && !turn ? `<div class="lk-vs"><span><small>You</small><b>${escText(lkScoreTxt(k, p.done))}</b></span><span><small>Lockedintool</small><b>${escText(lkScoreTxt(k, p.target))}</b></span></div>` : ''}
     ${vs && turn ? lkBoardHTML(lkCpuGame(p), true) : ''}
-    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your rank…' : 'Log in to rank') : p.earned ? 'Rank +' + p.earned + (p.newBest ? ' · new best!' : '') + ' · Rank ' + LK.racks : 'Today’s solo ranking is full - play people to rank higher'}</div>
+    <div class="fl-sh-s lk-earn">${p.earned == null ? (msgAccount() ? 'Adding your rank…' : 'Log in to rank') : p.earned < 0 ? 'Rank ' + p.earned + ' · Rank ' + LK.racks : p.earned ? 'Rank +' + p.earned + (p.newBest ? ' · new best!' : '') + ' · Rank ' + LK.racks : 'Today’s solo ranking is full - play people to rank higher'}</div>
     <button class="btn-wide btn-primary" data-lk="${vs ? 'cpu' : 'practice'}" data-k="${k}">Play again</button></div>`);
 }
 function lkSoloSend(p, body){

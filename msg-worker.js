@@ -223,6 +223,9 @@ export class Hub {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meetpeople (mid TEXT, uid TEXT, status TEXT, PRIMARY KEY (mid, uid))`);
     // #381 SELLING: a shop on your profile - products / services with pictures, a price, a description; people message you
     // to buy (paying inside Lockedintool waits for a payment partner).
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS courses (id TEXT PRIMARY KEY, uid TEXT, title TEXT, about TEXT, cover TEXT, price INTEGER DEFAULT 0, cur TEXT, active INTEGER DEFAULT 1, at INTEGER)`);   // #396 LEARN
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS lessons (id TEXT PRIMARY KEY, cid TEXT, idx INTEGER, title TEXT, body TEXT, media TEXT, mtype TEXT, at INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS enrolls (cid TEXT, uid TEXT, at INTEGER, done TEXT, PRIMARY KEY (cid, uid))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, uid TEXT, title TEXT, price INTEGER, cur TEXT, about TEXT, photos TEXT, active INTEGER DEFAULT 1, at INTEGER, sort INTEGER DEFAULT 0)`);
     // #382 CUSTOMERS: the people an account sells to - name, contact (private), notes, their Lockedintool @username if they
     // have one, and what they bought (a simple sales log). Managers on the team can see and add too.
@@ -336,6 +339,7 @@ export class Hub {
       if (path.startsWith('/v1/team/')) return this.team(me, path.slice(9), body);
       if (path.startsWith('/v1/meet/')) return this.meet(me, path.slice(9), body);
       if (path.startsWith('/v1/shop/')) return this.shop(me, path.slice(9), body);
+      if (path.startsWith('/v1/learn/')) return this.learn(me, path.slice(10), body);
       if (path.startsWith('/v1/cust/')) return this.cust(me, path.slice(9), body);
       if (path.startsWith('/v1/lk/')) return this.lockin(me, path.slice(7), body);
       if (path === '/v1/callrate') return this.callRate(me, body);
@@ -1547,6 +1551,103 @@ export class Hub {
     }
     return json({ error: 'unknown' }, 404);
   }
+  // #396 LEARN (owner: 'Others can become creators and teach others free or paid'): courses made of lessons. Free courses: anyone
+  // who can see the creator's profile enrols and learns; paid ones wait for the payment partner.
+  learn(me, act, b) {
+    b = b || {};
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, n);
+    const card = u => u ? { id: u.id, name: u.name || '', username: u.username || '', photo: this.mediaUrl(u.photo) } : null;
+    const view = (c, full) => {
+      const u = this.one('SELECT * FROM users WHERE id = ?', c.uid), mine = c.uid === me.id;
+      const en = this.one('SELECT * FROM enrolls WHERE cid = ? AND uid = ?', c.id, me.id);
+      let done = []; try { done = JSON.parse((en && en.done) || '[]'); } catch (e) {}
+      const v = { id: c.id, title: c.title, about: c.about || '', cover: c.cover ? this.mediaUrl(c.cover) : '', coverId: mine ? (c.cover || '') : undefined, price: c.price || 0, cur: c.cur || 'USD', active: !!c.active, at: c.at,
+        by: card(u), mine, enrolled: !!en, done, lessons: this.one('SELECT COUNT(*) AS n FROM lessons WHERE cid = ?', c.id).n, students: this.one('SELECT COUNT(*) AS n FROM enrolls WHERE cid = ?', c.id).n };
+      if (full) {
+        const open = mine || !!en;
+        v.list = this.sql.exec('SELECT * FROM lessons WHERE cid = ? ORDER BY idx, at', c.id).toArray().map(l => open
+          ? { id: l.id, title: l.title, body: l.body || '', media: l.media ? this.mediaUrl(l.media) : '', mediaId: mine ? (l.media || '') : undefined, mtype: l.mtype || '' }
+          : { id: l.id, title: l.title, locked: true });
+      }
+      return v;
+    };
+    const canSee = c => { if (!c) return false; if (c.uid === me.id) return true; const u = this.one('SELECT * FROM users WHERE id = ?', c.uid); return !!u && !!c.active && this.canSeeProfile(me, u) && !this.blocked(me.id, u.id) && !u.deactivated; };
+    const myMedia = m => m && this.one('SELECT 1 AS x FROM media WHERE id = ? AND uid = ?', m, me.id) ? m : '';
+    if (act === 'browse') {
+      const q = clean(b.q, 60).toLowerCase();
+      const rows = this.sql.exec('SELECT * FROM courses WHERE active = 1 AND uid != ? ORDER BY at DESC LIMIT 300', me.id).toArray().filter(c => canSee(c) && (!q || (c.title + ' ' + (c.about || '')).toLowerCase().includes(q)));
+      return json({ courses: rows.slice(0, 60).map(c => view(c)) });
+    }
+    if (act === 'mine') {
+      const teach = this.sql.exec('SELECT * FROM courses WHERE uid = ? ORDER BY at DESC', me.id).toArray().map(c => view(c));
+      const learning = this.sql.exec('SELECT c.* FROM enrolls e JOIN courses c ON c.id = e.cid WHERE e.uid = ? ORDER BY e.at DESC', me.id).toArray().filter(canSee).map(c => view(c));
+      return json({ teach, learning });
+    }
+    const c = b.id ? this.one('SELECT * FROM courses WHERE id = ?', clean(b.id, 40)) : null;
+    if (act === 'get') { if (!canSee(c)) return json({ error: 'notfound' }, 404); return json({ course: view(c, true) }); }
+    if (act === 'save') {
+      const title = clean(b.title, 90); if (!title) return json({ error: 'title' }, 400);
+      const price = Math.max(0, Math.min(1e9, Math.round(+b.price || 0))), cur = clean(b.cur, 3).toUpperCase() || 'USD', cover = myMedia(clean(b.cover, 80));
+      if (c) {
+        if (c.uid !== me.id) return json({ error: 'notfound' }, 404);
+        if (c.cover && c.cover !== cover) this.mediaDel('id = ?', c.cover);
+        this.sql.exec('UPDATE courses SET title = ?, about = ?, cover = ?, price = ?, cur = ?, active = ? WHERE id = ?', title, clean(b.about, 2000), cover, price, cur, b.active === false ? 0 : 1, c.id);
+        return json({ course: view(this.one('SELECT * FROM courses WHERE id = ?', c.id), true) });
+      }
+      if (this.one('SELECT COUNT(*) AS n FROM courses WHERE uid = ?', me.id).n >= 50) return json({ error: 'full' }, 400);
+      const id = 'co' + rand(9);
+      this.sql.exec('INSERT INTO courses (id, uid, title, about, cover, price, cur, active, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', id, me.id, title, clean(b.about, 2000), cover, price, cur, b.active === false ? 0 : 1, Date.now());
+      return json({ course: view(this.one('SELECT * FROM courses WHERE id = ?', id), true) });
+    }
+    if (act === 'delete') {
+      if (c && c.uid === me.id) {
+        if (c.cover) this.mediaDel('id = ?', c.cover);
+        for (const l of this.sql.exec('SELECT media FROM lessons WHERE cid = ?', c.id).toArray()) if (l.media) this.mediaDel('id = ?', l.media);
+        this.sql.exec('DELETE FROM lessons WHERE cid = ?', c.id); this.sql.exec('DELETE FROM enrolls WHERE cid = ?', c.id); this.sql.exec('DELETE FROM courses WHERE id = ?', c.id);
+      }
+      return json({ ok: true });
+    }
+    if (act === 'lesson' || act === 'unlesson' || act === 'lmove') {
+      if (!c || c.uid !== me.id) return json({ error: 'notfound' }, 404);
+      const old = b.lid ? this.one('SELECT * FROM lessons WHERE id = ? AND cid = ?', clean(b.lid, 40), c.id) : null;
+      if (act === 'unlesson') { if (old) { if (old.media) this.mediaDel('id = ?', old.media); this.sql.exec('DELETE FROM lessons WHERE id = ?', old.id); } return json({ course: view(c, true) }); }
+      if (act === 'lmove') {
+        const ls = this.sql.exec('SELECT id FROM lessons WHERE cid = ? ORDER BY idx, at', c.id).toArray().map(r => r.id);
+        const i = old ? ls.indexOf(old.id) : -1, j = i + (b.dir < 0 ? -1 : 1);
+        if (i >= 0 && j >= 0 && j < ls.length) { [ls[i], ls[j]] = [ls[j], ls[i]]; ls.forEach((id, k) => this.sql.exec('UPDATE lessons SET idx = ? WHERE id = ?', k, id)); }
+        return json({ course: view(c, true) });
+      }
+      const title = clean(b.title, 120); if (!title) return json({ error: 'title' }, 400);
+      const media = myMedia(clean(b.media, 80)), mtype = media ? (b.mtype === 'video' ? 'video' : 'photo') : '';
+      if (old) {
+        if (old.media && old.media !== media) this.mediaDel('id = ?', old.media);
+        this.sql.exec('UPDATE lessons SET title = ?, body = ?, media = ?, mtype = ? WHERE id = ?', title, clean(b.body, 20000), media, mtype, old.id);
+      } else {
+        if (this.one('SELECT COUNT(*) AS n FROM lessons WHERE cid = ?', c.id).n >= 200) return json({ error: 'full' }, 400);
+        const idx = this.one('SELECT COALESCE(MAX(idx), -1) + 1 AS n FROM lessons WHERE cid = ?', c.id).n;
+        this.sql.exec('INSERT INTO lessons (id, cid, idx, title, body, media, mtype, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 'ls' + rand(9), c.id, idx, title, clean(b.body, 20000), media, mtype, Date.now());
+      }
+      return json({ course: view(c, true) });
+    }
+    if (act === 'enroll' || act === 'leave' || act === 'done') {
+      if (!canSee(c) || c.uid === me.id) return json({ error: 'notfound' }, 404);
+      if (act === 'enroll') {
+        if (c.price > 0) return json({ error: 'partner' }, 400);
+        if (!this.one('SELECT 1 AS x FROM enrolls WHERE cid = ? AND uid = ?', c.id, me.id)) {
+          this.sql.exec('INSERT INTO enrolls (cid, uid, at, done) VALUES (?, ?, ?, ?)', c.id, me.id, Date.now(), '[]');
+          this.deliver(c.uid, { t: 'fnote', kind: 'learn', id: c.id, title: c.title, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
+        }
+      } else if (act === 'leave') this.sql.exec('DELETE FROM enrolls WHERE cid = ? AND uid = ?', c.id, me.id);
+      else {
+        const en = this.one('SELECT * FROM enrolls WHERE cid = ? AND uid = ?', c.id, me.id); if (!en) return json({ error: 'enroll' }, 400);
+        let d = []; try { d = JSON.parse(en.done || '[]'); } catch (e) {}
+        const lid = clean(b.lid, 40); d = d.filter(x => x !== lid); if (b.on) d.push(lid);
+        this.sql.exec('UPDATE enrolls SET done = ? WHERE cid = ? AND uid = ?', JSON.stringify(d.slice(-300)), c.id, me.id);
+      }
+      return json({ course: view(c, true) });
+    }
+    return json({ error: 'unknown' }, 404);
+  }
   // #380 MEETINGS
   async meet(me, act, b) {
     b = b || {};
@@ -1667,6 +1768,12 @@ export class Hub {
     this.sql.exec('DELETE FROM lkgames WHERE a = ? OR b = ?', uid, uid); this.sql.exec('DELETE FROM lkwallet WHERE uid = ?', uid); this.sql.exec('DELETE FROM lkracks WHERE uid = ?', uid);
     for (const r of this.sql.exec('SELECT photos FROM products WHERE uid = ?', uid).toArray()) { let ph = []; try { ph = JSON.parse(r.photos || '[]'); } catch (e) {} for (const m of ph) this.mediaDel('id = ?', m); }   // #381
     this.sql.exec('DELETE FROM products WHERE uid = ?', uid);
+    for (const c of this.sql.exec('SELECT id, cover FROM courses WHERE uid = ?', uid).toArray()) {   // #396 their courses, lessons and media go with them
+      if (c.cover) this.mediaDel('id = ?', c.cover);
+      for (const l of this.sql.exec('SELECT media FROM lessons WHERE cid = ?', c.id).toArray()) if (l.media) this.mediaDel('id = ?', l.media);
+      this.sql.exec('DELETE FROM lessons WHERE cid = ?', c.id); this.sql.exec('DELETE FROM enrolls WHERE cid = ?', c.id);
+    }
+    this.sql.exec('DELETE FROM courses WHERE uid = ?', uid); this.sql.exec('DELETE FROM enrolls WHERE uid = ?', uid);
     this.sql.exec('DELETE FROM custsales WHERE uid = ?', uid); this.sql.exec('DELETE FROM customers WHERE uid = ?', uid);   // #382
     for (const m of this.sql.exec('SELECT id FROM meetings WHERE oid = ?', uid).toArray()) this.sql.exec('DELETE FROM meetpeople WHERE mid = ?', m.id);   // #380
     this.sql.exec('DELETE FROM meetings WHERE oid = ?', uid); this.sql.exec('DELETE FROM meetpeople WHERE uid = ?', uid);

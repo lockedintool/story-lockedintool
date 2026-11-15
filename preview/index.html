@@ -1592,6 +1592,29 @@
   .lk-lb{ width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:10px; text-align:left; color:inherit; } .lk-lb > span:last-child{ font-size:20px; }
   .lk-earn{ color:#ffd60a !important; font-weight:700; }
   .lk-forfeit{ align-self:center; background:transparent; border:0; color:#ff453a; font-size:13px; padding:12px; margin-top:6px; }
+  .lk-golive{ margin:0 0 10px !important; } .lk-live-dot{ display:inline-block; font-style:normal; font-size:10px; font-weight:800; letter-spacing:.06em; background:#ff3b30; color:#fff; border-radius:5px; padding:2px 6px; }
+  .lk-gl-k{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; } .lk-gl-k button{ background:transparent; border:1px solid #333; border-radius:12px; color:#9a9a9a; padding:8px 10px; font-size:12px; font-weight:600; } .lk-gl-k button.on{ color:#fff; border-color:#fff; }
+  .lk-lv{ position:relative; min-height:100%; padding:0 !important; background:#000; overflow:hidden; }
+  .lk-lv video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; } .lk-lv video.mirror{ transform:scaleX(-1); }
+  .lk-lv-ov{ position:absolute; inset:0 0 108px 0; display:flex; flex-direction:column; gap:8px; padding:10px 12px; color:#fff; overflow-y:auto; scrollbar-width:none; }
+  .lk-lv-ov::-webkit-scrollbar{ display:none; }
+  .lk-lv-top{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; font-weight:600; text-shadow:0 1px 3px #000; } .lk-lv-top > span:nth-child(2){ flex:1; } .lk-lv-g{ order:5; flex:1 0 100%; font-size:12px; color:#ffd60a; }
+  .lk-lv-x{ background:rgba(0,0,0,.55); border:1px solid #fff; color:#fff; border-radius:12px; padding:5px 10px; font-size:12px; font-weight:700; }
+  .lk-lv-state{ text-align:center; margin-top:30%; font-size:15px; font-weight:700; text-shadow:0 1px 3px #000; }
+  .lk-lv-prize{ align-self:flex-start; background:#ffd60a; color:#000; font-size:11px; font-weight:800; border-radius:8px; padding:4px 8px; }
+  .lk-lv-match{ background:rgba(0,0,0,.62); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:8px 10px; }
+  .lk-lv-mt{ display:flex; justify-content:space-between; font-size:11px; color:#ffd60a; font-weight:700; margin-bottom:6px; }
+  .lk-lv-vs{ display:flex; align-items:center; justify-content:space-between; gap:6px; } .lk-lv-vs i{ font-style:normal; font-weight:800; font-size:13px; white-space:nowrap; }
+  .lk-lv-p{ display:flex; align-items:center; gap:6px; min-width:0; flex:1; } .lk-lv-p:last-child{ flex-direction:row-reverse; } .lk-lv-p b{ font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .lk-lv-p .msg-pic{ width:28px; height:28px; flex:0 0 28px; }
+  .lk-lv-board{ width:60%; margin:8px auto 0; pointer-events:none; } .lk-lv-board .lk-ttt{ width:100%; } .lk-lv-board .lk-pc{ font-size:16px; }
+  .lk-lv-q{ background:rgba(0,0,0,.62); border-radius:14px; padding:8px 10px; } .lk-lv-qt{ font-size:11px; font-weight:700; color:#9a9a9a; margin-bottom:6px; letter-spacing:.04em; }
+  .lk-lv-qp{ width:100%; display:flex; align-items:center; gap:8px; background:transparent; border:1px solid rgba(255,255,255,.18); border-radius:12px; color:#fff; padding:6px 8px; margin-bottom:6px; text-align:left; } .lk-lv-qp.on{ border-color:#ffd60a; } .lk-lv-qp .msg-pic{ width:26px; height:26px; flex:0 0 26px; } .lk-lv-qp b{ font-size:13px; }
+  .lk-lv-join{ align-self:center; background:#ffd60a; color:#000; border:0; border-radius:16px; font-weight:800; font-size:14px; padding:10px 18px; } .lk-lv-join.on{ background:rgba(0,0,0,.6); color:#fff; border:1px solid #fff; }
+  .lk-lv-playbtn{ margin:0 !important; }
+  .lk-lv-c{ margin-top:auto; display:flex; flex-direction:column; gap:3px; font-size:13px; text-shadow:0 1px 3px #000; } .lk-lv-c b{ font-weight:700; }
+  .lk-lv-bottom{ position:absolute; left:12px; right:12px; bottom:58px; display:flex; gap:6px; align-items:center; }
+  .lk-lv-bottom input{ flex:1; min-width:0; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.4); border-radius:18px; color:#fff; padding:9px 12px; font-size:14px; }
+  .lk-lv-bottom button{ background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:50%; width:38px; height:38px; flex:0 0 38px; font-size:16px; padding:0; } .lk-lv-heart{ color:#ff375f !important; }
   .fl-del{ color:#ff453a !important; } .fl-cur{ border-color:#fff !important; }
   .fl-view{ margin:8px 0; } .fl-view img, .fl-view video{ max-width:100%; max-height:55vh; border-radius:10px; display:block; margin:0 auto; } .fl-view audio{ width:100%; }
   .bz-swpop-bg{ position:fixed; inset:0; z-index:60; }
@@ -4337,7 +4360,7 @@
   // A note's own colours (its paper, cover, ink and the swatches that pick them) are the owner's writing,
   // not STORY's look -- they never swap (nor anything marked data-keep-color).
   // The payment cards in Wallet are printed like the real cards, so they keep their own look too.
-  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block|\.lk-logo/;
+  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block|\.lk-logo|\.lk-lv|\.lk-live-dot/;
   const KEEP_EL = '[data-keep-color], .note-card, .note-content-wrap, .canvas-page-wrap, .notes-swatch, .canvas-swatch, .notes-preview-page, .realcard-chase, .realcard-amex';
   function flip(t){
     const k = t.toLowerCase();
@@ -13713,6 +13736,13 @@ async function msgOnServer(m){
       setTimeout(mtRemindAll, 1500);
       return;
     }
+    if(m.kind === 'lklive' || m.kind === 'lkpick'){   // #395 Lock In live
+      const txt = m.kind === 'lklive' ? who + ' is playing Lock In live - open LOCK IN > Public games to watch' : who + ' picked you to play ' + (LK_NAMES[m.game] || 'Lock In') + ' live - open LOCK IN to play';
+      if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify('Lock In', txt); }catch(e){}
+      try{ localStorage.setItem('story-lk-ping', String(Date.now())); }catch(e){}
+      if(m.seq) msgSend({ t:'ack', seq:m.seq });
+      return;
+    }
     if(['lkchal', 'lkyes', 'lkno', 'lkturn', 'lkdone'].includes(m.kind)){   // #383 Lock In
       const g = LK_NAMES[m.game] || 'Lock In';
       const txt = m.kind === 'lkchal' ? who + ' challenged you to ' + g + (m.stake ? ' for ' + fmtCur(m.stake / 100, m.cur || 'USD', false) : '') + ' - open LOCK IN to answer'
@@ -22411,7 +22441,7 @@ const LK_ABOUT = { reaction:'Five rounds. Wait for green, then tap as fast as yo
   memory:'Find the eight pairs. The fastest time wins; every wrong pair adds 2 seconds.',
   pose:'Copy the pose at the top: tap an arm or the legs of your figure to move them. Every pose you pass comes faster - the most poses wins.' };
 const LK_SCORE = { reaction:'low', quiz:'high', memory:'low', pose:'high' };
-const LK = { games:[], record:{ wins:0, losses:0, draws:0 }, racks:0, best:{}, wallet:[], loaded:false, loading:false, err:'', tab:'private',
+const LK = { live:null, liveList:null, games:[], record:{ wins:0, losses:0, draws:0 }, racks:0, best:{}, wallet:[], loaded:false, loading:false, err:'', tab:'private',
   board:null, people:null, sheet:null, play:null, poll:0 };
 const LK_QUIZ = [
   ['What is the largest planet in our solar system?', 'Jupiter', 'Saturn', 'Neptune', 'Earth'],
@@ -22482,6 +22512,7 @@ function lkStatus(g){
 function lockInScreen(){
   if(!LK.loaded && !LK.loading && !LK.err) setTimeout(lkLoad, 0);
   if(LK.play) return lkPlayScreen();
+  if(LK.live) return lkLiveScreen();
   const biz = !!lkSpace(), sh = LK.sheet;
   const tile = k=>`<button class="lk-tile" data-lk="game" data-k="${k}">${lkIcon(k)}<b>${LK_NAMES[k]}</b></button>`;
   const open = LK.games.filter(g=>g.status === 'invited' || g.status === 'active'), done = LK.games.filter(g=>!(g.status === 'invited' || g.status === 'active'));
@@ -22501,7 +22532,7 @@ function lockInScreen(){
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
     ${biz ? '<div class="fl-note lk-note">Business accounts play Lock In in person - in-person play is coming next. Built-in games against others are for Personal accounts; you can still practise here.</div>' : ''}
     <div class="lk-tabs"><button class="${LK.tab === 'public' ? 'on' : ''}" data-lk="tab" data-v="public">Public games</button><button class="${LK.tab === 'private' ? 'on' : ''}" data-lk="tab" data-v="private">Private games</button></div>
-    ${LK.tab === 'public' ? '<div class="fl-empty">Public games are played live for everyone to watch - coming soon with Lock In live.</div>'
+    ${LK.tab === 'public' ? lkPublicHTML(biz)
       : !LK.loaded ? `<div class="fl-empty">${LK.err === 'signin' ? 'Log in to play Lock In' : LK.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>`
       : (open.length || done.length) ? (open.map(row).join('') + (done.length ? '<div class="section-title">FINISHED</div>' + done.map(row).join('') : ''))
       : '<div class="fl-empty">No games yet. Tap a game above to challenge someone who follows you back - or practise first.</div>'}
@@ -22591,6 +22622,15 @@ function lkBadgesSheet(){
 }
 function lkSheetHTML(sh){
   if(sh.t === 'badges') return lkBadgesSheet();
+  if(sh.t === 'golive') return `<div class="fl-sh-t">Go live with a game</div>
+      <div class="fl-sh-s">Everyone who can see your profile can watch, comment and ask to play. You choose who plays.</div>
+      <div class="section-title">GAME</div><div class="lk-gl-k">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(k=>`<button class="${sh.k === k ? 'on' : ''}" data-lk="gl-k" data-k="${k}">${escText(LK_NAMES[k])}</button>`).join('')}</div>
+      <div class="section-title">YOU</div><div class="lk-seg"><button class="${sh.role === 'play' ? 'on' : ''}" data-lk="gl-role" data-v="play">Play</button><button class="${sh.role === 'ref' ? 'on' : ''}" data-lk="gl-role" data-v="ref">Referee</button></div>
+      <div class="fl-sh-s">${sh.role === 'ref' ? 'You pick two people from the people asking to play; they play each other while you and everyone watch.' : 'You play against the people you pick, one after another.'}</div>
+      <div class="section-title">PRIZE (OPTIONAL)</div><input id="lk-prize" class="field-input" maxlength="80" placeholder="e.g. A shout-out on my profile" value="${escText(sh.prize || '')}">
+      <div class="fl-sh-s">Money prize pools come once Lockedintool's payment partner is connected.</div>
+      <button class="btn-wide btn-primary" data-lk="golive">Go live</button>
+      <button class="btn-wide" data-lk="close">Cancel</button>`;
   if(sh.t === 'game'){
     const k = sh.k, biz = !!lkSpace();
     const ppl = LK.people;
@@ -22834,6 +22874,119 @@ function lkPose(p){
   };
   draw();
 }
+// #395 PUBLIC GAMES, LIVE (owner: 'Yes, live only for Lock In'; 'If its public the creator can play or just be the reff ... for
+// users to win a price pool'): the creator goes live from their camera (msg-worker /v1/live/* - Cloudflare's live video), people
+// who can see their profile watch, comment, heart and ask to play; the creator picks who plays (owner: 'only the creator chooses
+// who plays') - against them (Play) or two of them against each other (Referee). Everyone sees the match live on the stream.
+function lkPublicHTML(biz){
+  const L = LK.liveList;
+  return `${biz ? '' : '<button class="btn-wide btn-primary lk-golive" data-lk="golive-sheet">Go live with a game</button>'}
+    ${L == null ? '<div class="fl-empty">Loading…</div>' : L.length ? L.map(l=>`<div class="row-card lk-row" data-lk="live-watch" data-id="${escText(l.id)}">${upPic(l.user || {})}
+      <span class="fl-tx"><b>${escText(lkWho(l.user))}${l.mine ? ' (you)' : ''}</b><small><i class="lk-live-dot">LIVE</i> ${escText(LK_NAMES[l.lk && l.lk.kind] || 'Lock In')} · ${l.lk && l.lk.role === 'ref' ? 'Refereeing' : 'Playing'} · ${fmtCount(l.viewers)} watching</small></span><span>›</span></div>`).join('')
+      : '<div class="fl-empty">Nobody is playing live right now. Go live and play the people watching - or referee them.</div>'}`;
+}
+function lkLiveList(){ if(!msgAccount()) { LK.liveList = []; return; }
+  msgApi('/v1/live/list', { lk:true }).then(r=>{ LK.liveList = r.lives || []; }).catch(()=>{ LK.liveList = []; }).finally(()=>{ if(state.current === 'lockin' && !LK.live && !LK.play && !LK.sheet) renderDevice(); }); }
+async function lkGoLive(kind, role, prize){
+  if(!msgAccount()){ showToast('Log in to go live'); return; }
+  const L = LK.live = { mode:'host', id:'', pc:null, stream:null, st:null, pick:[], state:'Starting your camera…', timer:0 };
+  renderDevice();
+  try{ L.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true }, video:{ facingMode:'user', width:{ ideal:720 }, height:{ ideal:1280 } } }); }
+  catch(e){ L.state = 'The camera or microphone couldn’t open'; lkLivePaint(); return; }
+  if(LK.live !== L) return lkLiveStop(L);
+  lkLiveAttach(); L.state = 'Going live…'; lkLivePaint();
+  try{
+    const s = await msgApi('/v1/live/start', { lk:{ kind, role, prize } }); L.id = s.id;
+    const pc = new RTCPeerConnection({ iceServers:[{ urls:'stun:stun.cloudflare.com:3478' }], bundlePolicy:'max-bundle' }); L.pc = pc;
+    const trs = L.stream.getTracks().map(t=>pc.addTransceiver(t, { direction:'sendonly', streams:[L.stream] }));
+    await pc.setLocalDescription(await pc.createOffer());
+    const r = await msgApi('/v1/live/publish', { id: s.id, sdp: pc.localDescription.sdp, tracks: trs.map(t=>({ mid: t.mid, trackName: s.id + '-' + t.sender.track.kind })) });
+    await pc.setRemoteDescription({ type:'answer', sdp: r.sdp });
+    L.state = ''; lkLiveArm(); lkLivePaint();
+  }catch(e){ L.state = e && e.code === 'not-ready' ? 'Live video isn’t switched on on Lockedintool’s server' : 'Couldn’t go live - try again'; lkLivePaint(); }
+}
+async function lkWatchLive(id){
+  const L = LK.live = { mode:'watch', id, pc:null, stream:null, st:null, pick:[], state:'Joining…', timer:0 };
+  renderDevice();
+  try{
+    const w = await msgApi('/v1/live/watch', { id });
+    const pc = new RTCPeerConnection({ iceServers:[{ urls:'stun:stun.cloudflare.com:3478' }], bundlePolicy:'max-bundle' }); L.pc = pc;
+    const ms = new MediaStream(); L.stream = ms;
+    pc.ontrack = e=>{ ms.addTrack(e.track); lkLiveAttach(); };
+    await pc.setRemoteDescription({ type: w.type || 'offer', sdp: w.sdp });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await msgApi('/v1/live/answer', { id, sdp: pc.localDescription.sdp });
+    L.state = ''; lkLiveArm(); lkLiveAttach(); lkLivePaint();
+  }catch(e){ L.state = e && e.code === 'ended' ? 'This live has ended' : 'Couldn’t open this live'; lkLivePaint(); }
+}
+function lkLiveArm(){ const L = LK.live; if(!L) return; clearInterval(L.timer); lkLivePoll(); L.timer = setInterval(lkLivePoll, 2000); }
+function lkLivePoll(){
+  const L = LK.live; if(!L || !L.id){ return; }
+  if(document.visibilityState === 'hidden' || state.current !== 'lockin') return;
+  msgApi('/v1/lk/livestate', { id: L.id }).then(st=>{ if(LK.live !== L) return; L.st = st;
+    if(!st.live && L.mode === 'watch'){ L.state = 'This live has ended'; clearInterval(L.timer); }
+    if(!LK.play) lkLivePaint(); }).catch(()=>{});
+}
+function lkLiveStop(L){ try{ L.pc && L.pc.close(); }catch(e){} try{ L.mode === 'host' && L.stream && L.stream.getTracks().forEach(t=>t.stop()); }catch(e){} clearInterval(L.timer); }
+function lkLiveExit(){
+  const L = LK.live; if(!L) return;
+  if(L.id) msgApi('/v1/live/' + (L.mode === 'host' ? 'end' : 'leave'), { id: L.id }).catch(()=>{});
+  lkLiveStop(L); LK.live = null; LK.liveList = null; lkLiveList(); renderDevice();
+}
+function lkLiveCall(act){ const L = LK.live; if(!L || !L.id) return;
+  msgApi('/v1/lk/' + act, { id: L.id }).then(()=>{ if(L.st) L.st.queued = act === 'livejoin'; lkLivePaint(); if(act === 'livejoin') showToast('You asked to play - the host picks who plays'); }).catch(()=>showToast('Couldn’t reach Lockedintool')); }
+function lkLivePick(){ const L = LK.live; if(!L || !L.id) return;
+  msgApi('/v1/lk/livepick', { id: L.id, uids: L.pick }).then(r=>{ L.pick = []; lkLivePoll(); if(L.st && L.st.lk && L.st.lk.role !== 'ref') lkLiveOpenGame(r.game); })
+    .catch(e=>showToast(e && e.code === 'playing' ? 'Finish the game that’s on first' : e && e.code === 'gone' ? 'They stopped asking to play - pick someone else' : 'Couldn’t start the game')); }
+function lkLiveOpenGame(gid){ msgApi('/v1/lk/get', { id: gid }).then(r=>{ if(r.game){ lkOpenGame(r.game); renderDevice(); } }).catch(()=>showToast('Couldn’t open the game')); }
+function lkLivePlay(){ const m = LK.live && LK.live.st && LK.live.st.match; if(m) lkLiveOpenGame(m.id); }
+function lkLiveComment(){ const L = LK.live, inp = document.getElementById('lk-lv-in'); if(!L || !L.id || !inp) return;
+  const text = inp.value.trim(); if(!text) return; inp.value = '';
+  msgApi('/v1/live/comment', { id: L.id, text }).then(lkLivePoll).catch(()=>showToast('No connection right now')); }
+function lkLiveAttach(){ const L = LK.live, v = document.getElementById('lk-lv-video'); if(!L || !v) return;
+  if(v.srcObject !== L.stream) v.srcObject = L.stream || null; v.muted = L.mode === 'host'; v.play && v.play().catch(()=>{}); }
+function lkLiveMatchHTML(m){
+  if(!m) return '';
+  const who = u=>`<span class="lk-lv-p">${upPic(u || {})}<b>${escText(lkWho(u))}</b></span>`;
+  const turn = m.kind === 'ttt' || m.kind === 'c4';
+  const res = m.status === 'done' ? (m.winner ? escText(lkWho(m.winner === (m.a && m.a.id) ? m.a : m.b)) + ' won' : 'Draw') : 'Playing now';
+  const sc = (v)=>v == null ? '…' : escText(lkScoreTxt(m.kind, v));
+  return `<div class="lk-lv-match"><div class="lk-lv-mt"><span>${escText(LK_NAMES[m.kind] || '')}</span><span>${res}</span></div>
+    <div class="lk-lv-vs">${who(m.a)}${turn ? '<i>vs</i>' : `<i>${sc(m.sa)} - ${sc(m.sb)}</i>`}${who(m.b)}</div>
+    ${turn && m.state ? `<div class="lk-lv-board">${lkBoardHTML({ kind: m.kind, state: m.state, iAmA: true, status: 'done' }, true)}</div>` : ''}</div>`;
+}
+function lkLiveOvHTML(){
+  const L = LK.live, st = L.st || {}, lk = st.lk || {}, host = L.mode === 'host', m = st.match;
+  const playing = m && m.status === 'active';
+  const myTurnHere = m && m.me && m.status === 'active' && (LK_SCORE[m.kind] ? (m.me === 'a' ? m.sa == null : m.sb == null) : true);
+  let panel = '';
+  if(host){
+    const need = lk.role === 'ref' ? 2 : 1, q = st.queue || [];
+    panel = playing ? '' : `<div class="lk-lv-q"><div class="lk-lv-qt">${q.length ? 'ASKING TO PLAY · pick ' + need : 'Nobody has asked to play yet'}</div>
+      ${q.map(u=>`<button class="lk-lv-qp${L.pick.includes(u.id) ? ' on' : ''}" data-lk="live-sel" data-u="${escText(u.id)}">${upPic(u)}<b>${escText(lkWho(u))}</b></button>`).join('')}
+      ${q.length ? `<button class="btn-wide btn-primary" data-lk="live-pick" ${L.pick.length === need ? '' : 'disabled'}>Start the game</button>` : ''}</div>`;
+  } else if(st.live){
+    panel = myTurnHere ? '' : `<button class="lk-lv-join${st.queued ? ' on' : ''}" data-lk="live-join">${st.queued ? 'Asked to play · tap to cancel' : 'Ask to play'}</button>`;
+  }
+  return `<div class="lk-lv-top"><span class="lk-live-dot">LIVE</span><span>${fmtCount(st.viewers || 0)} watching${st.hearts ? ' · ♥ ' + fmtCount(st.hearts) : ''}</span>
+      <span class="lk-lv-g">${escText(LK_NAMES[lk.kind] || '')} · ${host ? (lk.role === 'ref' ? 'You referee' : 'You play') : escText(lkWho(st.user)) + (lk.role === 'ref' ? ' referees' : ' plays')}</span>
+      <button class="lk-lv-x" data-lk="live-x">${host ? 'End' : '✕'}</button></div>
+    ${L.state ? `<div class="lk-lv-state">${escText(L.state)}</div>` : ''}
+    ${lk.prize ? `<div class="lk-lv-prize">PRIZE · ${escText(lk.prize)}</div>` : ''}
+    ${lkLiveMatchHTML(m)}
+    ${myTurnHere ? '<button class="btn-wide btn-primary lk-lv-playbtn" data-lk="live-play">Play your game</button>' : ''}
+    ${panel}
+    <div class="lk-lv-c">${(st.recent || []).slice(-6).map(c=>`<div><b>${escText(c.name || '@' + c.username)}</b> ${escText(c.text)}</div>`).join('')}</div>`;
+}
+function lkLivePaint(){ const ov = document.getElementById('lk-lv-ov'); if(ov && LK.live) ov.innerHTML = lkLiveOvHTML(); else if(state.current === 'lockin' && LK.live && !LK.play) renderDevice(); }
+function lkLiveScreen(){
+  setTimeout(lkLiveAttach, 0);
+  return `<div class="page-shell lk-lv">
+    <video id="lk-lv-video" class="${LK.live.mode === 'host' ? 'mirror' : ''}" playsinline autoplay muted></video>
+    <div id="lk-lv-ov" class="lk-lv-ov">${lkLiveOvHTML()}</div>
+    <div class="lk-lv-bottom"><input id="lk-lv-in" maxlength="200" placeholder="Add a comment" enterkeyhint="send" onkeydown="if(event.key==='Enter'){event.preventDefault();lkLiveComment();}"><button data-lk="live-send" aria-label="Send">➤</button><button class="lk-lv-heart" data-lk="live-heart" aria-label="Heart">♥</button></div>
+    </div>`;
+}
 function lkStart(){
   const p = LK.play; if(!p) return; p.live = true;
   if(p.k === 'reaction') lkReaction(p); else if(p.k === 'quiz') lkQuiz(p); else if(p.k === 'memory') lkMemory(p); else if(p.k === 'pose') lkPose(p);
@@ -22855,7 +23008,20 @@ document.addEventListener('click', e=>{
   const put = g=>{ if(!g) return; const i = LK.games.findIndex(x=>x.id === g.id); if(i >= 0) LK.games[i] = g; else LK.games.unshift(g); if(LK.play && LK.play.g && LK.play.g.id === g.id) LK.play.g = g; };
   const keep = ()=>{ const s = LK.sheet; if(s && s.t === 'game'){ const am = document.getElementById('lk-amt'), cu = document.getElementById('lk-cur'); if(am) s.amt = am.value; if(cu) s.cur = (cu.value || 'USD').toUpperCase(); } };
   switch(a){
-    case 'tab': LK.tab = b.getAttribute('data-v'); break;
+    case 'tab': LK.tab = b.getAttribute('data-v'); if(LK.tab === 'public') lkLiveList(); break;
+    case 'golive-sheet': LK.sheet = { t:'golive', k:'reaction', role:'play' }; break;
+    case 'gl-k': if(LK.sheet){ LK.sheet.prize = (document.getElementById('lk-prize') || {}).value || LK.sheet.prize || ''; LK.sheet.k = b.getAttribute('data-k'); } break;
+    case 'gl-role': if(LK.sheet){ LK.sheet.prize = (document.getElementById('lk-prize') || {}).value || LK.sheet.prize || ''; LK.sheet.role = b.getAttribute('data-v'); } break;
+    case 'golive': { const sh = LK.sheet; if(!sh) break; const prize = ((document.getElementById('lk-prize') || {}).value || '').trim(); LK.sheet = null; lkGoLive(sh.k, sh.role, prize); return; }
+    case 'live-watch': lkWatchLive(id); return;
+    case 'live-x': lkLiveExit(); return;
+    case 'live-join': lkLiveCall(LK.live && LK.live.st && LK.live.st.queued ? 'liveunjoin' : 'livejoin'); return;
+    case 'live-sel': { const L = LK.live; if(!L) return; const u = b.getAttribute('data-u'), need = L.st && L.st.lk && L.st.lk.role === 'ref' ? 2 : 1;
+      L.pick = L.pick.includes(u) ? L.pick.filter(x=>x !== u) : L.pick.concat(u).slice(-need); lkLivePaint(); return; }
+    case 'live-pick': lkLivePick(); return;
+    case 'live-play': lkLivePlay(); return;
+    case 'live-heart': if(LK.live) msgApi('/v1/live/heart', { id: LK.live.id }).catch(()=>{}); return;
+    case 'live-send': lkLiveComment(); return;
     case 'game': { const k = b.getAttribute('data-k');
       LK.sheet = { t:'game', k, bet:false, cur: (typeof moneyMainCur === 'function' && moneyMainCur()) || 'USD' };
       if(LK.people == null && msgAccount()) msgApi('/v1/lk/people').then(r=>{ LK.people = r.people || []; if(LK.sheet && LK.sheet.t === 'game'){ keep(); renderDevice(); } }).catch(()=>{ LK.people = []; });
@@ -22902,7 +23068,7 @@ document.addEventListener('click', e=>{
     case 'again': { const g = LK.play && LK.play.g; if(!g) break; LK.play = null; LK.sheet = { t:'game', k: g.kind, bet:false, to: g.other && g.other.id, cur: g.cur || 'USD' };
       if(LK.people == null) msgApi('/v1/lk/people').then(r=>{ LK.people = r.people || []; if(LK.sheet) renderDevice(); }).catch(()=>{ LK.people = []; });
       break; }
-    case 'quit': { const p = LK.play; if(p && p.live && p.g){ showToast('Finish your round first - you get one round'); return; } LK.play = null; LK.sheet = null; lkLoad(); break; }
+    case 'quit': { const p = LK.play; if(p && p.live && p.g){ showToast('Finish your round first - you get one round'); return; } LK.play = null; LK.sheet = null; lkLoad(); if(LK.live) lkLivePoll(); break; }
     case 'board': LK.sheet = { t:'board' }; LK.board = null; msgApi('/v1/lk/board').then(r=>{ LK.board = r; if(LK.sheet && LK.sheet.t === 'board') renderDevice(); }).catch(()=>{ LK.board = { board:[], myRank:0, myWins:0 }; if(LK.sheet) renderDevice(); }); break;
     case 'badges': LK.sheet = { t:'badges' }; break;
     case 'wallet': LK.sheet = { t:'wallet' }; break;

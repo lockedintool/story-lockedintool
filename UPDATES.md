@@ -403,3 +403,4 @@ commits, pushed as a new update) - nothing else changes.
 | 394 | 2026-11-15 | Lock In: Pose - copy the pose by tapping your figure's arms and legs; every pass gives less time; play solo, beat Lockedintool or challenge people | 1a65213 |
 | 395 | 2026-11-15 | Lock In: Public games live - go live with a game, play or referee, viewers ask to play and you pick, the match shows on the stream, optional prize | 8d23714 |
 | 396 | 2026-11-15 | LEARN in the Dashboard menu: creators make courses of lessons (words + a picture or video); people discover and start free courses, mark lessons done and see their progress; paid courses wait for the payment partner | 03a2f2c |
+| 397 | 2026-11-15 | Lock In: in-person play - post the video of a game you played in person (game, players, rules, winner, prize) with its own privacy: Everyone / Followers / Only me; for Personal and Business accounts | 85366bc |

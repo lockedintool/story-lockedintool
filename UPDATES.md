@@ -400,3 +400,4 @@ commits, pushed as a new update) - nothing else changes.
 | 391 | 2026-11-15 | Lock In: a loss takes rank away - against a person -15 (win +30, draw +10), against Lockedintool -5 (win +15, draw +5); never below 0 | 49aca10 |
 | 392 | 2026-11-15 | Lock In: 7 rank badges (Rookie to Legend) - tap the Rank box to see them; each Leaderboard row shows the badge; Lock In no longer shows on any profile | 3d4784b |
 | 393 | 2026-11-15 | Lock In: on the Leaderboard each badge shows its name on a ribbon (GOLD, DIAMOND...) | 4a8b76b |
+| 394 | 2026-11-15 | Lock In: Pose - copy the pose by tapping your figure's arms and legs; every pass gives less time; play solo, beat Lockedintool or challenge people | 1a65213 |

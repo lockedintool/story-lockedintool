@@ -193,6 +193,7 @@ export class Hub {
     try { this.sql.exec(`ALTER TABLE lives ADD COLUMN lkgame TEXT`); } catch (e) {}    // the game being played on it now
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkqueue (lid TEXT, uid TEXT, at INTEGER, PRIMARY KEY (lid, uid))`);
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN lk TEXT`); } catch (e) {}       // #388 a Lock In challenge posted to a status: {kind, stake, cur}
+    try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN vis TEXT`); } catch (e) {}      // #397 who sees a post: NULL = everyone who may see the profile, 'followers', 'me'
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN hlname TEXT`); } catch (e) {}   // a song from your phone with the post / status: {media, name}
     this.sql.exec(`CREATE INDEX IF NOT EXISTS uposts_feed ON uposts(kind, at)`);
     // Hearts and comments on statuses (owner).
@@ -522,6 +523,8 @@ export class Hub {
     for (const id of ids) storeOf(this.env, id).fetch('https://store/del?id=' + encodeURIComponent(id), { method: 'POST' }).catch(() => {});
   }
   follows(a, b) { return !!this.one('SELECT 1 AS x FROM follows WHERE uid = ? AND fid = ? AND (ok IS NULL OR ok = 1)', a, b); }
+  // #397 a post's own privacy (in-person Lock In games): on top of who may see the profile.
+  postOk(p, me) { return !p.vis || (me && p.uid === me.id) || (p.vis === 'followers' && !!me && this.follows(me.id, p.uid)); }
   act(uid, kind, from, ref, text) {
     if (!uid || !from || uid === from || this.blocked(uid, from)) return;
     // one row per person + thing (a second like of the same post just moves it to the top)
@@ -568,7 +571,7 @@ export class Hub {
     const items = this.postItems(p).map(i => ({ type: i.type === 'video' ? 'video' : 'photo', url: this.mediaUrl(i.media), thumb: this.mediaUrl(i.thumb) }));
     const mu = this.postMusic(p);
     const v = { id: p.id, kind: p.kind, type: items[0] ? items[0].type : 'text', url: items[0] ? items[0].url : '', thumb: items[0] ? items[0].thumb : '', at: p.at, title: p.title || '', text: p.text || '', items,
-      music: mu.media ? { url: this.mediaUrl(mu.media), name: mu.name || '' } : null };
+      music: mu.media ? { url: this.mediaUrl(mu.media), name: mu.name || '' } : null, vis: p.vis || '' };
     if (p.lk) { try { v.lk = JSON.parse(p.lk); v.lk.taken = this.one('SELECT COUNT(*) AS n FROM lkgames WHERE src = ?', p.id).n; v.lk.full = !!v.lk.fullAt || v.lk.taken >= (v.lk.max || 1); if (me) v.lk.mine = !!this.one('SELECT 1 AS x FROM lkgames WHERE src = ? AND b = ?', p.id, me.id); } catch (e) {} }   // #388 / #389
     if (p.kind === 'status' || me) Object.assign(v, {
       hearts: this.one('SELECT COUNT(*) AS n FROM ulikes WHERE pid = ?', p.id).n,
@@ -584,7 +587,7 @@ export class Hub {
       private: this.isPrivate(u), bio: u.bio || '',
       followers: n('SELECT COUNT(*) AS n FROM follows WHERE fid = ? AND (ok IS NULL OR ok = 1)'), following: n('SELECT COUNT(*) AS n FROM follows WHERE uid = ? AND (ok IS NULL OR ok = 1)'),
       requests: u.id === me.id ? n('SELECT COUNT(*) AS n FROM follows WHERE fid = ? AND ok = 0') : 0, requested: u.id !== me.id && this.requested(me.id, u.id),
-      posts: n("SELECT COUNT(*) AS n FROM uposts WHERE uid = ? AND kind = 'post'"),
+      posts: u.id === me.id ? n("SELECT COUNT(*) AS n FROM uposts WHERE uid = ? AND kind = 'post'") : this.sql.exec("SELECT uid, vis FROM uposts WHERE uid = ? AND kind = 'post'", u.id).toArray().filter(p => this.postOk(p, me)).length,
       isFollowing: u.id !== me.id && this.follows(me.id, u.id), followsYou: u.id !== me.id && this.follows(u.id, me.id), me: u.id === me.id });
   }
   // Highlights on a profile (owner): circles, the newest thing in each as its cover; open one to watch it.
@@ -641,7 +644,7 @@ export class Hub {
     if (!u) return json({ error: 'notfound' }, 404);
     if (!this.canSeeProfile(me, u)) return json(this.personView(u, me));  // private: only who it is
     this.dropOldStatuses();
-    const posts = this.sql.exec("SELECT * FROM uposts WHERE uid = ? AND kind = 'post' ORDER BY at DESC LIMIT 90", u.id).toArray().map(p => this.postView(p, me));
+    const posts = this.sql.exec("SELECT * FROM uposts WHERE uid = ? AND kind = 'post' ORDER BY at DESC LIMIT 90", u.id).toArray().filter(p => this.postOk(p, me)).map(p => this.postView(p, me));
     return json(Object.assign(this.personView(u, me), { postList: posts, statuses: this.statusesOf(u, me), highlights: this.highlightsOf(u, me), shop: this.shopOf(u.id, false) }));   // #392 Lock In is never attached to a profile
   }
   updates(me) {
@@ -669,25 +672,27 @@ export class Hub {
       const music = b.music && b.music.media && this.mediaDone(String(b.music.media), me.id) ? JSON.stringify({ media: String(b.music.media), name: String(b.music.name || '').slice(0, 80) }) : null;
       this.sql.exec('INSERT INTO uposts (id, uid, kind, type, media, thumb, at, title, text, items, music) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         id, me.id, kind, first.type || 'text', first.media || null, first.thumb || null, Date.now(), title || null, text || null, items.length ? JSON.stringify(items) : null, music);
+      const vis = kind === 'post' && ['followers', 'me'].includes(b.vis) ? b.vis : null;   // #397
+      if (vis) this.sql.exec('UPDATE uposts SET vis = ? WHERE id = ?', vis, id);
       if (hl) this.sql.exec('UPDATE uposts SET hl = ?, hlname = ? WHERE id = ?', hl, String(b.hlname || '').trim().slice(0, 40) || 'Highlight', id);
       if (kind === 'status' && b.lk && ['reaction', 'quiz', 'memory', 'ttt', 'c4'].includes(String(b.lk.kind))) {   // #388
         this.sql.exec('UPDATE uposts SET lk = ? WHERE id = ?', JSON.stringify({ kind: String(b.lk.kind), stake: Math.max(0, Math.min(1e9, Math.round(+b.lk.stake || 0))), cur: String(b.lk.cur || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD', max: Math.max(1, Math.min(100, Math.round(+b.lk.max || 1))) }), id);
       }
-      this.notifyFollowers(me, kind, id);
+      if (vis !== 'me') this.notifyFollowers(me, kind, id);
       this.dropOldStatuses();
       return json(this.postView(this.one('SELECT * FROM uposts WHERE id = ?', id), me));
     }
     if (op === 'get') {
       const p = this.one("SELECT * FROM uposts WHERE id = ? AND kind = 'post'", String(b.id || ''));
       const owner = p && this.one('SELECT * FROM users WHERE id = ?', p.uid);
-      if (!p || !owner || !this.canSeeProfile(me, owner)) return json({ error: 'notfound' }, 404);
+      if (!p || !owner || !this.canSeeProfile(me, owner) || !this.postOk(p, me)) return json({ error: 'notfound' }, 404);
       return json(Object.assign(this.postView(p, me), { user: this.feedUser(owner, me) }));
     }
     // A status / post you're allowed to see: heart it, comment under it, read its comments.
     if (['heart', 'comment', 'comments', 'uncomment', 'share'].includes(op)) {
       const p = this.one("SELECT * FROM uposts WHERE id = ? AND (kind = 'post' OR (kind = 'status' AND at >= ?))", String(b.id || ''), Date.now() - 86400000);
       const owner = p && this.one('SELECT * FROM users WHERE id = ?', p.uid);
-      if (!p || !owner || !(p.kind === 'status' ? this.canSeeStatus(me, owner) : this.canSeeProfile(me, owner))) return json({ error: 'notfound' }, 404);
+      if (!p || !owner || !(p.kind === 'status' ? this.canSeeStatus(me, owner) : this.canSeeProfile(me, owner) && this.postOk(p, me))) return json({ error: 'notfound' }, 404);
       if (op === 'heart') {
         if (b.on === false) this.sql.exec('DELETE FROM ulikes WHERE pid = ? AND uid = ?', p.id, me.id);
         else { this.sql.exec('INSERT OR IGNORE INTO ulikes (pid, uid, at) VALUES (?, ?, ?)', p.id, me.id, Date.now()); this.act(p.uid, 'like', me.id, p.id, p.kind); }
@@ -734,7 +739,7 @@ export class Hub {
       for (const p of rows) {
         cursor = p.at;
         if (!seen.has(p.uid)) { const u = this.one('SELECT * FROM users WHERE id = ?', p.uid); seen.set(p.uid, u && this.canSeeProfile(me, u) ? u : null); }
-        const u = seen.get(p.uid); if (!u) continue;
+        const u = seen.get(p.uid); if (!u || !this.postOk(p, me)) continue;
         if (out.length >= 15) { more = true; break; }
         out.push(Object.assign(this.postView(p, me), { user: this.feedUser(u, me) }));
       }

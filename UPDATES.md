@@ -401,3 +401,4 @@ commits, pushed as a new update) - nothing else changes.
 | 392 | 2026-11-15 | Lock In: 7 rank badges (Rookie to Legend) - tap the Rank box to see them; each Leaderboard row shows the badge; Lock In no longer shows on any profile | 3d4784b |
 | 393 | 2026-11-15 | Lock In: on the Leaderboard each badge shows its name on a ribbon (GOLD, DIAMOND...) | 4a8b76b |
 | 394 | 2026-11-15 | Lock In: Pose - copy the pose by tapping your figure's arms and legs; every pass gives less time; play solo, beat Lockedintool or challenge people | 1a65213 |
+| 395 | 2026-11-15 | Lock In: Public games live - go live with a game, play or referee, viewers ask to play and you pick, the match shows on the stream, optional prize | 8d23714 |

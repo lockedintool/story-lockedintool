@@ -189,6 +189,9 @@ export class Hub {
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN items TEXT`); } catch (e) {}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN music TEXT`); } catch (e) {}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN hl TEXT`); } catch (e) {}       // highlights: which highlight (its id on the phone)
+    try { this.sql.exec(`ALTER TABLE lives ADD COLUMN lk TEXT`); } catch (e) {}        // #395 a Lock In live: {kind, role:'play'|'ref', prize}
+    try { this.sql.exec(`ALTER TABLE lives ADD COLUMN lkgame TEXT`); } catch (e) {}    // the game being played on it now
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS lkqueue (lid TEXT, uid TEXT, at INTEGER, PRIMARY KEY (lid, uid))`);
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN lk TEXT`); } catch (e) {}       // #388 a Lock In challenge posted to a status: {kind, stake, cur}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN hlname TEXT`); } catch (e) {}   // a song from your phone with the post / status: {media, name}
     this.sql.exec(`CREATE INDEX IF NOT EXISTS uposts_feed ON uposts(kind, at)`);
@@ -594,7 +597,7 @@ export class Hub {
       if (this.blocked(me.id, f.uid)) continue;
       if (kind === 'status') { const u = this.one('SELECT * FROM users WHERE id = ?', f.uid); if (!u || !this.canSeeStatus(u, me)) continue; }
       this.deliver(f.uid, { t: 'fnote', kind, id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() });
-      if (kind !== 'live') this.act(f.uid, kind, me.id, id);
+      if (kind !== 'live' && kind !== 'lklive') this.act(f.uid, kind, me.id, id);
     }
   }
   statusesOf(u, me) {
@@ -1334,6 +1337,44 @@ export class Hub {
       return json({ ok: true, earned: got, racks: this.lkRacks(me.id), best, newBest });
     }
     if (act === 'wallet') return json({ error: 'partner' }, 400);
+    if (act === 'livestate' || act === 'livejoin' || act === 'liveunjoin' || act === 'livepick') {   // #395 a Lock In game played live
+      const l = this.one('SELECT * FROM lives WHERE id = ? AND lk IS NOT NULL', String(b.id || ''));
+      const host = l && this.one('SELECT * FROM users WHERE id = ?', l.uid);
+      if (!l || !host || !this.canSeeProfile(me, host) || this.blocked(me.id, host.id)) return json({ error: 'notfound' }, 404);
+      let lk = {}; try { lk = JSON.parse(l.lk); } catch (e) {}
+      const mine = l.uid === me.id;
+      if (act === 'livejoin' || act === 'liveunjoin') {
+        if (mine || l.ended) return json({ error: 'closed' }, 400);
+        if (act === 'livejoin') this.sql.exec('INSERT OR IGNORE INTO lkqueue (lid, uid, at) VALUES (?, ?, ?)', l.id, me.id, Date.now());
+        else this.sql.exec('DELETE FROM lkqueue WHERE lid = ? AND uid = ?', l.id, me.id);
+        return json({ ok: true });
+      }
+      if (act === 'livepick') {
+        if (!mine || l.ended) return json({ error: 'notfound' }, 404);
+        const cur = l.lkgame && this.one('SELECT * FROM lkgames WHERE id = ?', l.lkgame);
+        if (cur && cur.status === 'active') return json({ error: 'playing' }, 409);
+        const ids = (Array.isArray(b.uids) ? b.uids : []).map(String).slice(0, 2);
+        const need = lk.role === 'ref' ? 2 : 1;
+        if (ids.length !== need || new Set(ids).size !== need) return json({ error: 'pick' }, 400);
+        for (const u of ids) if (!this.one('SELECT uid FROM lkqueue WHERE lid = ? AND uid = ?', l.id, u)) return json({ error: 'gone' }, 409);
+        const [pa, pb] = lk.role === 'ref' ? ids : [me.id, ids[0]];
+        const gid = 'lk' + rand(10), turn = KINDS[lk.kind] === 'turn' ? pa : null;
+        this.sql.exec("INSERT INTO lkgames (id, kind, a, b, status, stake, cur, seed, state, at, turn, src) VALUES (?, ?, ?, ?, 'active', 0, 'USD', ?, ?, ?, ?, ?)", gid, lk.kind, pa, pb, Math.floor(Math.random() * 2147483647), lk.kind === 'ttt' ? JSON.stringify({ board: '.........' }) : lk.kind === 'c4' ? JSON.stringify({ board: '.'.repeat(42) }) : null, Date.now(), turn, 'live:' + l.id);
+        this.sql.exec('UPDATE lives SET lkgame = ? WHERE id = ?', gid, l.id);
+        for (const u of ids) { this.sql.exec('DELETE FROM lkqueue WHERE lid = ? AND uid = ?', l.id, u); this.deliver(u, { t: 'fnote', kind: 'lkpick', id: gid, from: me.id, name: me.name || '', username: me.username || '', game: lk.kind, at: Date.now() }); }
+        return json({ ok: true, game: gid });
+      }
+      // livestate: what everyone watching sees - the match now, the queue (the host sees who), comments, hearts, viewers
+      const g = l.lkgame && this.one('SELECT * FROM lkgames WHERE id = ?', l.lkgame);
+      let match = null;
+      if (g) {
+        let st = null; try { st = JSON.parse(g.state || 'null'); } catch (e) {}
+        const ua = this.one('SELECT * FROM users WHERE id = ?', g.a), ub = this.one('SELECT * FROM users WHERE id = ?', g.b);
+        match = { id: g.id, kind: g.kind, status: g.status, a: card(ua), b: card(ub), sa: g.sa, sb: g.sb, state: st, winner: g.winner || '', turn: g.turn || '', me: g.a === me.id ? 'a' : g.b === me.id ? 'b' : '' };
+      }
+      const q = this.sql.exec('SELECT q.uid, u.* FROM lkqueue q JOIN users u ON u.id = q.uid WHERE q.lid = ? ORDER BY q.at LIMIT 100', l.id).toArray();
+      return json(Object.assign(this.liveView(l, me), { lk, mine, match, queued: q.some(x => x.uid === me.id), queueCount: q.length, queue: mine ? q.map(card) : [], recent: this.liveRecent(l.id) }));
+    }
     if (act === 'open') {   // #388: accept a challenge someone posted to their status - anyone who can see the status may play
       const p = this.one("SELECT * FROM uposts WHERE id = ? AND kind = 'status' AND lk IS NOT NULL", String(b.pid || ''));
       const u = p && this.one('SELECT * FROM users WHERE id = ?', p.uid);
@@ -2723,13 +2764,28 @@ export class Hub {
     this.sql.exec('UPDATE lives SET ended = ? WHERE id = ?', Date.now(), l.id);
     this.liveTell(l, { kind: 'ended' });
     this.sql.exec('DELETE FROM livewatch WHERE lid = ?', l.id);
+    this.sql.exec('DELETE FROM lkqueue WHERE lid = ?', l.id);
   }
   async live(me, op, b) {
     // Owner: Live is removed from Lockedintool - nobody can go live; lists are empty.
-    if (op === 'list') return json({ lives: [] });
-    if (op === 'start' || op === 'publish') return json({ error: 'closed' }, 400);
+    // #395 except Lock In: public Lock In games are played live (owner: 'Yes, live only for Lock In').
     const now = Date.now(), id = String(b.id || '');
     const l = id ? this.one('SELECT * FROM lives WHERE id = ?', id) : null;
+    if (op === 'list' && !b.lk) return json({ lives: [] });
+    if (op === 'start' && !(b.lk && b.lk.kind)) return json({ error: 'closed' }, 400);
+    if (op === 'publish' && !(l && l.lk)) return json({ error: 'closed' }, 400);
+    if (op === 'list') {
+      const rows = this.sql.exec("SELECT * FROM lives WHERE ended IS NULL AND lk IS NOT NULL AND started > ? ORDER BY started DESC LIMIT 50", now - 12 * 3600000).toArray();
+      const out = [];
+      for (const r of rows) {
+        if (r.tracks === '[]') continue;
+        const u = this.one('SELECT * FROM users WHERE id = ?', r.uid);
+        if (!u || !this.canSeeProfile(me, u) || this.blocked(me.id, u.id)) continue;
+        let lk = {}; try { lk = JSON.parse(r.lk); } catch (e) {}
+        out.push(Object.assign(this.liveView(r, me), { lk, mine: u.id === me.id, following: this.follows(me.id, u.id) }));
+      }
+      return json({ lives: out, ready: this.liveReady() });
+    }
     if (op === 'list') {
       // Lives on now that you may see: the people you follow always; anyone else's once it has engagement (owner).
       const rows = this.sql.exec('SELECT * FROM lives WHERE ended IS NULL AND started > ? ORDER BY started DESC LIMIT 50', now - 12 * 3600000).toArray();
@@ -2748,7 +2804,8 @@ export class Hub {
       for (const old of this.sql.exec('SELECT * FROM lives WHERE uid = ? AND ended IS NULL', me.id).toArray()) this.liveEnd(old);
       const ses = await this.rt('POST', '/sessions/new');
       const lid = 'lv' + rand(9);
-      this.sql.exec('INSERT INTO lives (id, uid, sid, tracks, title, started) VALUES (?, ?, ?, ?, ?, ?)', lid, me.id, ses.sessionId, '[]', String(b.title || '').slice(0, 80), now);
+      const K = ['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'], lk = { kind: K.includes(b.lk.kind) ? b.lk.kind : 'reaction', role: b.lk.role === 'ref' ? 'ref' : 'play', prize: String(b.lk.prize || '').slice(0, 80) };
+      this.sql.exec('INSERT INTO lives (id, uid, sid, tracks, title, started, lk) VALUES (?, ?, ?, ?, ?, ?, ?)', lid, me.id, ses.sessionId, '[]', String(b.title || '').slice(0, 80), now, JSON.stringify(lk));
       return json({ id: lid, sid: ses.sessionId });
     }
     if (!l) return json({ error: 'notfound' }, 404);
@@ -2759,7 +2816,7 @@ export class Hub {
       const r = await this.rt('POST', '/sessions/' + l.sid + '/tracks/new', { sessionDescription: { type: 'offer', sdp: String(b.sdp || '') }, tracks });
       const first = l.tracks === '[]';
       this.sql.exec('UPDATE lives SET tracks = ? WHERE id = ?', JSON.stringify(tracks.map(t => t.trackName)), l.id);
-      if (first) this.notifyFollowers(me, 'live', l.id);   // followers are told the moment the picture goes out
+      if (first) this.notifyFollowers(me, 'lklive', l.id);   // followers are told the moment the picture goes out
       return json({ sdp: r.sessionDescription && r.sessionDescription.sdp });
     }
     if (op === 'end') { if (mine) this.liveEnd(l); return json({ ok: true }); }

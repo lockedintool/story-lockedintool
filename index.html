@@ -1576,7 +1576,12 @@
   .lk-res-lost.lk-go .lk-big{ animation:lkLose .8s ease-out both !important; animation-duration:.8s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
   .lk-res-draw.lk-go .lk-big{ animation:lkDraw .5s ease-out both !important; animation-duration:.5s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
   .lk-res.lk-go .lk-big ~ *{ animation:lkRise .4s ease-out both !important; animation-duration:.4s !important; animation-delay:calc(var(--lk-o, 0ms) + 450ms) !important; animation-iteration-count:1 !important; }
-  .lk-racks b{ color:#ffd60a; }
+  .lk-racks b{ color:#ffd60a; } .lk-rec > span.lk-racks{ position:relative; cursor:pointer; } .lk-racks-b{ display:inline-block; vertical-align:-2px; margin-right:3px; line-height:0; }
+  .lk-bdg-top{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; margin-bottom:12px; }
+  .lk-bdg-bar{ width:70%; height:6px; border-radius:3px; background:#262626; margin-top:8px; overflow:hidden; } .lk-bdg-bar i{ display:block; height:100%; background:#ffd60a; border-radius:3px; }
+  .lk-bdg-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:10px; }
+  .lk-bdg{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px; border:1px solid #262626; border-radius:12px; } .lk-bdg.on{ border-color:#ffd60a; }
+  .lk-lb-b{ line-height:0; flex:0 0 auto; } .lk-bdg b{ font-size:11px; } .lk-bdg small{ font-size:10px; color:#9a9a9a; }
   .lk-lb{ width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:10px; text-align:left; color:inherit; } .lk-lb > span:last-child{ font-size:20px; }
   .lk-earn{ color:#ffd60a !important; font-weight:700; }
   .lk-forfeit{ align-self:center; background:transparent; border:0; color:#ff453a; font-size:13px; padding:12px; margin-top:6px; }
@@ -12962,7 +12967,6 @@ function upRenderPerson(){
     '<div class="pf-stats">' + [['following', 'Following'], ['followers', 'Followers'], ['posts', 'Posts']].map(([k, l])=>'<div class="pf-stat"><div class="pf-stat-n">' + (p[k] === undefined ? '—' : fmtCount(p[k])) + '</div><div class="pf-stat-l">' + l + '</div></div>').join('') + '</div>' +
     (p.about && !p.isFollowing && !isMe ? '<div class="up-p-about">' + escText(p.about) + '</div>' : '') +
     (p.bio ? '<div class="up-p-bio">' + escText(p.bio) + '</div>' : '') +
-    (p.racks ? '<div class="up-shop-t">LOCK IN · RANK ' + p.racks + '</div>' : '') +
     ((p.highlights || []).length ? '<div class="pf-hls up-p-hls">' + p.highlights.map((h, i)=>'<button class="pf-hl" data-pf="up-hl" data-i="' + i + '"><span class="pf-hl-c"><img alt="" loading="lazy" src="' + escText(h.cover || '') + '"></span><span class="pf-hl-n">' + escText(h.name) + '</span></button>').join('') + '</div>' : '') +
     (isMe ? '' : '<div class="up-p-btns"><button class="up-follow up-follow-lg' + (p.isFollowing || p.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(p.id) + '">' + (p.isFollowing ? 'Following' : p.requested ? 'Requested' : 'Follow') + '</button>' +
       (p.canMsg === false ? '' : '<button class="up-follow up-follow-lg" data-pf="up-message">Message</button>') + '</div>') +
@@ -22483,7 +22487,7 @@ function lockInScreen(){
     <div class="page-shell fl-page lk-page">
     ${topBar('', false)}
     ${lkLogo()}
-    <div class="lk-rec"><span class="lk-racks"><small>Rank</small><b>${LK.racks}</b></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
+    <div class="lk-rec"><span class="lk-racks" data-lk="badges"><small><i class="lk-racks-b">${lkBadgeSVG(lkBadgeOf(LK.racks), 14)}</i>Rank</small><b>${LK.racks}</b></span><span><b>${LK.record.wins}</b><small>Wins</small></span><span><b>${LK.record.losses}</b><small>Losses</small></span><span><b>${LK.record.draws}</b><small>Draws</small></span></div>
     <button class="row-card lk-lb" data-lk="board"><span class="fl-tx"><b>Leaderboard</b><small>Rank by winning - a loss takes some rank away</small></span><span>›</span></button>
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
@@ -22548,7 +22552,38 @@ function lkIcon(k){
     pose:'<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 9l5 2 5-2M9 22l3-8 3 8"/>' }[k] || '';
   return `<span class="lk-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg></span>`;
 }
+// #392 rank badges - seen only by tapping the Rank box in Lock In; never on a profile (owner: 'They dont connect to the users profile in anytype of form')
+const LK_BADGES = [
+  { n:'Rookie',   at:0,    c1:'#8e8e93', c2:'#3a3a3c', s:0 },
+  { n:'Bronze',   at:100,  c1:'#e0a26a', c2:'#7a4420', s:1 },
+  { n:'Silver',   at:300,  c1:'#f2f2f7', c2:'#7c7c84', s:2 },
+  { n:'Gold',     at:700,  c1:'#ffe066', c2:'#b8860b', s:3 },
+  { n:'Platinum', at:1500, c1:'#b4f0ea', c2:'#3c8c86', s:3 },
+  { n:'Diamond',  at:3000, c1:'#9fd8ff', c2:'#1f5fbf', s:4 },
+  { n:'Legend',   at:6000, c1:'#ff8a5c', c2:'#b0141e', s:5 }
+];
+function lkBadgeOf(r){ let i = 0; LK_BADGES.forEach((b, k)=>{ if((r || 0) >= b.at) i = k; }); return i; }
+function lkBadgeSVG(i, size, dim){
+  const b = LK_BADGES[i], id = 'lkb' + i + '_' + size;
+  const stars = Array.from({ length: b.s }, (_, k)=>{ const x = 50 + (k - (b.s - 1) / 2) * 13; return '<path d="M' + x + ' 72l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="#fff"/>'; }).join('');
+  return '<svg data-keep-color width="' + size + '" height="' + size + '" viewBox="0 0 100 110" style="' + (dim ? 'opacity:.28;filter:grayscale(1);' : '') + '">'
+    + '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + b.c1 + '"/><stop offset="1" stop-color="' + b.c2 + '"/></linearGradient></defs>'
+    + '<path d="M50 4 L92 20 V52 C92 78 72 96 50 106 C28 96 8 78 8 52 V20 Z" fill="#000" stroke="url(#' + id + ')" stroke-width="5"/>'
+    + '<path d="M50 13 L84 26 V52 C84 73 68 88 50 97 C32 88 16 73 16 52 V26 Z" fill="url(#' + id + ')"/>'
+    + '<path d="M32 42 L50 28 L68 42 M32 56 L50 42 L68 56" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>'
+    + stars + '</svg>';
+}
+function lkBadgesSheet(){
+  const r = LK.racks || 0, i = lkBadgeOf(r), b = LK_BADGES[i], nx = LK_BADGES[i + 1];
+  const pct = nx ? Math.round((r - b.at) / (nx.at - b.at) * 100) : 100;
+  return `<div class="lk-bdg-top">${lkBadgeSVG(i, 112)}<div class="fl-sh-t">${b.n}</div><div class="fl-sh-s">Rank ${r}${nx ? ' · ' + (nx.at - r) + ' more to ' + nx.n : ' · the highest badge'}</div>
+      <div class="lk-bdg-bar"><i style="width:${pct}%"></i></div></div>
+    <div class="lk-bdg-grid">${LK_BADGES.map((x, k)=>`<div class="lk-bdg${k === i ? ' on' : ''}">${lkBadgeSVG(k, 52, k > i)}<b>${x.n}</b><small>Rank ${x.at}+</small></div>`).join('')}</div>
+    <div class="fl-sh-s">Badges come with your rank - win to move up, a loss takes some rank away. They stay inside Lock In.</div>
+    <button class="btn-wide" data-lk="close">Close</button>`;
+}
 function lkSheetHTML(sh){
+  if(sh.t === 'badges') return lkBadgesSheet();
   if(sh.t === 'game'){
     const k = sh.k, biz = !!lkSpace();
     const ppl = LK.people;
@@ -22576,8 +22611,8 @@ function lkSheetHTML(sh){
       <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk="decline" data-id="${escText(g.id)}">Decline</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk="accept" data-id="${escText(g.id)}">Accept</button></div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'board'){ const b = LK.board;
-    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' · Rank ' + b.myRacks : 'Win a game to rank on the board') : 'Loading…'}</div>
-      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>Rank ${u.racks} · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has ranked yet.</div>') : ''}</div>
+    return `<div class="fl-sh-t">Leaderboard</div><div class="fl-sh-s">${b ? (b.myRank ? 'You’re number ' + b.myRank + ' · ' + LK_BADGES[lkBadgeOf(b.myRacks)].n + ' · Rank ' + b.myRacks : 'Win a game to rank on the board') : 'Loading…'}</div>
+      <div class="lk-people">${b ? (b.board.length ? b.board.map((u, i)=>`<div class="row-card lk-person${u.me ? ' on' : ''}"><span class="lk-rank">${i + 1}</span><span class="lk-lb-b">${lkBadgeSVG(lkBadgeOf(u.racks), 30)}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${LK_BADGES[lkBadgeOf(u.racks)].n} · Rank ${u.racks} · ${u.wins} win${u.wins === 1 ? '' : 's'}</small></span></div>`).join('') : '<div class="fl-sh-s">Nobody has ranked yet.</div>') : ''}</div>
       <button class="btn-wide" data-lk="close">Close</button>`; }
   if(sh.t === 'wallet') return `<div class="fl-sh-t">Game wallet</div>
       <div class="fl-sh-s">Your game wallet is only used inside Lock In. Add money to it, then bet with it - when a game you both agreed to ends, the winner gets the money automatically.</div>
@@ -22825,6 +22860,7 @@ document.addEventListener('click', e=>{
       break; }
     case 'quit': { const p = LK.play; if(p && p.live && p.g){ showToast('Finish your round first - you get one round'); return; } LK.play = null; LK.sheet = null; lkLoad(); break; }
     case 'board': LK.sheet = { t:'board' }; LK.board = null; msgApi('/v1/lk/board').then(r=>{ LK.board = r; if(LK.sheet && LK.sheet.t === 'board') renderDevice(); }).catch(()=>{ LK.board = { board:[], myRank:0, myWins:0 }; if(LK.sheet) renderDevice(); }); break;
+    case 'badges': LK.sheet = { t:'badges' }; break;
     case 'wallet': LK.sheet = { t:'wallet' }; break;
     case 'addmoney': showToast('Adding money to your game wallet comes once Lockedintool’s payment partner is connected - play free until then'); return;
     case 'close': LK.sheet = null; break;

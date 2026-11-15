@@ -635,7 +635,7 @@ export class Hub {
     if (!this.canSeeProfile(me, u)) return json(this.personView(u, me));  // private: only who it is
     this.dropOldStatuses();
     const posts = this.sql.exec("SELECT * FROM uposts WHERE uid = ? AND kind = 'post' ORDER BY at DESC LIMIT 90", u.id).toArray().map(p => this.postView(p, me));
-    return json(Object.assign(this.personView(u, me), { postList: posts, statuses: this.statusesOf(u, me), highlights: this.highlightsOf(u, me), shop: this.shopOf(u.id, false), racks: this.lkRacks(u.id) }));
+    return json(Object.assign(this.personView(u, me), { postList: posts, statuses: this.statusesOf(u, me), highlights: this.highlightsOf(u, me), shop: this.shopOf(u.id, false) }));   // #392 Lock In is never attached to a profile
   }
   updates(me) {
     this.dropOldStatuses();

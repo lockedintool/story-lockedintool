@@ -1263,6 +1263,10 @@ export class Hub {
   lkRacks(uid) { const r = this.one('SELECT racks FROM lkracks WHERE uid = ?', uid); return r ? r.racks : 0; }
   lkEarn(uid, n, solo) {   // solo racks are capped at 200 a day so they can't be farmed; games against people aren't
     this.sql.exec('INSERT OR IGNORE INTO lkracks (uid, racks, best, day, dayn) VALUES (?, 0, ?, ?, 0)', uid, '{}', '');
+    if (n < 0) {   // #391 a loss takes rank away (never below 0) and doesn't count towards the daily solo cap
+      this.sql.exec('UPDATE lkracks SET racks = MAX(0, racks + ?) WHERE uid = ?', n, uid);
+      return n;
+    }
     if (solo) {
       const day = new Date().toISOString().slice(0, 10), r = this.one('SELECT day, dayn FROM lkracks WHERE uid = ?', uid);
       const used = r.day === day ? r.dayn : 0; n = Math.max(0, Math.min(n, 200 - used));
@@ -1278,7 +1282,7 @@ export class Hub {
       if (winner) { const lose = winner === g.a ? g.b : g.a; this.lkMove(winner, g.cur, g.stake * 2, -g.stake); this.lkMove(lose, g.cur, 0, -g.stake); }
       else { this.lkMove(g.a, g.cur, g.stake, -g.stake); this.lkMove(g.b, g.cur, g.stake, -g.stake); }
     }
-    for (const uid of [g.a, g.b]) this.lkEarn(uid, !winner ? 10 : winner === uid ? 30 : 5, false);   // #384: win 30, draw 10, played 5
+    for (const uid of [g.a, g.b]) this.lkEarn(uid, !winner ? 10 : winner === uid ? 30 : -15, false);   // #391 (owner: 'losses should decrease it'): win +30, draw +10, loss -15
     for (const uid of [g.a, g.b]) this.deliver(uid, { t: 'fnote', kind: 'lkdone', id: g.id, from: uid === g.a ? g.b : g.a, game: g.kind, won: !!winner && winner === uid, draw: !winner, at: Date.now() });
   }
   lockin(me, act, b) {
@@ -1321,7 +1325,7 @@ export class Hub {
       const score = Math.max(0, Math.min(1e9, Math.round(+b.score || 0))), vs = !!b.vs, won = !!b.won, draw = !!b.draw;
       this.lkEarn(me.id, 0, false);
       let best = {}; try { best = JSON.parse(this.one('SELECT best FROM lkracks WHERE uid = ?', me.id).best || '{}'); } catch (e) {}
-      let n = vs ? (won ? 15 : draw ? 5 : 2) : 5, newBest = false;
+      let n = vs ? (won ? 15 : draw ? 5 : -5) : 5, newBest = false;
       if (KINDS[kind] !== 'turn' && !vs && score > 0) {
         const old = best[kind]; const better = old == null || (KINDS[kind] === 'low' ? score < old : score > old);
         if (better) { best[kind] = score; newBest = old != null; if (newBest) n += 10; this.sql.exec('UPDATE lkracks SET best = ? WHERE uid = ?', JSON.stringify(best), me.id); }

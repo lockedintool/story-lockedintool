@@ -1592,7 +1592,12 @@
   .lk-res-draw.lk-go .lk-big{ animation:lkDraw .5s ease-out both !important; animation-duration:.5s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
   .lk-res.lk-go .lk-big ~ *{ animation:lkRise .4s ease-out both !important; animation-duration:.4s !important; animation-delay:calc(var(--lk-o, 0ms) + 450ms) !important; animation-iteration-count:1 !important; }
   .lk-racks b{ color:#ffd60a; } .lk-rec > span.lk-racks{ position:relative; cursor:pointer; } .lk-racks-b{ display:inline-block; vertical-align:-2px; margin-right:3px; line-height:0; }
-  .lk-bdg-top{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; margin-bottom:12px; }
+  .lk-ip-area { min-height:72px; resize:none; }
+.lk-ip-vid { position:relative; display:flex; align-items:center; gap:12px; }
+.lk-ip-vid img { width:96px; height:96px; object-fit:cover; border-radius:12px; border:1px solid #2a2a2a; }
+.lk-ip-vid i { position:absolute; left:38px; top:34px; font-style:normal; color:#fff; font-size:20px; text-shadow:0 0 6px #000; }
+.lk-ip-vid button { padding:8px 16px; border-radius:20px; border:1px solid #3a3a3a; background:transparent; color:#fff; font-size:13px; }
+.lk-bdg-top{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; margin-bottom:12px; }
   .lk-bdg-bar{ width:70%; height:6px; border-radius:3px; background:#262626; margin-top:8px; overflow:hidden; } .lk-bdg-bar i{ display:block; height:100%; background:#ffd60a; border-radius:3px; }
   .lk-bdg-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:10px; }
   .lk-bdg{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px; border:1px solid #262626; border-radius:12px; } .lk-bdg.on{ border-color:#ffd60a; }
@@ -12768,7 +12773,7 @@ function fpHTML(p){
     (items.length > 1 ? '<span class="up-fp-count">1/' + items.length + '</span>' : '') + '</div>' : '';
   return '<div class="up-fp" data-post="' + escText(p.id) + '">' +
     '<div class="up-fp-head" data-pf="up-person" data-id="' + escText(u.id || '') + '">' + upPic(u) + '<span class="up-fp-who"><b>' + escText(upName(u)) + '</b><span>' +
-      (u.name && u.username ? '@' + escText(u.username) + ' · ' : '') + escText(fpAgo(p.at)) + '</span></span></div>' +
+      (u.name && u.username ? '@' + escText(u.username) + ' · ' : '') + escText(fpAgo(p.at)) + (p.vis === 'me' ? ' · Only you' : p.vis === 'followers' ? ' · Followers' : '') + '</span></span></div>' +
     (p.title ? '<div class="up-fp-title">' + escText(p.title) + '</div>' : '') +
     (p.text ? '<div class="up-fp-text">' + escText(p.text) + '</div>' : '') + media +
     (p.music ? '<button class="up-fp-music" data-pf="fp-music" data-url="' + escText(p.music.url) + '">♪ <span>' + escText(p.music.name || 'Song') + '</span></button>' : '') +
@@ -21951,7 +21956,7 @@ function litGrid(kind, onFiles, opts){
   const chosen = [];
   document.querySelectorAll('.lit-grid-bg').forEach(x=>x.remove());
   const bg = document.createElement('div'); bg.className = 'lit-grid-bg';
-  bg.innerHTML = '<div class="lit-grid-head"><button data-g="x" aria-label="Close">✕</button><b>' + (one ? 'Choose a picture' : kind === 'video' ? 'Choose videos' : 'Choose pictures') + '</b><button data-g="send" disabled' + (one ? ' style="visibility:hidden"' : '') + '>Send</button></div><div class="lit-grid"></div>';
+  bg.innerHTML = '<div class="lit-grid-head"><button data-g="x" aria-label="Close">✕</button><b>' + (one ? (kind === 'video' ? 'Choose a video' : 'Choose a picture') : kind === 'video' ? 'Choose videos' : 'Choose pictures') + '</b><button data-g="send" disabled' + (one ? ' style="visibility:hidden"' : '') + '>Send</button></div><div class="lit-grid"></div>';
   const grid = bg.querySelector('.lit-grid'), send = bg.querySelector('[data-g="send"]'), title = bg.querySelector('b');
   let shown = 0;
   const more = ()=>{ const next = all.slice(shown, shown + 90); shown += next.length;
@@ -22686,7 +22691,9 @@ function lockInScreen(){
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
-    ${biz ? '<div class="fl-note lk-note">Business accounts play Lock In in person - in-person play is coming next. Built-in games against others are for Personal accounts; you can still practise here.</div>' : ''}
+    <div class="section-title">IN-PERSON PLAY</div>
+    <button class="row-card lk-lb lk-ip" data-lk="ip-sheet"><span class="lk-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></span><span class="fl-tx"><b>Post an in-person game</b><small>Play on one phone, post the video - you choose who sees it</small></span><span>›</span></button>
+    ${biz ? '<div class="fl-note lk-note">Business accounts play Lock In in person - post your games above. Built-in games against others are for Personal accounts; you can still practise here.</div>' : ''}
     <div class="lk-tabs"><button class="${LK.tab === 'public' ? 'on' : ''}" data-lk="tab" data-v="public">Public games</button><button class="${LK.tab === 'private' ? 'on' : ''}" data-lk="tab" data-v="private">Private games</button></div>
     ${LK.tab === 'public' ? lkPublicHTML(biz)
       : !LK.loaded ? `<div class="fl-empty">${LK.err === 'signin' ? 'Log in to play Lock In' : LK.err ? 'Couldn’t reach Lockedintool - check your connection' : 'Loading…'}</div>`
@@ -22776,8 +22783,50 @@ function lkBadgesSheet(){
     <div class="fl-sh-s">Badges come with your rank - win to move up, a loss takes some rank away. They stay inside Lock In.</div>
     <button class="btn-wide" data-lk="close">Close</button>`;
 }
+// #397 in-person play (owner's Lock In idea: 'the players agree the rules and challenges, play in person, and post the
+// finished video as a post with its own privacy'): the only Lock In part for both Personal and Business accounts.
+const LK_IP_VIS = [['', 'Everyone'], ['followers', 'Followers'], ['me', 'Only me']];
+function lkIpSheet(sh){
+  const f = (id, label, ph, v, max, area)=>`<div class="section-title">${label}</div>` + (area ? `<textarea id="${id}" class="field-input lk-ip-area" maxlength="${max}" placeholder="${ph}">${escText(v || '')}</textarea>` : `<input id="${id}" class="field-input" maxlength="${max}" placeholder="${ph}" value="${escText(v || '')}">`);
+  return `<div class="fl-sh-t">Post an in-person game</div>
+    <div class="fl-sh-s">Agree the rules and challenges together, play on one phone, then post the video.</div>
+    ${f('lk-ip-game', 'GAME OR CHALLENGE', 'e.g. First to show a ketchup bottle', sh.game, 80)}
+    ${f('lk-ip-players', 'PLAYERS', 'e.g. Thabo, Lerato', sh.players, 120)}
+    ${f('lk-ip-rules', 'RULES (OPTIONAL)', 'What you both agreed', sh.rules, 600, true)}
+    ${f('lk-ip-winner', 'WHO WON (OPTIONAL)', 'e.g. Lerato', sh.winner, 60)}
+    ${f('lk-ip-prize', 'PRIZE (OPTIONAL)', 'e.g. Loser buys lunch', sh.prize, 80)}
+    <div class="section-title">VIDEO</div>
+    ${sh.vid ? `<div class="lk-ip-vid"><img alt="" src="${escText(sh.vid.preview)}"><i>▶</i><button data-lk="ip-vid">Change</button></div>` : '<button class="btn-wide" data-lk="ip-vid">Choose the video</button>'}
+    <div class="section-title">WHO SEES IT</div>
+    <div class="lk-seg">${LK_IP_VIS.map(([v, n])=>`<button class="${(sh.vis || '') === v ? 'on' : ''}" data-lk="ip-vis" data-v="${v}">${n}</button>`).join('')}</div>
+    <div class="fl-sh-s">${sh.vis === 'me' ? 'Only you see it on your profile.' : sh.vis === 'followers' ? 'Only people who follow you see it.' : 'Everyone who can see your profile sees it in Updates.'}</div>
+    <button class="btn-wide btn-primary" data-lk="ip-post">${sh.posting ? 'Posting…' : 'Post'}</button>
+    <button class="btn-wide" data-lk="close">Cancel</button>`;
+}
+function lkIpKeep(){ const s = LK.sheet; if(!s || s.t !== 'ip') return; ['game', 'players', 'rules', 'winner', 'prize'].forEach(k=>{ const el = document.getElementById('lk-ip-' + k); if(el) s[k] = el.value; }); }
+async function lkIpPost(){
+  lkIpKeep(); const s = LK.sheet; if(!s || s.posting) return;
+  if(!msgAccount()){ showToast('Log in to post'); return; }
+  const game = (s.game || '').trim(), players = (s.players || '').trim();
+  if(!game){ showToast('Name the game or challenge'); return; }
+  if(!s.vid){ showToast('Choose the video of your game'); return; }
+  s.posting = true; renderDevice();
+  try{
+    const media = await upPutMedia({ bytes: await s.vid.get(), mime:'video/mp4' });
+    let thumb = ''; try{ thumb = await upPutMedia(await upBytes(s.vid.preview, 720)); }catch(e){}
+    const lines = ['In-person Lock In'];
+    if(players) lines.push('Players: ' + players);
+    if((s.rules || '').trim()) lines.push('Rules: ' + s.rules.trim());
+    if((s.winner || '').trim()) lines.push('Winner: ' + s.winner.trim());
+    if((s.prize || '').trim()) lines.push('Prize: ' + s.prize.trim());
+    await msgApi('/v1/uposts/create', { kind:'post', title: 'Lock In · ' + game, text: lines.join('\n'), items:[{ type:'video', media, thumb }], vis: s.vis || '' });
+    LK.sheet = null; showToast(s.vis === 'me' ? 'Posted - only you can see it on your profile' : 'Your game is posted');
+  }catch(err){ s.posting = false; showToast(err && err.code === 'big' ? 'That video is too big (300 MB max)' : 'Couldn’t post it - try again'); }
+  if(state.current === 'lockin') renderDevice();
+}
 function lkSheetHTML(sh){
   if(sh.t === 'badges') return lkBadgesSheet();
+  if(sh.t === 'ip') return lkIpSheet(sh);
   if(sh.t === 'golive') return `<div class="fl-sh-t">Go live with a game</div>
       <div class="fl-sh-s">Everyone who can see your profile can watch, comment and ask to play. You choose who plays.</div>
       <div class="section-title">GAME</div><div class="lk-gl-k">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(k=>`<button class="${sh.k === k ? 'on' : ''}" data-lk="gl-k" data-k="${k}">${escText(LK_NAMES[k])}</button>`).join('')}</div>
@@ -23227,6 +23276,10 @@ document.addEventListener('click', e=>{
     case 'quit': { const p = LK.play; if(p && p.live && p.g){ showToast('Finish your round first - you get one round'); return; } LK.play = null; LK.sheet = null; lkLoad(); if(LK.live) lkLivePoll(); break; }
     case 'board': LK.sheet = { t:'board' }; LK.board = null; msgApi('/v1/lk/board').then(r=>{ LK.board = r; if(LK.sheet && LK.sheet.t === 'board') renderDevice(); }).catch(()=>{ LK.board = { board:[], myRank:0, myWins:0 }; if(LK.sheet) renderDevice(); }); break;
     case 'badges': LK.sheet = { t:'badges' }; break;
+    case 'ip-sheet': if(!msgAccount()){ showToast('Log in to post'); return; } LK.sheet = { t:'ip', vis:'' }; break;
+    case 'ip-vis': lkIpKeep(); if(LK.sheet) LK.sheet.vis = b.getAttribute('data-v') || ''; break;
+    case 'ip-vid': lkIpKeep(); litGrid('video', files=>{ if(LK.sheet && LK.sheet.t === 'ip' && files[0]){ LK.sheet.vid = files[0]; if(state.current === 'lockin') renderDevice(); } }, { one:true }); return;
+    case 'ip-post': lkIpPost(); return;
     case 'wallet': LK.sheet = { t:'wallet' }; break;
     case 'addmoney': showToast('Adding money to your game wallet comes once Lockedintool’s payment partner is connected - play free until then'); return;
     case 'close': LK.sheet = null; break;

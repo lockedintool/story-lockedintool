@@ -1521,6 +1521,13 @@
   .lk-tiles{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px; }
   .lk-tile{ background:transparent; border:1px solid #262626; border-radius:14px; color:#fff; padding:12px 4px; display:flex; flex-direction:column; align-items:center; gap:6px; }
   .lk-tile b{ font-size:12px; font-weight:600; } .lk-tile.lk-soon{ opacity:0.55; }
+  .lk-pose{ display:flex; flex-direction:column; align-items:stretch; gap:6px; padding-top:4px; }
+  .lk-pose-top{ display:flex; justify-content:space-between; font-size:13px; font-weight:700; } .lk-pose-top span:last-child{ color:#9a9a9a; font-weight:500; }
+  .lk-pose-bar{ height:8px; border-radius:4px; background:#262626; overflow:hidden; } .lk-pose-bar i{ display:block; height:100%; width:100%; background:#ffd60a; border-radius:4px; }
+  .lk-pose-fig{ position:relative; height:clamp(120px, 24vh, 190px); display:flex; justify-content:center; } .lk-pose-fig svg{ width:auto; }
+  .lk-pose-me{ border:1px solid #262626; border-radius:16px; height:clamp(150px, 30vh, 240px); padding:8px 0; }
+  .lk-pose-lbl{ text-align:center; font-size:11px; letter-spacing:.06em; color:#9a9a9a; font-weight:700; }
+  .lk-pose-hit{ position:absolute; background:transparent; border:0; padding:0; } .lk-pose-hit.l{ left:0; top:0; width:50%; height:58%; } .lk-pose-hit.r{ right:0; top:0; width:50%; height:58%; } .lk-pose-hit.g{ left:0; bottom:0; width:100%; height:42%; }
   .lk-ico{ display:inline-flex; width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; background:#161616; flex:0 0 36px; }
   .lk-note{ margin:0 0 12px !important; }
   .lk-tabs, .lk-seg{ display:flex; gap:6px; margin:4px 0 10px; } .lk-tabs button, .lk-seg button{ flex:1 1 0; background:transparent; border:1px solid #333; border-radius:12px; color:#9a9a9a; padding:9px 4px; font-size:13px; font-weight:600; }
@@ -22402,7 +22409,7 @@ const LK_ABOUT = { reaction:'Five rounds. Wait for green, then tap as fast as yo
   ttt:'Three in a row. You play X and go first when you challenge.',
   c4:'Drop your pieces - four in a row wins. You go first when you challenge.',
   memory:'Find the eight pairs. The fastest time wins; every wrong pair adds 2 seconds.',
-  pose:'Copy the poses on the screen - the more you pass, the faster it gets.' };
+  pose:'Copy the pose at the top: tap an arm or the legs of your figure to move them. Every pose you pass comes faster - the most poses wins.' };
 const LK_SCORE = { reaction:'low', quiz:'high', memory:'low', pose:'high' };
 const LK = { games:[], record:{ wins:0, losses:0, draws:0 }, racks:0, best:{}, wallet:[], loaded:false, loading:false, err:'', tab:'private',
   board:null, people:null, sheet:null, play:null, poll:0 };
@@ -22476,7 +22483,7 @@ function lockInScreen(){
   if(!LK.loaded && !LK.loading && !LK.err) setTimeout(lkLoad, 0);
   if(LK.play) return lkPlayScreen();
   const biz = !!lkSpace(), sh = LK.sheet;
-  const tile = k=>`<button class="lk-tile${k === 'pose' ? ' lk-soon' : ''}" data-lk="game" data-k="${k}">${lkIcon(k)}<b>${LK_NAMES[k]}</b></button>`;
+  const tile = k=>`<button class="lk-tile" data-lk="game" data-k="${k}">${lkIcon(k)}<b>${LK_NAMES[k]}</b></button>`;
   const open = LK.games.filter(g=>g.status === 'invited' || g.status === 'active'), done = LK.games.filter(g=>!(g.status === 'invited' || g.status === 'active'));
   const row = g=>`<div class="row-card lk-row" data-lk="open" data-id="${escText(g.id)}">${lkIcon(g.kind)}
       <span class="fl-tx"><b>${escText(LK_NAMES[g.kind] || 'Game')} · ${escText(lkWho(g.other))}</b><small>${escText(lkStatus(g))}</small></span>
@@ -22698,6 +22705,7 @@ function lkTarget(k, seed){ const r = lkRng(seed ^ 0x5bd1e995);
   if(k === 'reaction') return 1500 + Math.floor(r() * 900);
   if(k === 'quiz') return (6 + Math.floor(r() * 3)) * 1000 + 400 + Math.floor(r() * 400);
   if(k === 'memory') return 28000 + Math.floor(r() * 18000);
+  if(k === 'pose') return 8 + Math.floor(r() * 8);
   return 0; }
 function lkCpuGame(p){ return { kind: p.k, status: p.res ? 'done' : 'active', state: { board: p.board.join(''), last: p.last }, myTurn: !p.res && p.turn === 'X', iAmA: true, other: { name: 'Lockedintool' } }; }
 function lkLines(k){
@@ -22790,17 +22798,54 @@ function lkMemory(p){
   };
   draw();
 }
+// #394 Pose (the owner's game): copy the pose shown - each arm up / out / down, legs together / apart. Each pass gives
+// less time for the next (6 s, then 10% less each time, never under 1.5 s); time running out ends the round. Score = poses passed.
+const LK_ARM = { up:[[28,12],[72,12]], out:[[20,34],[80,34]], down:[[30,62],[70,62]] }, LK_ARMS = ['up', 'out', 'down'];
+function lkPoseSVG(pz, color, match){
+  const limb = (x1, y1, pt, ok)=>`<line x1="${x1}" y1="${y1}" x2="${pt[0]}" y2="${pt[1]}" stroke="${ok ? '#30d158' : color}"/>`;
+  const legs = pz.lg ? [[30,104],[70,104]] : [[44,106],[56,106]];
+  const m = match || {};
+  return `<svg data-keep-color viewBox="0 0 100 112" width="100%" height="100%" fill="none" stroke-width="7" stroke-linecap="round">
+    <circle cx="50" cy="15" r="9" fill="${color}" stroke="none"/><line x1="50" y1="28" x2="50" y2="68" stroke="${color}"/>
+    ${limb(50, 34, LK_ARM[pz.l][0], m.l)}${limb(50, 34, LK_ARM[pz.r][1], m.r)}${limb(50, 68, legs[0], m.lg)}${limb(50, 68, legs[1], m.lg)}</svg>`;
+}
+function lkPose(p){
+  const r = lkRng(p.seed ^ 0x7f4a7c15), st = lkStage(); if(!st) return;
+  const me = { l:'down', r:'down', lg:0 };
+  const pick = prev=>{ let t; do { t = { l: LK_ARMS[Math.floor(r() * 3)], r: LK_ARMS[Math.floor(r() * 3)], lg: r() < 0.5 ? 0 : 1 }; } while(prev && t.l === prev.l && t.r === prev.r && t.lg === prev.lg); return t; };
+  let target = pick(me), passed = 0, limit = 6000, t0 = performance.now(), timer = 0;
+  const same = ()=>me.l === target.l && me.r === target.r && me.lg === target.lg;
+  const draw = ()=>{
+    st.innerHTML = `<div class="lk-pose"><div class="lk-pose-top"><span>Poses ${passed}</span><span>${(limit / 1000).toFixed(1)} s each</span></div>
+      <div class="lk-pose-bar"><i id="lk-pose-t"></i></div>
+      <div class="lk-pose-fig lk-pose-target">${lkPoseSVG(target, '#ffd60a')}</div><div class="lk-pose-lbl">COPY THIS</div>
+      <div class="lk-pose-fig lk-pose-me">${lkPoseSVG(me, 'currentColor', { l: me.l === target.l, r: me.r === target.r, lg: me.lg === target.lg })}
+        <button class="lk-pose-hit l" data-lkp="l" aria-label="Left arm"></button><button class="lk-pose-hit r" data-lkp="r" aria-label="Right arm"></button><button class="lk-pose-hit g" data-lkp="lg" aria-label="Legs"></button></div>
+      <div class="lk-pose-lbl">YOU - tap an arm or the legs</div></div>`;
+    tick();
+  };
+  const tick = ()=>{ const b = document.getElementById('lk-pose-t'); if(b) b.style.width = Math.max(0, 100 - (performance.now() - t0) / limit * 100) + '%'; };
+  const end = ()=>{ clearInterval(timer); p.limb = null; lkFinishRound(passed); };
+  timer = setInterval(()=>{ if(LK.play !== p || !p.live){ clearInterval(timer); return; } if(performance.now() - t0 >= limit){ end(); return; } tick(); }, 50);
+  p.limb = w=>{
+    if(w === 'lg') me.lg = me.lg ? 0 : 1; else me[w] = LK_ARMS[(LK_ARMS.indexOf(me[w]) + 1) % 3];
+    if(same()){ passed++; limit = Math.max(1500, Math.round(limit * 0.9)); target = pick(target); t0 = performance.now(); }
+    draw();
+  };
+  draw();
+}
 function lkStart(){
   const p = LK.play; if(!p) return; p.live = true;
-  if(p.k === 'reaction') lkReaction(p); else if(p.k === 'quiz') lkQuiz(p); else if(p.k === 'memory') lkMemory(p);
+  if(p.k === 'reaction') lkReaction(p); else if(p.k === 'quiz') lkQuiz(p); else if(p.k === 'memory') lkMemory(p); else if(p.k === 'pose') lkPose(p);
 }
 document.addEventListener('pointerdown', e=>{   // game taps act on touch-down: no click delay
   if(!LK.play) return;
-  const t = e.target.closest && e.target.closest('[data-lkr],[data-lkq],[data-lkm]'); if(!t) return;
+  const t = e.target.closest && e.target.closest('[data-lkr],[data-lkq],[data-lkm],[data-lkp]'); if(!t) return;
   e.preventDefault();
   if(t.hasAttribute('data-lkr') && LK.play.tap) LK.play.tap();
   else if(t.hasAttribute('data-lkq') && LK.play.answer) LK.play.answer(+t.getAttribute('data-lkq'));
   else if(t.hasAttribute('data-lkm') && LK.play.flip) LK.play.flip(+t.getAttribute('data-lkm'));
+  else if(t.hasAttribute('data-lkp') && LK.play.limb) LK.play.limb(t.getAttribute('data-lkp'));
 }, true);
 function lkOpenGame(g){ LK.play = { k: g.kind, g, seed: g.seed, done: null }; LK.sheet = null; }
 document.addEventListener('click', e=>{
@@ -22812,7 +22857,6 @@ document.addEventListener('click', e=>{
   switch(a){
     case 'tab': LK.tab = b.getAttribute('data-v'); break;
     case 'game': { const k = b.getAttribute('data-k');
-      if(k === 'pose'){ showToast('Pose is coming next'); return; }
       LK.sheet = { t:'game', k, bet:false, cur: (typeof moneyMainCur === 'function' && moneyMainCur()) || 'USD' };
       if(LK.people == null && msgAccount()) msgApi('/v1/lk/people').then(r=>{ LK.people = r.people || []; if(LK.sheet && LK.sheet.t === 'game'){ keep(); renderDevice(); } }).catch(()=>{ LK.people = []; });
       break; }

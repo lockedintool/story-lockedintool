@@ -192,6 +192,11 @@ export class Hub {
     try { this.sql.exec(`ALTER TABLE lives ADD COLUMN lk TEXT`); } catch (e) {}        // #395 a Lock In live: {kind, role:'play'|'ref', prize}
     try { this.sql.exec(`ALTER TABLE lives ADD COLUMN lkgame TEXT`); } catch (e) {}    // the game being played on it now
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lkqueue (lid TEXT, uid TEXT, at INTEGER, PRIMARY KEY (lid, uid))`);
+    try { this.sql.exec(`ALTER TABLE lives ADD COLUMN lkpoll TEXT`); } catch (e) {}     // #398 a chat poll on a Lock In live: {id, q, opts, open}
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS lkvotes (pid TEXT, uid TEXT, opt INTEGER, PRIMARY KEY (pid, uid))`);
+    // #398 Lock In Mode two: video-call challenges between two people who played 3 games together
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS lk2 (id TEXT PRIMARY KEY, a TEXT, b TEXT, status TEXT, whenat INTEGER, blink INTEGER, blinkby TEXT, blinkwin INTEGER, blinkat INTEGER, blinkfired INTEGER, blinktext TEXT, place_a TEXT, place_b TEXT, starter TEXT, starter_how TEXT, starter_a TEXT, starter_b TEXT, target INTEGER, prizemode TEXT, prize TEXT, gid TEXT, winner TEXT, at INTEGER, done_at INTEGER)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS lk2ch (id TEXT PRIMARY KEY, mid TEXT, text TEXT, prize TEXT, by TEXT, status TEXT, res_a TEXT, res_b TEXT, winner TEXT, at INTEGER)`);
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN lk TEXT`); } catch (e) {}       // #388 a Lock In challenge posted to a status: {kind, stake, cur}
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN vis TEXT`); } catch (e) {}      // #397 who sees a post: NULL = everyone who may see the profile, 'followers', 'me'
     try { this.sql.exec(`ALTER TABLE uposts ADD COLUMN hlname TEXT`); } catch (e) {}   // a song from your phone with the post / status: {media, name}
@@ -342,6 +347,7 @@ export class Hub {
       if (path.startsWith('/v1/shop/')) return this.shop(me, path.slice(9), body);
       if (path.startsWith('/v1/learn/')) return this.learn(me, path.slice(10), body);
       if (path.startsWith('/v1/cust/')) return this.cust(me, path.slice(9), body);
+      if (path.startsWith('/v1/lk2/')) return this.lockin2(me, path.slice(8), body);
       if (path.startsWith('/v1/lk/')) return this.lockin(me, path.slice(7), body);
       if (path === '/v1/callrate') return this.callRate(me, body);
       if (path === '/v1/callrates') return this.callRates(me);
@@ -1346,7 +1352,7 @@ export class Hub {
       return json({ ok: true, earned: got, racks: this.lkRacks(me.id), best, newBest });
     }
     if (act === 'wallet') return json({ error: 'partner' }, 400);
-    if (act === 'livestate' || act === 'livejoin' || act === 'liveunjoin' || act === 'livepick') {   // #395 a Lock In game played live
+    if (act === 'livestate' || act === 'livejoin' || act === 'liveunjoin' || act === 'livepick' || act === 'livepoll' || act === 'livevote' || act === 'livepollend') {   // #395 a Lock In game played live
       const l = this.one('SELECT * FROM lives WHERE id = ? AND lk IS NOT NULL', String(b.id || ''));
       const host = l && this.one('SELECT * FROM users WHERE id = ?', l.uid);
       if (!l || !host || !this.canSeeProfile(me, host) || this.blocked(me.id, host.id)) return json({ error: 'notfound' }, 404);
@@ -1356,6 +1362,26 @@ export class Hub {
         if (mine || l.ended) return json({ error: 'closed' }, 400);
         if (act === 'livejoin') this.sql.exec('INSERT OR IGNORE INTO lkqueue (lid, uid, at) VALUES (?, ?, ?)', l.id, me.id, Date.now());
         else this.sql.exec('DELETE FROM lkqueue WHERE lid = ? AND uid = ?', l.id, me.id);
+        return json({ ok: true });
+      }
+      // #398 (owner: 'live, a chat poll can decide the challenge (the most-voted option wins)')
+      let poll = null; try { poll = JSON.parse(l.lkpoll || 'null'); } catch (e) {}
+      if (act === 'livepoll') {
+        if (!mine || l.ended) return json({ error: 'notfound' }, 404);
+        const opts = (Array.isArray(b.opts) ? b.opts : []).map(x => String(x || '').trim().slice(0, 80)).filter(Boolean).slice(0, 4);
+        if (opts.length < 2) return json({ error: 'opts' }, 400);
+        this.sql.exec('UPDATE lives SET lkpoll = ? WHERE id = ?', JSON.stringify({ id: 'p' + rand(8), q: String(b.q || 'Which challenge?').trim().slice(0, 80) || 'Which challenge?', opts, open: 1, at: Date.now() }), l.id);
+        return json({ ok: true });
+      }
+      if (act === 'livevote') {
+        if (!poll || !poll.open || l.ended) return json({ error: 'closed' }, 400);
+        const o = Math.floor(+b.opt); if (!(o >= 0 && o < poll.opts.length)) return json({ error: 'opt' }, 400);
+        this.sql.exec('INSERT OR REPLACE INTO lkvotes (pid, uid, opt) VALUES (?, ?, ?)', poll.id, me.id, o);
+        return json({ ok: true });
+      }
+      if (act === 'livepollend') {
+        if (!mine || !poll) return json({ error: 'notfound' }, 404);
+        poll.open = 0; this.sql.exec('UPDATE lives SET lkpoll = ? WHERE id = ?', JSON.stringify(poll), l.id);
         return json({ ok: true });
       }
       if (act === 'livepick') {
@@ -1382,7 +1408,12 @@ export class Hub {
         match = { id: g.id, kind: g.kind, status: g.status, a: card(ua), b: card(ub), sa: g.sa, sb: g.sb, state: st, winner: g.winner || '', turn: g.turn || '', me: g.a === me.id ? 'a' : g.b === me.id ? 'b' : '' };
       }
       const q = this.sql.exec('SELECT q.uid, u.* FROM lkqueue q JOIN users u ON u.id = q.uid WHERE q.lid = ? ORDER BY q.at LIMIT 100', l.id).toArray();
-      return json(Object.assign(this.liveView(l, me), { lk, mine, match, queued: q.some(x => x.uid === me.id), queueCount: q.length, queue: mine ? q.map(card) : [], recent: this.liveRecent(l.id) }));
+      if (poll) {
+        const counts = poll.opts.map((_, i) => this.one('SELECT COUNT(*) AS n FROM lkvotes WHERE pid = ? AND opt = ?', poll.id, i).n);
+        const my = this.one('SELECT opt FROM lkvotes WHERE pid = ? AND uid = ?', poll.id, me.id);
+        poll = { q: poll.q, opts: poll.opts, open: !!poll.open, counts, mine: my ? my.opt : -1 };
+      }
+      return json(Object.assign(this.liveView(l, me), { lk, mine, match, poll, queued: q.some(x => x.uid === me.id), queueCount: q.length, queue: mine ? q.map(card) : [], recent: this.liveRecent(l.id) }));
     }
     if (act === 'open') {   // #388: accept a challenge someone posted to their status - anyone who can see the status may play
       const p = this.one("SELECT * FROM uposts WHERE id = ? AND kind = 'status' AND lk IS NOT NULL", String(b.pid || ''));
@@ -1764,12 +1795,188 @@ export class Hub {
     if (act === 'leave') { this.sql.exec('DELETE FROM teams WHERE oid = ? AND mid = ?', String(b.oid || ''), me.id); return json({ ok: true }); }
     return json({ error: 'unknown' }, 404);
   }
+  // ---- #398 Lock In Mode two (owner's idea, 14 Nov 2026): video-call challenges, unlocked after 3 games together ----
+  async lockin2(me, act, b) {
+    b = b || {};
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+    const card = u => u ? { id: u.id, name: u.name || '', username: u.username || '', photo: this.mediaUrl(u.photo) } : null;
+    const user = id => this.one('SELECT * FROM users WHERE id = ?', id);
+    const mutual = (x, y) => this.follows(x, y) && this.follows(y, x) && !this.blocked(x, y);
+    const played = (x, y) => this.one("SELECT COUNT(*) AS n FROM lkgames WHERE status = 'done' AND ((a = ? AND b = ?) OR (a = ? AND b = ?))", x, y, y, x).n;
+    const note = (uid, kind, m, extra) => this.deliver(uid, Object.assign({ t: 'fnote', kind, id: m.id, from: me.id, name: me.name || '', username: me.username || '', at: Date.now() }, extra || {}));
+    const other = m => m.a === me.id ? m.b : m.a;
+    const view = m => {
+      const chs = this.sql.exec('SELECT * FROM lk2ch WHERE mid = ? ORDER BY at', m.id).toArray().map(c => ({ id: c.id, text: c.text, prize: c.prize || '', mine: c.by === me.id, status: c.status,
+        myClaim: (c2 => c2 ? (c2 === me.id ? 'me' : 'them') : '')(m.a === me.id ? c.res_a : c.res_b), theirClaim: (m.a === me.id ? c.res_b : c.res_a) ? 'in' : '', won: c.winner === me.id, lost: !!c.winner && c.winner !== me.id }));
+      const wins = id => this.one('SELECT COUNT(*) AS n FROM lk2ch WHERE mid = ? AND winner = ?', m.id, id).n;
+      return { id: m.id, status: m.status, mine: m.a === me.id, other: card(user(other(m))), when: m.whenat || 0, blink: !!m.blink, blinkWindow: m.blinkwin || 0,
+        blinkFired: !!m.blinkfired, blinkText: m.blinkfired ? (m.blinktext || '') : '', blinkSet: m.blinkby === 'players' ? (m.blinktext ? 'set' : '') : 'lit',
+        myPlace: (m.a === me.id ? m.place_a : m.place_b) || '', theirPlace: (m.a === me.id ? m.place_b : m.place_a) ? 'in' : '',
+        starter: m.starter ? (m.starter === me.id ? 'me' : 'them') : '', starterHow: m.starter_how || '', myStarterPick: (m.a === me.id ? m.starter_a : m.starter_b) || '',
+        target: m.target || 0, prizeMode: m.prizemode || 'each', prize: m.prize || '', gid: m.gid || '', myWins: wins(me.id), theirWins: wins(other(m)),
+        won: m.status === 'done' && m.winner === me.id, draw: m.status === 'done' && !m.winner, at: m.at, challenges: chs };
+    };
+    const BLINK = {   // Lockedintool picks one both players can do where they are (owner: 'asking where you are, so it never gives one you can't do')
+      any: ['First to clap 5 times', 'First to touch their nose and say "Lock in"', 'First to show the camera a thumbs up with both hands', 'First to say the alphabet from A to J', 'First to stand up and sit down twice'],
+      home: ['First to show a spoon to the camera', 'First to show something red', 'First to bring a cup into view', 'First to show a pillow'],
+      outside: ['First to touch something green', 'First to show the sky on camera', 'First to point at a car', 'First to show a leaf'],
+      work: ['First to show a pen', 'First to show a piece of paper', 'First to show a key', 'First to write their name and show it'] };
+    const arm = m => {   // the moment it starts is kept on the server only - the players never see it
+      if (!m.blink || m.status !== 'active' || m.blinkat || !m.place_a || !m.place_b) return;
+      const at = Date.now() + 60000 + Math.floor(Math.random() * Math.max(60000, (m.blinkwin || 30) * 60000 - 60000));
+      this.sql.exec('UPDATE lk2 SET blinkat = ? WHERE id = ?', at, m.id);
+      this.lk2Alarm();
+    };
+    if (act === 'pairs') {   // who Mode two is open with: people who follow you and you follow back, after 3 games together
+      const rows = this.sql.exec('SELECT u.* FROM follows f JOIN follows g ON g.uid = f.fid AND g.fid = f.uid JOIN users u ON u.id = f.fid WHERE f.uid = ? AND (f.ok IS NULL OR f.ok = 1) AND (g.ok IS NULL OR g.ok = 1) LIMIT 500', me.id).toArray();
+      return json({ people: rows.filter(u => !this.blocked(me.id, u.id) && !u.deactivated).map(u => Object.assign(card(u), { played: played(me.id, u.id) })).sort((x, y) => y.played - x.played || (x.name || x.username).localeCompare(y.name || y.username)) });
+    }
+    if (act === 'list') {
+      const rows = this.sql.exec("SELECT * FROM lk2 WHERE (a = ? OR b = ?) AND (status IN ('invited', 'active', 'scheduled') OR done_at > ?) ORDER BY at DESC LIMIT 100", me.id, me.id, Date.now() - 30 * 86400000).toArray();
+      return json({ matches: rows.map(view) });
+    }
+    if (act === 'invite') {
+      const u = user(String(b.to || ''));
+      if (!u || u.deactivated || u.id === me.id) return json({ error: 'notfound' }, 404);
+      if (!mutual(me.id, u.id)) return json({ error: 'mutual' }, 403);
+      if (played(me.id, u.id) < 3) return json({ error: 'locked', played: played(me.id, u.id) }, 403);
+      if (this.one("SELECT COUNT(*) AS n FROM lk2 WHERE a = ? AND status = 'invited'", me.id).n >= 20) return json({ error: 'full' }, 429);
+      const whenat = +b.when > Date.now() ? Math.min(+b.when, Date.now() + 90 * 86400000) : 0;
+      const blink = b.blink ? 1 : 0, place = BLINK[b.place] ? b.place : 'any';
+      const gr = await (await this.groups(me, 'create', { name: 'Lock In · ' + (me.name || me.username || '') + ' & ' + (u.name || u.username || ''), type: 'private', about: 'Lock In Mode two', members: [u.id] })).json();
+      const id = 'm2' + rand(9);
+      this.sql.exec("INSERT INTO lk2 (id, a, b, status, whenat, blink, blinkby, blinkwin, blinktext, place_a, target, prizemode, prize, gid, winner, at) VALUES (?, ?, ?, 'invited', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?)",
+        id, me.id, u.id, whenat, blink, b.blinkBy === 'players' ? 'players' : 'lit', [15, 30, 60, 180].includes(+b.window) ? +b.window : 30, b.blinkBy === 'players' ? clean(b.blinkText, 120) : '',
+        blink ? place : '', Math.max(0, Math.min(15, Math.floor(+b.target || 0))), b.prizeMode === 'end' ? 'end' : 'each', clean(b.prize, 80), gr.id || '', Date.now());
+      const m = this.one('SELECT * FROM lk2 WHERE id = ?', id);
+      note(u.id, 'lk2inv', m, { blink: !!blink, when: whenat });
+      this.act(u.id, 'lk2inv', me.id, id, blink ? 'Blink you lose' : 'Mode two');
+      return json({ ok: true, match: view(m) });
+    }
+    const m = this.one('SELECT * FROM lk2 WHERE id = ? AND (a = ? OR b = ?)', clean(b.id, 40), me.id, me.id);
+    if (!m) return json({ error: 'gone' }, 404);
+    const isA = m.a === me.id, them = other(m);
+    const fresh = () => this.one('SELECT * FROM lk2 WHERE id = ?', m.id);
+    if (act === 'get') return json({ match: view(m) });
+    if (act === 'respond') {
+      if (m.status !== 'invited' || isA) return json({ error: 'state' }, 409);
+      if (!b.yes) { this.sql.exec("UPDATE lk2 SET status = 'declined', done_at = ? WHERE id = ?", Date.now(), m.id); note(them, 'lk2no', m); return json({ match: view(fresh()) }); }
+      const st = m.whenat > Date.now() ? 'scheduled' : 'active';
+      this.sql.exec('UPDATE lk2 SET status = ?, place_b = ? WHERE id = ?', st, m.blink ? (BLINK[b.place] ? b.place : 'any') : null, m.id);
+      note(them, 'lk2yes', m, { when: m.whenat || 0 });
+      const n = fresh(); arm(n); if (st === 'scheduled') this.lk2Alarm();
+      return json({ match: view(fresh()) });
+    }
+    if (act === 'cancel') {
+      if (!['invited', 'scheduled', 'active'].includes(m.status)) return json({ error: 'state' }, 409);
+      this.sql.exec("UPDATE lk2 SET status = 'cancelled', done_at = ? WHERE id = ?", Date.now(), m.id); note(them, 'lk2off', m);
+      return json({ match: view(fresh()) });
+    }
+    if (m.status === 'scheduled' && m.whenat <= Date.now()) { this.sql.exec("UPDATE lk2 SET status = 'active' WHERE id = ?", m.id); m.status = 'active'; arm(fresh()); }
+    if (m.status !== 'active') return json({ error: 'state', match: view(m) }, 409);
+    if (act === 'place') {   // Blink you lose: where you are, so Lockedintool never picks something you can't do
+      this.sql.exec(`UPDATE lk2 SET ${isA ? 'place_a' : 'place_b'} = ? WHERE id = ?`, BLINK[b.place] ? b.place : 'any', m.id);
+      arm(fresh()); return json({ match: view(fresh()) });
+    }
+    if (act === 'starter') {   // who starts: spin the wheel, or both agree
+      if (m.starter) return json({ match: view(m) });
+      if (b.how === 'wheel') {
+        const s = Math.random() < 0.5 ? m.a : m.b;
+        this.sql.exec("UPDATE lk2 SET starter = ?, starter_how = 'wheel' WHERE id = ?", s, m.id);
+        note(them, 'lk2start', m, { mine: s === them });
+        return json({ match: view(fresh()), spun: true });
+      }
+      const pick = b.pick === 'me' ? me.id : b.pick === 'them' ? them : '';
+      if (!pick) return json({ error: 'pick' }, 400);
+      this.sql.exec(`UPDATE lk2 SET ${isA ? 'starter_a' : 'starter_b'} = ? WHERE id = ?`, pick, m.id);
+      const n = fresh();
+      if (n.starter_a && n.starter_a === n.starter_b) { this.sql.exec("UPDATE lk2 SET starter = ?, starter_how = 'agree' WHERE id = ?", n.starter_a, m.id); note(them, 'lk2start', m, { mine: n.starter_a === them }); }
+      return json({ match: view(fresh()) });
+    }
+    if (act === 'propose') {   // a challenge - it counts once both agreed to it
+      const text = clean(b.text, 160); if (!text) return json({ error: 'text' }, 400);
+      if (this.one('SELECT COUNT(*) AS n FROM lk2ch WHERE mid = ?', m.id).n >= 50) return json({ error: 'full' }, 429);
+      this.sql.exec("INSERT INTO lk2ch (id, mid, text, prize, by, status, at) VALUES (?, ?, ?, ?, ?, 'proposed', ?)", 'c' + rand(9), m.id, text, m.prizemode === 'each' ? clean(b.prize, 80) : '', me.id, Date.now());
+      note(them, 'lk2prop', m, { text });
+      return json({ match: view(fresh()) });
+    }
+    const c = b.cid ? this.one('SELECT * FROM lk2ch WHERE id = ? AND mid = ?', clean(b.cid, 40), m.id) : null;
+    const finishIfTarget = () => {
+      const n = fresh(); if (!n.target) return;
+      for (const id of [n.a, n.b]) if (this.one('SELECT COUNT(*) AS k FROM lk2ch WHERE mid = ? AND winner = ?', n.id, id).k >= n.target) return this.lk2End(n, me);
+    };
+    if (act === 'agree' || act === 'reject') {
+      if (!c || c.status !== 'proposed' || c.by === me.id) return json({ error: 'state' }, 409);
+      if (act === 'reject') this.sql.exec('DELETE FROM lk2ch WHERE id = ?', c.id); else this.sql.exec("UPDATE lk2ch SET status = 'agreed' WHERE id = ?", c.id);
+      note(them, act === 'agree' ? 'lk2agree' : 'lk2rej', m, { text: c.text });
+      return json({ match: view(fresh()) });
+    }
+    if (act === 'result') {   // both say who won; the same answer counts, different answers = disputed (nobody wins it)
+      if (!c || c.status !== 'agreed') return json({ error: 'state' }, 409);
+      const claim = b.won === 'me' ? me.id : b.won === 'them' ? them : '';
+      if (!claim) return json({ error: 'won' }, 400);
+      this.sql.exec(`UPDATE lk2ch SET ${isA ? 'res_a' : 'res_b'} = ? WHERE id = ?`, claim, c.id);
+      const n = this.one('SELECT * FROM lk2ch WHERE id = ?', c.id);
+      if (n.res_a && n.res_b) {
+        if (n.res_a === n.res_b) this.sql.exec("UPDATE lk2ch SET status = 'done', winner = ? WHERE id = ?", n.res_a, c.id);
+        else this.sql.exec("UPDATE lk2ch SET status = 'disputed', winner = '' WHERE id = ?", c.id);
+        note(them, 'lk2res', m, { text: c.text });
+        finishIfTarget();
+      } else note(them, 'lk2claim', m, { text: c.text });
+      return json({ match: view(fresh()) });
+    }
+    if (act === 'forfeit') {   // giving up a challenge - the other wins it
+      if (!c || !['agreed', 'proposed'].includes(c.status)) return json({ error: 'state' }, 409);
+      this.sql.exec("UPDATE lk2ch SET status = 'forfeit', winner = ? WHERE id = ?", them, c.id);
+      note(them, 'lk2res', m, { text: c.text });
+      finishIfTarget();
+      return json({ match: view(fresh()) });
+    }
+    if (act === 'end') { this.lk2End(fresh(), me); return json({ match: view(fresh()) }); }
+    return json({ error: 'unknown' }, 404);
+  }
+  lk2End(m, me) {   // the match ends: whoever won more challenges wins it (rank like any game against a person)
+    if (m.status !== 'active') return;
+    const w = id => this.one('SELECT COUNT(*) AS n FROM lk2ch WHERE mid = ? AND winner = ?', m.id, id).n;
+    const wa = w(m.a), wb = w(m.b), winner = wa > wb ? m.a : wb > wa ? m.b : '';
+    this.sql.exec("UPDATE lk2 SET status = 'done', winner = ?, done_at = ? WHERE id = ?", winner, Date.now(), m.id);
+    if (wa + wb > 0) for (const uid of [m.a, m.b]) this.lkEarn(uid, !winner ? 10 : winner === uid ? 30 : -15, false);
+    for (const uid of [m.a, m.b]) this.deliver(uid, { t: 'fnote', kind: 'lk2done', id: m.id, from: me ? me.id : '', name: me ? me.name || '' : '', username: me ? me.username || '' : '', won: winner === uid, draw: !winner, at: Date.now() });
+  }
+  lk2Alarm() {   // one Durable Object alarm at the next Blink you lose start (nothing runs while none is armed)
+    const n = this.one('SELECT MIN(blinkat) AS t FROM lk2 WHERE blink = 1 AND blinkfired IS NULL AND blinkat > 0 AND status = ?', 'active');
+    const s = this.one("SELECT MIN(whenat) AS t FROM lk2 WHERE status = 'scheduled' AND whenat > 0");   // a scheduled match starting: both are told
+    const t = Math.min(n && n.t || Infinity, s && s.t || Infinity);
+    if (t !== Infinity) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, t));
+  }
+  async alarm() {
+    for (const m of this.sql.exec("SELECT * FROM lk2 WHERE status = 'scheduled' AND whenat <= ?", Date.now() + 500).toArray()) {
+      this.sql.exec("UPDATE lk2 SET status = 'active' WHERE id = ?", m.id);
+      for (const uid of [m.a, m.b]) this.deliver(uid, { t: 'fnote', kind: 'lk2now', id: m.id, blink: !!m.blink, at: Date.now() });
+      if (m.blink && m.place_a && m.place_b && !m.blinkat) this.sql.exec('UPDATE lk2 SET blinkat = ? WHERE id = ?', Date.now() + 60000 + Math.floor(Math.random() * Math.max(60000, (m.blinkwin || 30) * 60000 - 60000)), m.id);
+    }
+    const due = this.sql.exec("SELECT * FROM lk2 WHERE blink = 1 AND blinkfired IS NULL AND blinkat > 0 AND blinkat <= ? AND status = 'active'", Date.now() + 500).toArray();
+    const ANY = ['First to clap 5 times', 'First to touch their nose and say "Lock in"', 'First to show the camera a thumbs up with both hands', 'First to say the alphabet from A to J', 'First to stand up and sit down twice'];
+    const MORE = { home: ['First to show a spoon to the camera', 'First to show something red', 'First to bring a cup into view', 'First to show a pillow'],
+      outside: ['First to touch something green', 'First to show the sky on camera', 'First to point at a car', 'First to show a leaf'],
+      work: ['First to show a pen', 'First to show a piece of paper', 'First to show a key', 'First to write their name and show it'] };
+    for (const m of due) {
+      let text = m.blinkby === 'players' && m.blinktext ? m.blinktext : '';
+      if (!text) { const pool = m.place_a && m.place_a === m.place_b && MORE[m.place_a] ? ANY.concat(MORE[m.place_a]) : ANY; text = pool[Math.floor(Math.random() * pool.length)]; }
+      this.sql.exec("UPDATE lk2 SET blinkfired = ?, blinktext = ? WHERE id = ?", Date.now(), text, m.id);
+      this.sql.exec("INSERT INTO lk2ch (id, mid, text, prize, by, status, at) VALUES (?, ?, ?, '', 'lit', 'agreed', ?)", 'c' + rand(9), m.id, text, Date.now());
+      for (const uid of [m.a, m.b]) this.deliver(uid, { t: 'fnote', kind: 'lk2blink', id: m.id, text, at: Date.now() });
+    }
+    this.lk2Alarm();
+  }
   deleteUser(uid, why = 'deleted') {
     this.sql.exec('DELETE FROM teams WHERE oid = ? OR mid = ?', uid, uid);   // #379
     for (const g of this.sql.exec("SELECT * FROM lkgames WHERE (a = ? OR b = ?) AND status IN ('invited', 'active')", uid, uid).toArray()) {   // #383: open games end - the other player wins, stakes are settled
       if (g.status === 'active') this.lkFinish(g, g.a === uid ? g.b : g.a);
       else if (g.stake > 0) this.lkMove(g.a, g.cur, g.stake, -g.stake);
     }
+    for (const m of this.sql.exec('SELECT id FROM lk2 WHERE a = ? OR b = ?', uid, uid).toArray()) this.sql.exec('DELETE FROM lk2ch WHERE mid = ?', m.id);   // #398
+    this.sql.exec('DELETE FROM lk2 WHERE a = ? OR b = ?', uid, uid); this.sql.exec('DELETE FROM lkvotes WHERE uid = ?', uid);
     this.sql.exec('DELETE FROM lkgames WHERE a = ? OR b = ?', uid, uid); this.sql.exec('DELETE FROM lkwallet WHERE uid = ?', uid); this.sql.exec('DELETE FROM lkracks WHERE uid = ?', uid);
     for (const r of this.sql.exec('SELECT photos FROM products WHERE uid = ?', uid).toArray()) { let ph = []; try { ph = JSON.parse(r.photos || '[]'); } catch (e) {} for (const m of ph) this.mediaDel('id = ?', m); }   // #381
     this.sql.exec('DELETE FROM products WHERE uid = ?', uid);

@@ -1592,7 +1592,43 @@
   .lk-res-draw.lk-go .lk-big{ animation:lkDraw .5s ease-out both !important; animation-duration:.5s !important; animation-delay:var(--lk-o, 0ms) !important; animation-iteration-count:1 !important; }
   .lk-res.lk-go .lk-big ~ *{ animation:lkRise .4s ease-out both !important; animation-duration:.4s !important; animation-delay:calc(var(--lk-o, 0ms) + 450ms) !important; animation-iteration-count:1 !important; }
   .lk-racks b{ color:#ffd60a; } .lk-rec > span.lk-racks{ position:relative; cursor:pointer; } .lk-racks-b{ display:inline-block; vertical-align:-2px; margin-right:3px; line-height:0; }
-  .lk-ip-area { min-height:72px; resize:none; }
+  .lk-m2card { display:flex; align-items:center; gap:10px; text-align:left; width:100%; }
+.lk-m2-l { display:flex; flex-shrink:0; }
+.lk2-hero { display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; margin:4px 0 10px; }
+.lk2-logo { display:block; }
+.lk2-person { display:flex; align-items:center; gap:10px; }
+.lk2-dots { display:flex; gap:4px; margin-top:4px; }
+.lk2-dots i { width:8px; height:8px; border-radius:50%; border:1px solid #6a6a6a; }
+.lk2-dots i.on { background:#ffd60a; border-color:#ffd60a; }
+.lk2-mh { display:flex; align-items:center; gap:10px; margin:4px 0 12px; }
+.lk2-call { background:#30d158 !important; color:#000 !important; border-color:#30d158 !important; font-weight:800; }
+.lk2-armed { border:1px dashed #ffd60a; border-radius:14px; padding:12px; margin:10px 0; display:flex; flex-direction:column; gap:4px; }
+.lk2-armed b { color:#ffd60a; } .lk2-armed span { font-size:13px; opacity:.85; }
+.lk2-blink { background:#ffd60a; color:#000; border-radius:16px; padding:16px; margin:10px 0; text-align:center; display:flex; flex-direction:column; gap:6px; }
+.lk2-blink b { font-size:34px; font-weight:900; font-style:italic; } .lk2-blink span { font-size:17px; font-weight:700; }
+.lk2-wheel { position:relative; width:96px; height:96px; margin:8px auto 4px; }
+.lk2-wheel svg { display:block; }
+.lk2-wheel.spin svg { animation:lk2spin 1.6s cubic-bezier(.2,.7,.2,1) both !important; animation-delay:var(--lk2d, 0ms) !important; animation-duration:1.6s !important; }
+@keyframes lk2spin { from { transform:rotate(0deg); } to { transform:rotate(1440deg); } }
+.lk2-pin { position:absolute; top:-6px; left:50%; margin-left:-7px; border-left:7px solid transparent; border-right:7px solid transparent; border-top:12px solid #fff; }
+.lk2-score { display:flex; align-items:center; justify-content:space-between; border:1px solid #2a2a2a; border-radius:14px; padding:10px 16px; margin:12px 0; }
+.lk2-score span { display:flex; flex-direction:column; align-items:center; } .lk2-score b { font-size:26px; font-weight:900; } .lk2-score small { opacity:.7; font-size:12px; }
+.lk2-score i { font-style:normal; font-size:12px; opacity:.7; }
+.lk2-ch { border:1px solid #2a2a2a; border-radius:12px; padding:10px 12px; margin:6px 0; display:flex; flex-direction:column; gap:4px; }
+.lk2-ch small { font-size:12px; opacity:.75; } .lk2-ch .lk2-w { color:#30d158; opacity:1; } .lk2-ch .lk2-l { color:#ff453a; opacity:1; }
+.lk2-acts { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.lk2-prop { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.lk2-end { margin-top:14px; }
+.lk-lv-pollbtn { margin:6px 0; padding:8px 14px; border-radius:18px; border:1px solid rgba(255,255,255,.5); background:rgba(0,0,0,.45); color:#fff; font-size:13px; font-weight:700; align-self:flex-start; }
+.lk-lv-poll { background:rgba(0,0,0,.55); border-radius:14px; padding:10px; margin:6px 0; display:flex; flex-direction:column; gap:6px; }
+.lk-lv-pq { font-weight:800; font-size:14px; color:#fff; }
+.lk-lv-po { position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.35); background:transparent; color:#fff; font-size:13px; text-align:left; }
+.lk-lv-po i { position:absolute; left:0; top:0; bottom:0; background:rgba(255,214,10,.28); }
+.lk-lv-po span, .lk-lv-po b { position:relative; } .lk-lv-po.on { border-color:#ffd60a; } .lk-lv-po.win { border-color:#30d158; }
+.lk-lv-po:disabled { opacity:1; }
+.lk-lv-pw { color:#30d158; font-weight:800; font-size:13px; }
+.lk-lv-pe { position:absolute; left:12px; right:12px; top:90px; background:#111; border:1px solid #333; border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:6px; z-index:5; color:#fff; }
+.lk-ip-area { min-height:72px; resize:none; }
 .lk-ip-vid { position:relative; display:flex; align-items:center; gap:12px; }
 .lk-ip-vid img { width:96px; height:96px; object-fit:cover; border-radius:12px; border:1px solid #2a2a2a; }
 .lk-ip-vid i { position:absolute; left:38px; top:34px; font-style:normal; color:#fff; font-size:20px; text-shadow:0 0 6px #000; }
@@ -4373,7 +4409,7 @@
   // A note's own colours (its paper, cover, ink and the swatches that pick them) are the owner's writing,
   // not STORY's look -- they never swap (nor anything marked data-keep-color).
   // The payment cards in Wallet are printed like the real cards, so they keep their own look too.
-  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block|\.lk-logo|\.lk-lv|\.lk-live-dot/;
+  const KEEP_SEL = /\.cr-shutter|\.note-(card|content|page-counter)|\.notes-(swatch|preview-page)|\.canvas-(page|swatch)|\.inline-task|\.draw-canvas|^\.realcard$|\.realcard-(chase|amex|top|brand|chip|num|bottom|label|name|logo)|\.lit-block|\.lk-logo|\.lk-lv|\.lk-live-dot|\.lk2-blink|\.lk2-wheel|\.lk2-call/;
   const KEEP_EL = '[data-keep-color], .note-card, .note-content-wrap, .canvas-page-wrap, .notes-swatch, .canvas-swatch, .notes-preview-page, .realcard-chase, .realcard-amex';
   function flip(t){
     const k = t.toLowerCase();
@@ -12681,6 +12717,7 @@ function actLine(a){
   if(k === 'meetmove') return 'moved “' + escText(t) + '” to a new time';
   if(k === 'lkchal') return 'challenged you to ' + escText(LK_NAMES[t] || 'a game') + ' - open LOCK IN in the Dashboard menu';   // #383
   if(k === 'lkyes') return 'accepted your ' + escText(LK_NAMES[t] || 'game') + ' challenge';
+  if(k === 'lk2inv') return 'challenged you to ' + escText(t || 'Mode two') + ' on a video call - open LOCK IN';   // #398
   if(k === 'like') return t === 'status' ? 'liked your status' : 'liked your post';
   if(k === 'share') return 'shared your post';
   if(k === 'comment'){ const st = t.indexOf('s:') === 0; return 'commented on your ' + (st ? 'status' : 'post') + ': “' + escText(st ? t.slice(2) : t) + '”'; }
@@ -13754,6 +13791,25 @@ async function msgOnServer(m){
       const txt = m.kind === 'lklive' ? who + ' is playing Lock In live - open LOCK IN > Public games to watch' : who + ' picked you to play ' + (LK_NAMES[m.game] || 'Lock In') + ' live - open LOCK IN to play';
       if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify('Lock In', txt); }catch(e){}
       try{ localStorage.setItem('story-lk-ping', String(Date.now())); }catch(e){}
+      if(m.seq) msgSend({ t:'ack', seq:m.seq });
+      return;
+    }
+    if(/^lk2/.test(m.kind)){   // #398 Lock In Mode two
+      const txt = m.kind === 'lk2inv' ? who + (m.blink ? ' challenged you to Blink you lose' : ' challenged you on a video call') + ' - open LOCK IN to answer'
+        : m.kind === 'lk2yes' ? who + ' accepted your Mode two challenge' + (m.when > Date.now() ? '' : ' - go to LOCK IN')
+        : m.kind === 'lk2no' ? who + ' declined your Mode two challenge'
+        : m.kind === 'lk2off' ? who + ' cancelled your Mode two match'
+        : m.kind === 'lk2now' ? (m.blink ? 'Your Blink you lose match is armed - it can start at any moment' : 'Your Mode two match starts now - open LOCK IN')
+        : m.kind === 'lk2blink' ? 'BLINK! ' + (m.text || '') + ' - go!'
+        : m.kind === 'lk2start' ? (m.mine ? 'You start' : who + ' starts') + ' your Mode two match'
+        : m.kind === 'lk2prop' ? who + ' suggested a challenge: ' + (m.text || '')
+        : m.kind === 'lk2agree' ? who + ' agreed to: ' + (m.text || '')
+        : m.kind === 'lk2rej' ? who + ' said no to: ' + (m.text || '')
+        : m.kind === 'lk2claim' ? who + ' said who won “' + (m.text || '') + '” - your turn to say'
+        : m.kind === 'lk2res' ? 'Result in for “' + (m.text || '') + '”'
+        : m.kind === 'lk2done' ? (m.draw ? 'Your Mode two match ended in a draw' : m.won ? 'You won your Mode two match!' : 'You lost your Mode two match') : '';
+      if(txt && NATIVE && window.StoryNative.msgNotify && !['lk2res', 'lk2agree'].includes(m.kind)) try{ window.StoryNative.msgNotify('Lock In', txt); }catch(e){}
+      try{ localStorage.setItem('story-lk2-ping', String(Date.now())); }catch(e){}
       if(m.seq) msgSend({ t:'ack', seq:m.seq });
       return;
     }
@@ -22674,6 +22730,7 @@ function lockInScreen(){
   if(!LK.loaded && !LK.loading && !LK.err) setTimeout(lkLoad, 0);
   if(LK.play) return lkPlayScreen();
   if(LK.live) return lkLiveScreen();
+  if(LK2.open) return lk2Screen();   // #398 Mode two
   const biz = !!lkSpace(), sh = LK.sheet;
   const tile = k=>`<button class="lk-tile" data-lk="game" data-k="${k}">${lkIcon(k)}<b>${LK_NAMES[k]}</b></button>`;
   const open = LK.games.filter(g=>g.status === 'invited' || g.status === 'active'), done = LK.games.filter(g=>!(g.status === 'invited' || g.status === 'active'));
@@ -22691,6 +22748,8 @@ function lockInScreen(){
     <div class="row-card lk-wallet" data-lk="wallet"><span class="fl-tx"><b>GAME WALLET</b><small>${wal.length ? wal.map(w=>escText(lkMoney(w.bal, w.cur)) + (w.held ? ' · ' + escText(lkMoney(w.held, w.cur)) + ' in games' : '')).join(' · ') : 'Only used inside Lock In · $0.00'}</small></span><span class="lk-add">Add money</span></div>
     <div class="section-title">BUILT-IN GAMES</div>
     <div class="lk-tiles">${['reaction', 'quiz', 'ttt', 'c4', 'memory', 'pose'].map(tile).join('')}</div>
+    <div class="section-title">MODE TWO</div>
+    <div class="row-card lk-row lk-m2card" data-lk2="open"><span class="lk-m2-l">${lk2Logo(78)}</span><span class="fl-tx"><b>Video challenges</b><small>${biz ? 'For Personal accounts' : 'Challenges and Blink you lose · opens after 3 games with someone'}</small></span><span>›</span></div>
     <div class="section-title">IN-PERSON PLAY</div>
     <button class="row-card lk-lb lk-ip" data-lk="ip-sheet"><span class="lk-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></span><span class="fl-tx"><b>Post an in-person game</b><small>Play on one phone, post the video - you choose who sees it</small></span><span>›</span></button>
     ${biz ? '<div class="fl-note lk-note">Business accounts play Lock In in person - post your games above. Built-in games against others are for Personal accounts; you can still practise here.</div>' : ''}
@@ -22824,6 +22883,188 @@ async function lkIpPost(){
   }catch(err){ s.posting = false; showToast(err && err.code === 'big' ? 'That video is too big (300 MB max)' : 'Couldn’t post it - try again'); }
   if(state.current === 'lockin') renderDevice();
 }
+// ---- #398 Lock In Mode two (owner's idea, 14 Nov 2026): video-call challenges, opened after 3 games together ----
+const LK2 = { open:false, pairs:null, matches:[], loaded:false, cur:'', sheet:null, timer:0, spinAt:0 };
+const LK2_PLACES = [['home', 'Home'], ['outside', 'Outside'], ['work', 'Work'], ['any', 'Anywhere']];
+function lk2Logo(size){   // the owner's Mode two logo: the words 'Lock in' with an arrow on top meaning speed - be fast
+  const w = size || 180;
+  return `<svg class="lk2-logo" width="${w}" height="${Math.round(w * 0.42)}" viewBox="0 0 220 92" aria-label="Lock in">
+    <g transform="skewX(-14) translate(14 0)" fill="#ffd60a">
+      <rect x="22" y="12" width="26" height="4" rx="2"/><rect x="14" y="21" width="34" height="4" rx="2"/><rect x="26" y="30" width="22" height="4" rx="2"/>
+      <rect x="56" y="18" width="118" height="10" rx="3"/><path d="M170 6 L200 23 L170 40 Z"/></g>
+    <text x="110" y="84" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="900" font-style="italic" fill="currentColor" letter-spacing="-1">Lock in</text></svg>`;
+}
+function lk2Load(){
+  if(!msgAccount()) return;
+  Promise.all([msgApi('/v1/lk2/list'), msgApi('/v1/lk2/pairs')]).then(([a, p])=>{ LK2.matches = a.matches || []; LK2.pairs = p.people || []; LK2.loaded = true; })
+    .catch(()=>{ LK2.loaded = true; LK2.pairs = LK2.pairs || []; })
+    .finally(()=>{ if(state.current === 'lockin' && LK2.open && !LK2.sheet) renderDevice(); });
+}
+function lk2Get(id){ return LK2.matches.find(m=>m.id === id); }
+function lk2Put(m){ if(!m) return; const i = LK2.matches.findIndex(x=>x.id === m.id); if(i >= 0) LK2.matches[i] = m; else LK2.matches.unshift(m); }
+function lk2Call(act, body, after){
+  return msgApi('/v1/lk2/' + act, body).then(r=>{ if(r.match) lk2Put(r.match); if(after) after(r); if(state.current === 'lockin' && LK2.open) renderDevice(); return r; })
+    .catch(err=>{ if(err && err.info && err.info.match) lk2Put(err.info.match);
+      showToast(err && err.code === 'locked' ? 'Mode two opens after 3 games together' : err && err.code === 'mutual' ? 'You both need to follow each other' : err && err.code === 'state' ? 'That changed - here it is now' : 'Couldn’t reach Lockedintool - try again');
+      if(state.current === 'lockin') renderDevice(); });
+}
+function lk2PollTick(){
+  const m = lk2Get(LK2.cur);
+  if(!m || !LK2.open || state.current !== 'lockin' || document.visibilityState !== 'visible' || ['done', 'declined', 'cancelled'].includes(m.status)){ clearInterval(LK2.timer); LK2.timer = 0; return; }
+  if(LK2.sheet || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) return;   // never redraw under your typing
+  msgApi('/v1/lk2/get', { id: m.id }).then(r=>{ if(!r.match) return; const was = JSON.stringify(lk2Get(m.id)); lk2Put(r.match); if(was !== JSON.stringify(r.match) && LK2.cur === m.id && state.current === 'lockin') renderDevice(); }).catch(()=>{});
+}
+function lk2Status(m){
+  const who = escText(lkWho(m.other));
+  if(m.status === 'invited') return m.mine ? 'Waiting for ' + who + ' to accept' : who + ' challenged you';
+  if(m.status === 'scheduled') return 'Starts ' + new Date(m.when).toLocaleString([], { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  if(m.status === 'active') return m.blink && !m.blinkFired ? 'Blink you lose is armed' : 'On now · ' + m.myWins + ' - ' + m.theirWins;
+  if(m.status === 'done') return m.draw ? 'Draw · ' + m.myWins + ' - ' + m.theirWins : (m.won ? 'You won · ' : 'You lost · ') + m.myWins + ' - ' + m.theirWins;
+  return m.status === 'declined' ? 'Declined' : 'Cancelled';
+}
+function lk2HomeHTML(){
+  const biz = !!lkSpace();
+  const open = LK2.matches.filter(m=>['invited', 'scheduled', 'active'].includes(m.status)), done = LK2.matches.filter(m=>!['invited', 'scheduled', 'active'].includes(m.status));
+  const row = m=>`<div class="row-card lk-row" data-lk2="match" data-id="${escText(m.id)}"><span class="tm-pic">${upPic(m.other || {})}</span>
+      <span class="fl-tx"><b>${m.blink ? 'Blink you lose' : 'Challenges'} · ${escText(lkWho(m.other))}</b><small>${escText(lk2Status(m))}</small></span><span>›</span></div>`;
+  const person = u=>{ const ok = u.played >= 3;
+    return `<div class="row-card lk-row lk2-person"><span class="tm-pic">${upPic(u)}</span><span class="fl-tx"><b>${escText(lkWho(u))}</b>
+      <small>${ok ? 'Mode two is open' : u.played + ' of 3 games played'}</small>${ok ? '' : `<span class="lk2-dots">${[0, 1, 2].map(i=>`<i class="${i < u.played ? 'on' : ''}"></i>`).join('')}</span>`}</span>
+      ${ok ? `<button class="lk-mini" data-lk2="inv" data-id="${escText(u.id)}">Challenge</button>` : ''}</div>`; };
+  return `<div class="lk2-hero">${lk2Logo(190)}<div class="fl-sh-s">Video-call challenges. You agree the challenge, go on a video call and see who does it first. Opens with someone after you have played 3 games together.</div></div>
+    ${biz ? '<div class="fl-note lk-note">Mode two is for Personal accounts. Business accounts play in person - post it from IN-PERSON PLAY.</div>' : ''}
+    ${!LK2.loaded ? '<div class="fl-empty">Loading…</div>' : `
+    ${open.length ? '<div class="section-title">YOUR MATCHES</div>' + open.map(row).join('') : ''}
+    ${biz ? '' : `<div class="section-title">PEOPLE YOU PLAY</div>
+    ${(LK2.pairs || []).length ? LK2.pairs.map(person).join('') : '<div class="fl-empty">Follow each other with someone and play 3 built-in games together - then Mode two opens.</div>'}`}
+    ${done.length ? '<div class="section-title">FINISHED</div>' + done.map(row).join('') : ''}`}`;
+}
+function lk2WheelHTML(m){   // the owner's 'spin the wheel' - it turns for a moment, then shows who starts
+  const spinning = Date.now() - LK2.spinAt < 1600;
+  if(spinning) setTimeout(()=>{ if(state.current === 'lockin') renderDevice(); }, 1650 - (Date.now() - LK2.spinAt));
+  return `<div class="lk2-wheel${spinning ? ' spin' : ''}" data-keep-color style="--lk2d:-${Math.min(1600, Date.now() - LK2.spinAt)}ms"><svg viewBox="0 0 100 100" width="96" height="96"><circle cx="50" cy="50" r="48" fill="#ffd60a"/><path d="M50 50 L50 2 A48 48 0 0 1 50 98 Z" fill="#ff453a"/>
+    <text x="72" y="54" text-anchor="middle" font-size="11" font-weight="900" fill="#000">${spinning ? '' : m.starter === 'them' ? 'THEM' : 'YOU'}</text><text x="28" y="54" text-anchor="middle" font-size="11" font-weight="900" fill="#000">${spinning ? '' : m.starter === 'them' ? 'YOU' : 'THEM'}</text></svg><i class="lk2-pin"></i></div>`;
+}
+function lk2MatchHTML(m){
+  const who = escText(lkWho(m.other)), on = m.status === 'active';
+  let body = '';
+  if(m.status === 'invited') body = m.mine ? `<div class="fl-sh-s">Waiting for ${who} to accept.</div><button class="btn-wide" data-lk2="cancel" data-id="${m.id}">Take it back</button>`
+    : `<div class="fl-sh-s">${m.blink ? 'Blink you lose: once you accept, it starts at any moment in the next ' + lk2Win(m.blinkWindow) + ' - nobody knows when.' : 'A match of challenges you both agree on, on a video call.'}${m.when ? ' Planned for ' + escText(lk2Status(Object.assign({}, m, { status:'scheduled' })).replace('Starts ', '')) + '.' : ''}</div>
+      ${m.blink ? `<div class="section-title">WHERE ARE YOU?</div><div class="lk-seg">${LK2_PLACES.map(([v, n])=>`<button class="${(LK2.place || 'any') === v ? 'on' : ''}" data-lk2="place-pick" data-v="${v}">${n}</button>`).join('')}</div>
+        <div class="fl-sh-s">So Lockedintool never gives you a challenge you can’t do there.</div>` : ''}
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk2="decline" data-id="${m.id}">Decline</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk2="accept" data-id="${m.id}">Accept</button></div>`;
+  else if(m.status === 'scheduled') body = `<div class="fl-sh-s">It opens ${escText(lk2Status(m).replace('Starts ', ''))}. You’ll both be told when it starts.</div><button class="btn-wide" data-lk2="cancel" data-id="${m.id}">Cancel the match</button>`;
+  else if(on){
+    const blinkWait = m.blink && !m.blinkFired;
+    body = `<button class="btn-wide lk2-call" data-lk2="call" data-id="${m.id}">Video call ${who}</button>
+      ${blinkWait ? `<div class="lk2-armed"><b>Blink you lose is armed</b><span>It starts at any moment in the next ${lk2Win(m.blinkWindow)} - stay ready. ${m.blinkSet === 'set' ? 'You set the challenge together.' : 'Lockedintool picks the challenge.'}</span></div>` : ''}
+      ${m.blink && m.blinkFired ? `<div class="lk2-blink" data-keep-color><b>BLINK!</b><span>${escText(m.blinkText)}</span></div>` : ''}
+      ${m.blink ? '' : `<div class="section-title">WHO STARTS</div>
+      ${m.starter ? lk2WheelHTML(m) + `<div class="fl-sh-s" style="text-align:center;">${Date.now() - LK2.spinAt < 1600 ? 'Spinning…' : (m.starter === 'me' ? 'You start' : who + ' starts') + (m.starterHow === 'wheel' ? ' · the wheel picked' : ' · you both agreed')}</div>`
+        : `<div class="mt-two"><button class="btn-wide" style="margin-top:0;" data-lk2="spin" data-id="${m.id}">Spin the wheel</button><button class="btn-wide" style="margin-top:0;" data-lk2="agree-start" data-id="${m.id}">We agree</button></div>
+          ${m.myStarterPick ? `<div class="fl-sh-s">You said ${m.myStarterPick === 'me' ? 'you' : who} start${m.myStarterPick === 'me' ? '' : 's'} - waiting for ${who} to say the same.</div>` : ''}`}`}
+      <div class="lk2-score"><span><b>${m.myWins}</b><small>You</small></span><i>${m.target ? 'First to ' + m.target : 'Until you stop'}</i><span><b>${m.theirWins}</b><small>${who}</small></span></div>
+      ${m.prizeMode === 'end' && m.prize ? `<div class="lk-lv-prize">PRIZE AT THE END · ${escText(m.prize)}</div>` : ''}
+      ${m.blink ? (m.blinkFired ? '<div class="section-title">WHO DID IT FIRST?</div>' + m.challenges.map(c=>lk2ChHTML(m, c)).join('') : '') : `<div class="section-title">CHALLENGES</div>
+      ${m.challenges.length ? m.challenges.map(c=>lk2ChHTML(m, c)).join('') : '<div class="fl-sh-s">No challenges yet. Suggest one - it counts once you both agree.</div>'}`}
+      ${m.blink ? '' : `<div class="lk2-prop"><input id="lk2-text" class="field-input" maxlength="160" placeholder="e.g. First to grab a ketchup bottle and show it">
+        ${m.prizeMode === 'each' ? '<input id="lk2-prize" class="field-input" maxlength="80" placeholder="Prize for this one (optional)">' : ''}
+        <button class="btn-wide" data-lk2="propose" data-id="${m.id}">Suggest this challenge</button></div>`}
+      <button class="btn-wide lk2-end" data-lk2="end" data-id="${m.id}">End the match</button>`;
+  }
+  else if(m.status === 'done') body = lkResWrap('m2' + m.id, m.draw ? 'draw' : m.won ? 'won' : 'lost', `<div class="lk-big">${m.draw ? 'Draw' : m.won ? 'You won!' : 'You lost'}</div><div class="fl-sh-s">${m.myWins} - ${m.theirWins}${m.prizeMode === 'end' && m.prize ? ' · Prize: ' + escText(m.prize) : ''}</div>`)
+    + `<div class="section-title">CHALLENGES</div>` + m.challenges.map(c=>lk2ChHTML(m, c)).join('');
+  else body = `<div class="fl-sh-s">${escText(lk2Status(m))}.</div>`;
+  if(on || m.status === 'scheduled') setTimeout(lk2Arm, 0);
+  return `<div class="lk2-mh"><span class="tm-pic">${upPic(m.other || {})}</span><span class="fl-tx"><b>${m.blink ? 'Blink you lose' : 'Challenges'} · ${who}</b><small>${escText(lk2Status(m))}</small></span></div>${body}`;
+}
+function lk2Win(n){ return n >= 60 ? (n / 60) + (n === 60 ? ' hour' : ' hours') : n + ' minutes'; }
+function lk2Arm(){ if(!LK2.timer) LK2.timer = setInterval(lk2PollTick, 3000); }
+function lk2ChHTML(m, c){
+  const who = escText(lkWho(m.other)), live = m.status === 'active';
+  let act = '';
+  if(c.status === 'proposed') act = c.mine ? `<small>Waiting for ${who} to agree</small>` : live ? `<span class="lk2-acts"><button class="lk-mini" data-lk2="ch-no" data-id="${m.id}" data-c="${c.id}">No</button><button class="lk-mini on" data-lk2="ch-yes" data-id="${m.id}" data-c="${c.id}">Agree</button></span>` : '';
+  else if(c.status === 'agreed') act = !live ? '' : c.myClaim ? `<small>You said ${c.myClaim === 'me' ? 'you' : who} won - waiting for ${who} to say who won</small>`
+    : `<span class="lk2-acts"><button class="lk-mini on" data-lk2="won-me" data-id="${m.id}" data-c="${c.id}">I won</button><button class="lk-mini" data-lk2="won-them" data-id="${m.id}" data-c="${c.id}">${who} won</button><button class="lk-mini" data-lk2="ch-ff" data-id="${m.id}" data-c="${c.id}">Forfeit</button></span>`;
+  else if(c.status === 'done' || c.status === 'forfeit') act = `<small class="${c.won ? 'lk2-w' : 'lk2-l'}">${c.won ? 'You won it' : who + ' won it'}${c.status === 'forfeit' ? ' · forfeit' : ''}</small>`;
+  else if(c.status === 'disputed') act = '<small>You didn’t agree on who won - nobody wins it</small>';
+  return `<div class="lk2-ch"><b>${escText(c.text)}</b>${c.prize ? `<small>Prize · ${escText(c.prize)}</small>` : ''}${act}</div>`;
+}
+function lk2SheetHTML(sh){
+  if(sh.t === 'inv'){ const u = (LK2.pairs || []).find(x=>x.id === sh.to) || {};
+    return `<div class="fl-sh-t">Challenge ${escText(lkWho(u))}</div>
+      <div class="section-title">GAME</div><div class="lk-seg"><button class="${sh.blink ? '' : 'on'}" data-lk2="s-blink" data-v="0">Challenges</button><button class="${sh.blink ? 'on' : ''}" data-lk2="s-blink" data-v="1">Blink you lose</button></div>
+      <div class="fl-sh-s">${sh.blink ? 'Lockedintool starts it at any moment - neither of you knows when. First to do the challenge on the video call wins.' : 'You agree each challenge together, then do it on a video call. As many as you like, one after another.'}</div>
+      <div class="section-title">WHEN</div><div class="lk-seg"><button class="${sh.sched ? '' : 'on'}" data-lk2="s-when" data-v="0">Now</button><button class="${sh.sched ? 'on' : ''}" data-lk2="s-when" data-v="1">Pick a date</button></div>
+      ${sh.sched ? `<div class="mt-two"><input id="lk2-date" class="field-input" type="date" value="${escText(sh.date || '')}"><input id="lk2-time" class="field-input" type="time" value="${escText(sh.time || '')}"></div>` : ''}
+      ${sh.blink ? `<div class="section-title">IT STARTS WITHIN</div><div class="lk-seg">${[15, 30, 60, 180].map(n=>`<button class="${(sh.win || 30) === n ? 'on' : ''}" data-lk2="s-win" data-v="${n}">${n >= 60 ? n / 60 + ' h' : n + ' min'}</button>`).join('')}</div>
+        <div class="section-title">THE CHALLENGE</div><div class="lk-seg"><button class="${sh.setIt ? '' : 'on'}" data-lk2="s-set" data-v="0">Lockedintool picks</button><button class="${sh.setIt ? 'on' : ''}" data-lk2="s-set" data-v="1">We set it</button></div>
+        ${sh.setIt ? `<input id="lk2-btext" class="field-input" maxlength="120" placeholder="e.g. First to show a spoon" value="${escText(sh.btext || '')}">` : `<div class="section-title">WHERE ARE YOU?</div><div class="lk-seg">${LK2_PLACES.map(([v, n])=>`<button class="${(sh.place || 'any') === v ? 'on' : ''}" data-lk2="s-place" data-v="${v}">${n}</button>`).join('')}</div>`}`
+      : `<div class="section-title">FIRST TO</div><div class="lk-seg">${[[1, '1'], [3, '3'], [5, '5'], [0, 'Until we stop']].map(([n, l])=>`<button class="${(sh.target || 0) === n ? 'on' : ''}" data-lk2="s-target" data-v="${n}">${l}</button>`).join('')}</div>
+        <div class="section-title">PRIZE</div><div class="lk-seg"><button class="${sh.pend ? '' : 'on'}" data-lk2="s-pm" data-v="each">Each challenge its own</button><button class="${sh.pend ? 'on' : ''}" data-lk2="s-pm" data-v="end">One prize at the end</button></div>
+        ${sh.pend ? `<input id="lk2-prize-end" class="field-input" maxlength="80" placeholder="e.g. Loser buys lunch" value="${escText(sh.prize || '')}">` : ''}`}
+      <div class="fl-sh-s">Prizes are in words for now - money prize pools come once Lockedintool’s payment partner is connected.</div>
+      <button class="btn-wide btn-primary" data-lk2="send">Send challenge</button><button class="btn-wide" data-lk2="close">Cancel</button>`; }
+  if(sh.t === 'end') return `<div class="fl-sh-t">End the match?</div><div class="fl-sh-s">Whoever won more challenges wins the match.</div>
+      <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-lk2="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk2="end-yes" data-id="${sh.id}">End the match</button></div>`;
+  if(sh.t === 'agree') return `<div class="fl-sh-t">Who starts?</div><div class="fl-sh-s">You both say who starts - when you say the same, it’s set.</div>
+      <button class="btn-wide" data-lk2="start-pick" data-v="me" data-id="${sh.id}">I start</button><button class="btn-wide" data-lk2="start-pick" data-v="them" data-id="${sh.id}">${escText(lkWho((lk2Get(sh.id) || {}).other))} starts</button><button class="btn-wide" data-lk2="close">Cancel</button>`;
+  return '<button class="btn-wide" data-lk2="close">Close</button>';
+}
+function lk2Screen(){
+  if(!LK2.loaded && msgAccount()) setTimeout(lk2Load, 0);
+  const m = LK2.cur && lk2Get(LK2.cur);
+  return `<div class="page-shell fl-page lk-page lk2-page"><div class="lk-ph"><button class="lk-back" data-lk2="${m ? 'back-list' : 'back'}" aria-label="Back">‹</button><b>${m ? 'Mode two' : ''}</b><span></span></div>
+    ${m ? lk2MatchHTML(m) : lk2HomeHTML()}
+    ${LK2.sheet ? `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${lk2SheetHTML(LK2.sheet)}</div></div>` : ''}</div>`;
+}
+function lk2Keep(){ const s = LK2.sheet; if(!s || s.t !== 'inv') return; [['date', 'lk2-date'], ['time', 'lk2-time'], ['btext', 'lk2-btext'], ['prize', 'lk2-prize-end']].forEach(([k, id])=>{ const el = document.getElementById(id); if(el) s[k] = el.value; }); }
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-lk2]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-lk2'), id = b.getAttribute('data-id'), v = b.getAttribute('data-v'), s = LK2.sheet;
+  switch(a){
+    case 'open': if(!msgAccount()){ showToast('Log in to play Lock In'); return; } LK2.open = true; LK2.cur = ''; lk2Load(); break;
+    case 'back': LK2.open = false; LK2.cur = ''; break;
+    case 'back-list': LK2.cur = ''; lk2Load(); break;
+    case 'match': LK2.cur = id; LK2.place = 'any'; break;
+    case 'inv': LK2.sheet = { t:'inv', to:id, target:0, win:30, place:'any' }; break;
+    case 's-blink': lk2Keep(); s.blink = v === '1'; break;
+    case 's-when': lk2Keep(); s.sched = v === '1'; break;
+    case 's-win': lk2Keep(); s.win = +v; break;
+    case 's-set': lk2Keep(); s.setIt = v === '1'; break;
+    case 's-place': lk2Keep(); s.place = v; break;
+    case 's-target': lk2Keep(); s.target = +v; break;
+    case 's-pm': lk2Keep(); s.pend = v === 'end'; break;
+    case 'send': { lk2Keep(); let when = 0;
+      if(s.sched){ when = new Date((s.date || '') + 'T' + (s.time || '')).getTime(); if(!(when > Date.now())){ showToast('Pick a date and time that hasn’t passed'); return; } }
+      if(s.blink && s.setIt && !(s.btext || '').trim()){ showToast('Write the challenge, or let Lockedintool pick'); return; }
+      const body = { to:s.to, when, blink:!!s.blink, window:s.win || 30, blinkBy: s.setIt ? 'players' : 'lit', blinkText: s.btext || '', place: s.place || 'any', target: s.blink ? 1 : s.target || 0, prizeMode: s.pend ? 'end' : 'each', prize: s.pend ? s.prize || '' : '' };
+      LK2.sheet = null; lk2Call('invite', body, r=>{ if(r.match){ LK2.cur = r.match.id; showToast('Challenge sent'); } }); return; }
+    case 'place-pick': LK2.place = v; break;
+    case 'accept': lk2Call('respond', { id, yes:true, place: LK2.place || 'any' }); return;
+    case 'decline': lk2Call('respond', { id, yes:false }); return;
+    case 'cancel': lk2Call('cancel', { id }); return;
+    case 'call': { const m = lk2Get(id); if(!m || !m.gid) return;
+      try{ localStorage.setItem(GCALL_REQ, JSON.stringify({ gid: m.gid, name: 'Lock In · ' + lkWho(m.other), video:true, join:false, at: Date.now() })); }catch(err){}
+      showToast('Calling ' + lkWho(m.other) + '…'); return; }
+    case 'spin': LK2.spinAt = Date.now(); lk2Call('starter', { id, how:'wheel' }); return;
+    case 'agree-start': LK2.sheet = { t:'agree', id }; break;
+    case 'start-pick': LK2.sheet = null; lk2Call('starter', { id, how:'agree', pick:v }); return;
+    case 'propose': { const t = document.getElementById('lk2-text'), p = document.getElementById('lk2-prize'); const text = t ? t.value.trim() : '';
+      if(!text){ showToast('Write the challenge first'); return; } lk2Call('propose', { id, text, prize: p ? p.value.trim() : '' }); return; }
+    case 'ch-yes': lk2Call('agree', { id, cid: b.getAttribute('data-c') }); return;
+    case 'ch-no': lk2Call('reject', { id, cid: b.getAttribute('data-c') }); return;
+    case 'won-me': case 'won-them': lk2Call('result', { id, cid: b.getAttribute('data-c'), won: a === 'won-me' ? 'me' : 'them' }); return;
+    case 'ch-ff': lk2Call('forfeit', { id, cid: b.getAttribute('data-c') }); return;
+    case 'end': LK2.sheet = { t:'end', id }; break;
+    case 'end-yes': LK2.sheet = null; lk2Call('end', { id }); return;
+    case 'close': LK2.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
+}, true);
+window.addEventListener('storage', e=>{ if(e.key === 'story-lk2-ping' && state.current === 'lockin' && LK2.open) lk2Load(); });
 function lkSheetHTML(sh){
   if(sh.t === 'badges') return lkBadgesSheet();
   if(sh.t === 'ip') return lkIpSheet(sh);
@@ -23179,9 +23420,26 @@ function lkLiveOvHTML(){
     ${L.state ? `<div class="lk-lv-state">${escText(L.state)}</div>` : ''}
     ${lk.prize ? `<div class="lk-lv-prize">PRIZE · ${escText(lk.prize)}</div>` : ''}
     ${lkLiveMatchHTML(m)}
+    ${lkLivePollHTML(st, host)}
     ${myTurnHere ? '<button class="btn-wide btn-primary lk-lv-playbtn" data-lk="live-play">Play your game</button>' : ''}
     ${panel}
     <div class="lk-lv-c">${(st.recent || []).slice(-6).map(c=>`<div><b>${escText(c.name || '@' + c.username)}</b> ${escText(c.text)}</div>`).join('')}</div>`;
+}
+// #398 (owner: 'live, a chat poll can decide the challenge (the most-voted option wins)')
+function lkLivePollHTML(st, host){
+  const p = st.poll;
+  if(!p) return host && st.live ? '<button class="lk-lv-pollbtn" data-lk="poll-new">Chat poll</button>' : '';
+  const total = p.counts.reduce((x, y)=>x + y, 0), top = Math.max(...p.counts), lead = p.counts.indexOf(top);
+  return `<div class="lk-lv-poll"><div class="lk-lv-pq">${escText(p.q)}${p.open ? '' : ' · closed'}</div>
+    ${p.opts.map((o, i)=>`<button class="lk-lv-po${p.mine === i ? ' on' : ''}${!p.open && i === lead && top > 0 ? ' win' : ''}" data-lk="poll-vote" data-v="${i}" ${p.open && !host ? '' : 'disabled'}>
+      <i style="width:${total ? Math.round(p.counts[i] / total * 100) : 0}%"></i><span>${escText(o)}</span><b>${p.counts[i]}</b></button>`).join('')}
+    ${!p.open && top > 0 ? `<div class="lk-lv-pw">The chat picked: ${escText(p.opts[lead])}</div>` : ''}
+    ${host ? (p.open ? '<button class="lk-lv-pollbtn" data-lk="poll-end">Close the poll</button>' : '<button class="lk-lv-pollbtn" data-lk="poll-new">New chat poll</button>') : ''}</div>`;
+}
+function lkLivePollEditHTML(){
+  return `<div class="lk-lv-pe"><b>Chat poll</b><input id="lk-pq" class="field-input" maxlength="80" placeholder="Which challenge?">
+    ${[0, 1, 2, 3].map(i=>`<input id="lk-po${i}" class="field-input" maxlength="80" placeholder="Option ${i + 1}${i > 1 ? ' (optional)' : ''}">`).join('')}
+    <div class="confirm-btn-row"><button class="btn-wide" style="margin-top:0;" data-lk="poll-cancel">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-lk="poll-start">Start the poll</button></div></div>`;
 }
 function lkLivePaint(){ const ov = document.getElementById('lk-lv-ov'); if(ov && LK.live) ov.innerHTML = lkLiveOvHTML(); else if(state.current === 'lockin' && LK.live && !LK.play) renderDevice(); }
 function lkLiveScreen(){
@@ -23189,6 +23447,7 @@ function lkLiveScreen(){
   return `<div class="page-shell lk-lv">
     <video id="lk-lv-video" class="${LK.live.mode === 'host' ? 'mirror' : ''}" playsinline autoplay muted></video>
     <div id="lk-lv-ov" class="lk-lv-ov">${lkLiveOvHTML()}</div>
+    ${LK.live.pollEdit ? lkLivePollEditHTML() : ''}
     <div class="lk-lv-bottom"><input id="lk-lv-in" maxlength="200" placeholder="Add a comment" enterkeyhint="send" onkeydown="if(event.key==='Enter'){event.preventDefault();lkLiveComment();}"><button data-lk="live-send" aria-label="Send">➤</button><button class="lk-lv-heart" data-lk="live-heart" aria-label="Heart">♥</button></div>
     </div>`;
 }
@@ -23227,6 +23486,14 @@ document.addEventListener('click', e=>{
     case 'live-play': lkLivePlay(); return;
     case 'live-heart': if(LK.live) msgApi('/v1/live/heart', { id: LK.live.id }).catch(()=>{}); return;
     case 'live-send': lkLiveComment(); return;
+    case 'poll-new': if(LK.live){ LK.live.pollEdit = true; } break;
+    case 'poll-cancel': if(LK.live) LK.live.pollEdit = false; break;
+    case 'poll-start': { const L = LK.live; if(!L) return; const opts = [0, 1, 2, 3].map(i=>((document.getElementById('lk-po' + i) || {}).value || '').trim()).filter(Boolean);
+      if(opts.length < 2){ showToast('Give at least 2 options'); return; }
+      L.pollEdit = false; msgApi('/v1/lk/livepoll', { id: L.id, q: ((document.getElementById('lk-pq') || {}).value || '').trim(), opts }).then(lkLivePoll).catch(()=>showToast('Couldn’t start the poll')); break; }
+    case 'poll-end': if(LK.live) msgApi('/v1/lk/livepollend', { id: LK.live.id }).then(lkLivePoll).catch(()=>{}); return;
+    case 'poll-vote': { const L = LK.live; if(!L) return; const o = +b.getAttribute('data-v'); if(L.st && L.st.poll){ L.st.poll.mine = o; }
+      msgApi('/v1/lk/livevote', { id: L.id, opt: o }).then(lkLivePoll).catch(()=>showToast('The poll is closed')); lkLivePaint(); return; }
     case 'game': { const k = b.getAttribute('data-k');
       LK.sheet = { t:'game', k, bet:false, cur: (typeof moneyMainCur === 'function' && moneyMainCur()) || 'USD' };
       if(LK.people == null && msgAccount()) msgApi('/v1/lk/people').then(r=>{ LK.people = r.people || []; if(LK.sheet && LK.sheet.t === 'game'){ keep(); renderDevice(); } }).catch(()=>{ LK.people = []; });

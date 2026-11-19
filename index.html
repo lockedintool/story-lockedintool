@@ -10084,7 +10084,7 @@ function subscriptionScreen(){
     : active ? 'Your plan: ' + (s.plan === 'premium' ? 'Premium' : 'Basic') + sysNm(s.mode) + ' · paid until ' + until
     : !s.connected ? 'Subscriptions open once LOCKED IN TOOL’s payments are set up.'
     : soon ? 'Free: the Dashboard is yours. Basic & Premium are coming soon.'
-    : locked ? 'Free: the Dashboard. Choose a plan for the Pages.' : 'Choose a plan to use LOCKED IN TOOL.';
+    : locked ? (LIT_NO_PAGES ? 'Free: the Dashboard. Choose a plan to open Make money.' : 'Free: the Dashboard. Choose a plan for the Pages.') : 'Choose a plan to use LOCKED IN TOOL.';
   // #311 (owner, 13 Nov 2026: 'These messages for the system and account type should show on top of the screen with the
   // background a blurred black, not have their own space like that'): the details pop up OVER the Subscription page.
   const subPop = state.sub.optView ? subOptionScreen(locked) : state.sub.acctView ? subAcctScreen(locked) : '';
@@ -10734,7 +10734,7 @@ function quickAccessSettingsHTML(){
       ${opt('s3dial', 'Station 3 with dial pad')}
       ${opt('separate', 'Station 3 dial pad separate')}
       ${opt('dialonly', 'Dial pad only')}
-      ${wallet}
+      ${LIT_NO_PAGES ? '' : wallet}
     </div>`;
 }
 // Only use widgets (owner): Lockedintool is only its home screen widgets - the Pages, Station 3, the bottom line and
@@ -11126,7 +11126,7 @@ function informationScreen(){
   const ver = NATIVE && window.StoryNative.appVersion ? window.StoryNative.appVersion() : '';
   const block = (title, rows)=>`
     <div class="section-title">${title}</div>
-    <div class="set2-card">${rows.map(([name, sub])=>`<div class="set2-row"><div class="set2-text"><div class="set2-name">${name}</div>${sub ? `<div class="set2-sub">${sub}</div>` : ''}</div></div>`).join('')}</div>`;
+    <div class="set2-card">${rows.filter(r=>!r[2] || (r[2] === 'pages' ? !LIT_NO_PAGES : LIT_NO_PAGES)).map(([name, sub])=>`<div class="set2-row"><div class="set2-text"><div class="set2-name">${name}</div>${sub ? `<div class="set2-sub">${sub}</div>` : ''}</div></div>`).join('')}</div>`;
   return `
     <div class="page-shell set2 info-page">
     ${topBar('Information', false)}
@@ -11134,25 +11134,32 @@ function informationScreen(){
       <div class="info-title">Lockedintool</div>
     </div>
     ${block('WHAT LOCKEDINTOOL IS', [
-      ['One with your phone', 'Once Lockedintool is on, it stays on - like part of the phone. Your pages and Station 3 are there over every app, and on the lock screen.'],
-      ['Everything in one place', 'Your money, your cards, your trading, your notes and your people - without switching between apps.'],
+      ['One with your phone', 'Once Lockedintool is on, it stays on - like part of the phone. Your pages and Station 3 are there over every app, and on the lock screen.', 'pages'],
+      ['Everything in one place', 'Your money, your cards, your trading, your notes and your people - without switching between apps.', 'pages'],
+      ['A platform for locking in', 'Made for people who are locking in and focusing on success. You only join the groups you choose.', 'nopages'],
+      ['Everything in one app', 'Making money, your notes, files, team, meetings, shop, customers, learning and your people - without switching between apps.', 'nopages'],
     ])}
     ${block('HOW IT WORKS', [
-      ['Pages', 'Money, Wallet and Focus page sit side by side in a row. Swipe between them; Rows and Page Styles show them in different ways.'],
+      ['Pages', 'Money, Wallet and Focus page sit side by side in a row. Swipe between them; Rows and Page Styles show them in different ways.', 'pages'],
+      ['Make money', 'Money-making systems, channels, groups, business ideas and products from Lockedintool. Basic opens a selection, Premium opens everything.', 'nopages'],
+      ['Updates', 'Share updates and posts, find profiles to check out and see what people share in the Updates feed.', 'nopages'],
       ['Station 3', 'The button in the corner. Open it for Messages, Profile, Create, Call history and the dial pad - from anywhere.'],
       ['Community', 'Public groups anyone can join, and your own community.'],
       ['Notes', 'Notes and drawings, kept on your phone.'],
     ])}
     ${block('EVERYTHING IS REAL', [
-      ['Your money', 'Payments come from your own bank\u2019s notifications. Nothing is made up.'],
-      ['Your bank', 'Connect your bank in Money for your real balance and history, straight from your bank.'],
-      ['Your trading', 'Your own broker accounts and TradingView\u2019s real chart. Lockedintool is only the gateway - deposits and withdrawals stay with your broker.'],
+      ['Your money', 'Payments come from your own bank\u2019s notifications. Nothing is made up.', 'pages'],
+      ['Your bank', 'Connect your bank in Money for your real balance and history, straight from your bank.', 'pages'],
+      ['Your trading', 'Your own broker accounts and TradingView\u2019s real chart. Lockedintool is only the gateway - deposits and withdrawals stay with your broker.', 'pages'],
+      ['Your profile', 'Real followers, updates and posts - no made-up numbers.', 'nopages'],
       ['Your people', 'Real messages, calls and groups between people on Lockedintool.'],
     ])}
     ${block('YOUR PRIVACY', [
       ['Messages and calls', 'End-to-end encrypted. Your keys are made on your phone and never leave it.'],
-      ['Your money, cards and notes', 'Kept only on your phone. Card details are kept locked on your phone only, and only show after your phone\u2019s own unlock.'],
-      ['Your broker logins', 'Kept in Lockedintool\u2019s private storage on your phone. Your broker password is never stored.'],
+      ['Your money, cards and notes', 'Kept only on your phone. Card details are kept locked on your phone only, and only show after your phone\u2019s own unlock.', 'pages'],
+      ['Your broker logins', 'Kept in Lockedintool\u2019s private storage on your phone. Your broker password is never stored.', 'pages'],
+      ['Your notes', 'Kept only on your phone.', 'nopages'],
+      ['Your files', 'Kept in your Lockedintool account - only you and the team you choose see them.', 'nopages'],
     ])}
     ${block('COMING NEXT', [
       ['Subscription', 'One subscription that covers everything Lockedintool connects for you.'],
@@ -15222,12 +15229,12 @@ function appMenuTemplate(){
 // apps and photo album. Android lets no app take over other apps' data or logins, so the phone's own Gallery and other
 // apps' accounts stay as they are - a company's space lives inside Lockedintool.
 const SUB_ACCTS = [
-  { key:'personal', name:'Personal', short:'Your phone, your apps - everything in one place.',
-    text:LIT_NO_PAGES ? 'One Lockedintool for everything: your cards, notes and pictures all in one place.' : 'One Lockedintool for everything on your phone: your Pages, apps, cards, notes and pictures all in one place.',
-    list:['Everything in one place', LIT_NO_PAGES ? 'Your cards, notes and pictures' : 'Your Pages, apps, cards and notes', LIT_NO_PAGES ? 'Your own Lockedintool account' : 'Works with Second system or Only system'] },
+  { key:'personal', name:'Personal', short: LIT_NO_PAGES ? 'You - everything in one place.' : 'Your phone, your apps - everything in one place.',
+    text:LIT_NO_PAGES ? 'One Lockedintool for you: your notes, files, updates and people all in one place.' : 'One Lockedintool for everything on your phone: your Pages, apps, cards, notes and pictures all in one place.',
+    list:['Everything in one place', LIT_NO_PAGES ? 'Your notes, files and updates' : 'Your Pages, apps, cards and notes', LIT_NO_PAGES ? 'Your own Lockedintool account' : 'Works with Second system or Only system'] },
   { key:'business', name:'Business', short:'A space for each of your companies - plus Personal.',
-    text:'Add your companies and each one gets its own Lockedintool: its own Pages, apps, cards, notes, photo album, colours and background. After every unlock you choose which company to focus on, or your Personal account. Everything that isn’t one of your companies stays in Personal.',
-    list:['A space for each company', 'Choose your focus after every unlock', 'Each company: its own Pages, apps, photos and notes', 'Personal keeps everything else'] }
+    text: LIT_NO_PAGES ? 'Add your companies and each one gets its own Lockedintool account: its own notes, files, team, meetings, shop, customers, colours and background. When you open Lockedintool you choose which company to focus on, or your Personal account.' : 'Add your companies and each one gets its own Lockedintool: its own Pages, apps, cards, notes, photo album, colours and background. After every unlock you choose which company to focus on, or your Personal account. Everything that isn’t one of your companies stays in Personal.',
+    list: LIT_NO_PAGES ? ['A space for each company', 'Choose your focus when you open Lockedintool', 'Each company: its own files, team, shop and customers', 'Personal keeps everything else'] : ['A space for each company', 'Choose your focus after every unlock', 'Each company: its own Pages, apps, photos and notes', 'Personal keeps everything else'] }
 ];
 function acctType(){ const v = litLsRaw('story-acct-type'); return v === 'business' || v === 'personal' ? v : ''; }
 function bizOn(){ return acctType() === 'business'; }

@@ -10017,7 +10017,19 @@ function subLocalPrice(usd){
   fxEnsure(); const v = fxConvert(Number(usd), 'USD', cur);
   return v == null ? '' : ' (about ' + fmtCur(v, cur) + ' today)';
 }
+// #400 (owner, 19 Nov 2026: 'Lockedintool now is just going to be the dashboard. Basically the basic and premium subscriptions
+// will be for lockedintool money making systems channels groups business ideas products and everything that has to start
+// making money with as little money as possible and to make as much money as possible'; chose 'Basic = some, Premium = all').
+// The plan texts from before (the Pages) are kept below as SUB_PLANS_PAGES - they come back with the pages.
 const SUB_PLANS = [
+  { key:'basic', name:'Basic', tag:'Start making money. Stay locked in.', badge:'',
+    text:'Get started with LOCKED IN TOOL’s money-making systems: a selection of channels, groups, business ideas and products, chosen to help you start making money with as little money as possible.',
+    list:['A selection of money-making systems', 'Money-making channels and groups', 'Business ideas you can start with little money', 'Products you can start with', 'Everything on the Dashboard'] },
+  { key:'premium', name:'Premium', tag:'Everything. Make as much as you can.', badge:'Full access',
+    text:'Unlock every LOCKED IN TOOL money-making system, channel, group, business idea and product - including the newest as they are added - so you can start with as little money as possible and make as much money as possible.',
+    list:['Every money-making system', 'All channels and groups', 'Every business idea and product', 'The newest ones as soon as they are added', 'Everything in Basic'] },
+];
+const SUB_PLANS_PAGES = [
   { key:'basic', name:'Basic', tag:'Your essentials. Stay locked in.', badge:'',
     text:'Get the core LOCKED IN TOOL experience with your three essential pages: Money, Home/Wallet, and Focus page. Keep your finances, wallet, and goals in one place, with the freedom to build your daily routine around what matters most.',
     list:['Money page', 'Home/Wallet page', 'Customizable Focus page', 'Three-page layout', 'Essential focus tools'] },
@@ -10976,7 +10988,7 @@ function privacySettingsHTML(){
 // ---- Privacy Policy + Terms of Service (owner, under Information). Written from how Lockedintool really works; the
 //      owner's details: Lockedintool, lockedintool@gmail.com, no refunds (except where the law requires). Also reachable from the
 //      Subscription page (must be readable by someone without a plan, before they agree to it).
-const LEGAL_UPDATED = '13 November 2026';
+const LEGAL_UPDATED = '19 November 2026';
 const LEGAL = {
   'legal-safety': { title:'Safety & Rules', sections:[
     ['Adult content is blocked', [
@@ -11053,7 +11065,7 @@ const LEGAL = {
     ['Updates', [
       'Lockedintool downloads new versions by itself and tells you with a notification when one is ready. It installs only when you choose to, after you confirm twice, so nothing you are working on is lost. Please install updates when they are available - they keep Lockedintool working and safe.' ]],
     ['Subscription', [
-      'Without a plan you can use the Dashboard for free. Basic adds the Money, Wallet and Focus page and Lockedintool calls (voice, video and group calls); Premium adds everything else (more pages and rows). Calls aren’t part of the free plan - phone calls from the dial pad are your phone’s own and always work.',
+      'Without a plan you can use the Dashboard for free. Basic opens a selection of Lockedintool’s money-making systems, channels, groups, business ideas and products, and Lockedintool calls (voice, video and group calls); Premium opens all of them, including the newest as they are added. Calls aren’t part of the free plan - phone calls from the dial pad are your phone’s own and always work.',
       'Basic is $5 a month and Premium $15 a month. Prices can change - they can go up or go down. Any change to current prices will be announced: everyone with a plan is told, a month you have already paid for never costs more and nothing extra is charged for it, and the new price applies to new purchases and your next payment. A price can also come back down before your next payment.',
       'In South Africa plans are charged in rand - the dollar price converted at the day’s rate, shown before you pay - through PayFast, on its own secure page (card or instant EFT). One payment gives 30 days of your plan; paying the same plan again adds 30 days. These plans don’t renew by themselves - you pay each month.',
       'Outside South Africa plans are charged in US dollars (your bank may show it in your own currency) and sold through Lemon Squeezy (lemonsqueezy.com), which takes the payment on its own page - card, PayPal, Apple Pay or Google Pay - and handles your country’s sales tax. A plan renews by itself every month until you cancel; cancel any time with the link in Lemon Squeezy’s email, and your plan runs to the end of the month already paid.',

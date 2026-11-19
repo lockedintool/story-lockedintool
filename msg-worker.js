@@ -229,6 +229,9 @@ export class Hub {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meetpeople (mid TEXT, uid TEXT, status TEXT, PRIMARY KEY (mid, uid))`);
     // #381 SELLING: a shop on your profile - products / services with pictures, a price, a description; people message you
     // to buy (paying inside Lockedintool waits for a payment partner).
+    // #403 MAKE MONEY (owner, 19 Nov 2026: 'the basic and premium subscriptions will be for lockedintool money making systems
+    // channels groups business ideas products'): Lockedintool's official account posts them; Basic opens some, Premium all.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS earn (id TEXT PRIMARY KEY, uid TEXT, cat TEXT, title TEXT, summary TEXT, body TEXT, cost TEXT, cover TEXT, link TEXT, tier TEXT, active INTEGER DEFAULT 1, at INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS courses (id TEXT PRIMARY KEY, uid TEXT, title TEXT, about TEXT, cover TEXT, price INTEGER DEFAULT 0, cur TEXT, active INTEGER DEFAULT 1, at INTEGER)`);   // #396 LEARN
     this.sql.exec(`CREATE TABLE IF NOT EXISTS lessons (id TEXT PRIMARY KEY, cid TEXT, idx INTEGER, title TEXT, body TEXT, media TEXT, mtype TEXT, at INTEGER)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS enrolls (cid TEXT, uid TEXT, at INTEGER, done TEXT, PRIMARY KEY (cid, uid))`);
@@ -346,6 +349,7 @@ export class Hub {
       if (path.startsWith('/v1/meet/')) return this.meet(me, path.slice(9), body);
       if (path.startsWith('/v1/shop/')) return this.shop(me, path.slice(9), body);
       if (path.startsWith('/v1/learn/')) return this.learn(me, path.slice(10), body);
+      if (path.startsWith('/v1/earn/')) return this.earn(me, path.slice(9), body);
       if (path.startsWith('/v1/cust/')) return this.cust(me, path.slice(9), body);
       if (path.startsWith('/v1/lk2/')) return this.lockin2(me, path.slice(8), body);
       if (path.startsWith('/v1/lk/')) return this.lockin(me, path.slice(7), body);
@@ -1592,6 +1596,56 @@ export class Hub {
   }
   // #396 LEARN (owner: 'Others can become creators and teach others free or paid'): courses made of lessons. Free courses: anyone
   // who can see the creator's profile enrols and learns; paid ones wait for the payment partner.
+  // #403: which plan this account has for MAKE MONEY - 'premium' (everything), 'basic' (the Basic ones) or 'free' (titles only).
+  // Like calls: until subscriptions are switched on (SUB_ENFORCE) everyone has everything; the official account always does.
+  earnTier(me) {
+    const u = this.planOwner(me);
+    if (this.env.SUB_ENFORCE !== '1' || !this.subReady() || !u || u.official) return 'premium';
+    const r = this.one('SELECT plan, until FROM subs WHERE uid = ?', u.id);
+    return r && r.until > Date.now() ? (r.plan === 'premium' ? 'premium' : 'basic') : 'free';
+  }
+  earn(me, act, b) {
+    b = b || {};
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, n);
+    const CATS = ['system', 'channel', 'group', 'idea', 'product'];
+    const tier = this.earnTier(me), off = !!me.official;
+    const open = it => off || tier === 'premium' || (tier === 'basic' && it.tier !== 'premium');
+    const view = it => {
+      const ok = open(it);
+      const v = { id: it.id, cat: it.cat, title: it.title, summary: it.summary || '', cost: it.cost || '', cover: it.cover ? this.mediaUrl(it.cover) : '', tier: it.tier === 'premium' ? 'premium' : 'basic', at: it.at, locked: !ok };
+      if (ok) { v.body = it.body || ''; v.link = it.link || ''; }
+      if (off) { v.coverId = it.cover || ''; v.active = !!it.active; }
+      return v;
+    };
+    if (act === 'list') {
+      const rows = this.sql.exec(off ? 'SELECT * FROM earn ORDER BY at DESC LIMIT 500' : 'SELECT * FROM earn WHERE active = 1 ORDER BY at DESC LIMIT 500').toArray();
+      return json({ items: rows.map(view), tier, official: off });
+    }
+    const it = b.id ? this.one('SELECT * FROM earn WHERE id = ?', clean(b.id, 40)) : null;
+    if (act === 'get') { if (!it || (!it.active && !off)) return json({ error: 'notfound' }, 404); return json({ item: view(it), tier }); }
+    if (!off) return json({ error: 'official' }, 403);
+    if (act === 'save') {
+      const title = clean(b.title, 120); if (!title) return json({ error: 'title' }, 400);
+      const cat = CATS.includes(b.cat) ? b.cat : 'idea', t = b.tier === 'premium' ? 'premium' : 'basic';
+      let link = clean(b.link, 500); if (link && !/^https:\/\//i.test(link)) link = '';
+      const cover = b.cover && this.one('SELECT 1 AS x FROM media WHERE id = ? AND uid = ?', clean(b.cover, 80), me.id) ? clean(b.cover, 80) : '';
+      if (it) {
+        if (it.cover && it.cover !== cover) this.mediaDel('id = ?', it.cover);
+        this.sql.exec('UPDATE earn SET cat = ?, title = ?, summary = ?, body = ?, cost = ?, cover = ?, link = ?, tier = ?, active = ? WHERE id = ?', cat, title, clean(b.summary, 300), clean(b.body, 20000), clean(b.cost, 60), cover, link, t, b.active === false ? 0 : 1, it.id);
+        return json({ item: view(this.one('SELECT * FROM earn WHERE id = ?', it.id)) });
+      }
+      const id = 'ea' + rand(9);
+      this.sql.exec('INSERT INTO earn (id, uid, cat, title, summary, body, cost, cover, link, tier, active, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', id, me.id, cat, title, clean(b.summary, 300), clean(b.body, 20000), clean(b.cost, 60), cover, link, t, b.active === false ? 0 : 1, Date.now());
+      return json({ item: view(this.one('SELECT * FROM earn WHERE id = ?', id)) });
+    }
+    if (act === 'delete') {
+      if (!it) return json({ ok: true });
+      if (it.cover) this.mediaDel('id = ?', it.cover);
+      this.sql.exec('DELETE FROM earn WHERE id = ?', it.id);
+      return json({ ok: true });
+    }
+    return json({ error: 'unknown' }, 404);
+  }
   learn(me, act, b) {
     b = b || {};
     const clean = (v, n) => String(v || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, n);

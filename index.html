@@ -1509,6 +1509,7 @@
   .le-title{ font-size:21px; font-weight:800; line-height:1.2; } .le-about{ font-size:14px; line-height:1.45; white-space:pre-wrap; opacity:.9; margin:6px 0 10px; }
   .le-meta{ font-size:12px; color:#9a9a9a; margin-bottom:10px; } .le-bar{ height:6px; border-radius:3px; background:#262626; overflow:hidden; margin:6px 0 4px; } .le-bar i{ display:block; height:100%; background:#30d158; }
   .le-ls{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:6px; cursor:pointer; } .le-n{ width:26px; height:26px; flex:0 0 26px; border-radius:50%; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+  .ea-lock{ color:#ffd60a; font-weight:700; } .ea-tag{ display:inline-block; font-size:11px; font-weight:700; letter-spacing:.4px; color:#9a9a9a; text-transform:uppercase; margin:2px 0 6px; } .ea-cost{ font-size:13px; font-weight:700; color:#30d158; margin:2px 0 8px; } .ea-locked{ border:1px dashed #444; border-radius:14px; padding:14px; margin:8px 0 12px; font-size:14px; line-height:1.45; }
   .le-n.ok{ background:#30d158; border-color:#30d158; color:#000; } .le-ls .fl-tx{ flex:1; min-width:0; } .le-mv{ background:transparent; border:1px solid #333; color:#fff; border-radius:8px; width:28px; height:28px; padding:0; font-size:13px; }
   .le-media{ width:100%; border-radius:12px; overflow:hidden; background:#111; margin:8px 0; } .le-media img, .le-media video{ width:100%; display:block; max-height:60vh; object-fit:contain; background:#000; }
   .le-body{ font-size:15px; line-height:1.55; white-space:pre-wrap; margin:6px 0 14px; } .le-paid{ color:#ffd60a; font-weight:700; }
@@ -6375,6 +6376,7 @@ function dashboardScreen(){
       <div class="safe-search"><span class="diamond">◇</span> Safe search is on</div>`}
       <div class="story-body">
         <div class="story-sidebar">
+          <div class="sidebar-item" data-nav="earn">MAKE MONEY</div>
           <div class="sidebar-item" data-nav="notes">NOTES</div>
           <div class="sidebar-item" data-nav="files">FILES</div>
           <div class="sidebar-item" data-nav="staff">TEAM</div>
@@ -17447,6 +17449,7 @@ function renderScreenContent(){
     case 'customers': return customersScreen();
     case 'lockin': return lockInScreen();
     case 'learn': return learnScreen();
+    case 'earn': return earnScreen();
     case 'biz-home': return bizHomeScreen();
     case 'personal-home': return personalHomeScreen();
   }
@@ -19041,6 +19044,7 @@ function attachHandlers(){
       if(target === 'community' && state.current !== 'community-group' && state.current !== 'community') state.communityMode = cmStartMode();
       if(target === 'layouts-pagelayout') state.layoutRowEdit = null;   // Page layout opens on its list of rows
       if(target === 'settings') state.setSection = null;   // Settings opens on its list of names (owner)
+      if(target === 'earn'){ EA.open = null; EA.sheet = null; EA.list = null; }   // #403: Make money opens on its fresh list
       if(target === 'layouts-bg'){ state.bgScope = el.getAttribute('data-scope') || 'pages'; state.bgEditTarget = state.bgScope === 'dashboard' ? 'dashboard' : null; state.bgPicking = false; }
       if(target === 'layouts-color'){ state.colorScope = el.getAttribute('data-scope') || 'pages'; state.colorEditTarget = state.colorScope === 'dashboard' ? 'dashboard' : null; }   // Dashboard: one scope, open its editor straight away
       state.moneyTransferOpen = false;   // Money's Transfer Money pop-up (its Wallet Overview button) never stays open behind
@@ -22493,6 +22497,105 @@ document.addEventListener('click', e=>{
   }
   renderDevice();
 }, true);
+// ---- #403 MAKE MONEY (owner, 19 Nov 2026: 'the basic and premium subscriptions will be for lockedintool money making systems
+// channels groups business ideas products and everything that has to start making money with as little money as possible
+// and to make as much money as possible'; chose 'Basic = some, Premium = all' and 'Money-making section'). Lockedintool's
+// official account adds them (+ Add); everyone sees the titles, Basic opens the Basic ones, Premium opens all (the server
+// decides - /v1/earn/*).
+const EA = { cat:'all', list:null, tier:'', official:false, open:null, sheet:null, err:'' };
+const EA_CATS = [['system','Systems','System'],['channel','Channels','Channel'],['group','Groups','Group'],['idea','Business ideas','Business idea'],['product','Products','Product']];
+function eaCatName(k, one){ const c = EA_CATS.find(x=>x[0] === k); return c ? c[one ? 2 : 1] : ''; }
+function eaLoad(){
+  if(!msgAccount()){ EA.err = 'signin'; EA.list = []; return; }
+  msgApi('/v1/earn/list').then(r=>{ EA.list = r.items || []; EA.tier = r.tier || ''; EA.official = !!r.official; EA.err = ''; })
+    .catch(e=>{ EA.err = e.code === 'signin' ? 'signin' : 'net'; EA.list = EA.list || []; })
+    .finally(()=>{ if(state.current === 'earn' && !EA.sheet) renderDevice(); });
+}
+function eaRow(it){
+  return `<div class="row-card sh-row" data-ea="open" data-id="${escText(it.id)}"><span class="sh-pic">${it.cover ? `<img alt="" loading="lazy" src="${escText(it.cover)}">` : `<b>${escText((it.title || '?').charAt(0).toUpperCase())}</b>`}</span>
+    <span class="fl-tx"><b>${escText(it.title)}</b><small>${escText(eaCatName(it.cat, true))}${it.cost ? ' · Start: ' + escText(it.cost) : ''}${EA.official && !it.active ? ' · Hidden' : ''} · ${it.locked ? `<span class="ea-lock">Locked · ${it.tier === 'premium' ? 'Premium' : 'Basic'}</span>` : it.tier === 'premium' ? 'Premium' : 'Basic'}</small></span></div>`;
+}
+function eaItemHTML(it){
+  return `<div class="lk-ph"><button class="lk-back" data-ea="back" aria-label="Back">‹</button><b>${escText(eaCatName(it.cat, true))}</b><span>${it.tier === 'premium' ? 'Premium' : 'Basic'}</span></div>
+    ${it.cover ? `<div class="le-cover"><img alt="" src="${escText(it.cover)}"></div>` : ''}
+    <div class="le-title">${escText(it.title)}</div>
+    ${it.cost ? `<div class="ea-cost">Start with: ${escText(it.cost)}</div>` : ''}
+    ${it.summary ? `<div class="le-about">${escText(it.summary)}</div>` : ''}
+    ${it.locked ? `<div class="ea-locked">This ${escText(eaCatName(it.cat, true).toLowerCase())} opens with ${it.tier === 'premium' ? 'Premium' : 'Basic or Premium'}.</div><button class="btn-wide btn-primary" data-ea="plans">See the plans</button>`
+      : `<div class="le-body">${escText(it.body || '')}</div>${it.link ? `<button class="btn-wide btn-primary" data-ea="link" data-url="${escText(it.link)}">Open</button>` : ''}`}
+    ${EA.official ? `<button class="btn-wide" data-ea="edit" data-id="${escText(it.id)}">Edit</button>` : ''}`;
+}
+function eaSheetHTML(sh){
+  if(sh.t === 'del') return `<div class="fl-sh-t">Delete “${escText(sh.title)}”?</div><div class="fl-sh-s">It’s removed for everyone, for good.</div>
+    <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-ea="close">Cancel</button><button class="btn-wide btn-primary fl-del" style="margin-top:0;" data-ea="del-yes" data-id="${escText(sh.id)}">Delete</button></div>`;
+  return `<div class="fl-sh-t">${sh.id ? 'Edit' : 'Add to Make money'}</div>
+    <div class="fl-chips">${EA_CATS.map(c=>`<button class="fl-chip${sh.cat === c[0] ? ' on' : ''}" data-ea="scat" data-v="${c[0]}">${c[2]}</button>`).join('')}</div>
+    <div class="sh-photos">${sh.coverUrl ? `<span class="sh-ph"><img alt="" src="${escText(sh.coverUrl)}"><button data-ea="cv-del" aria-label="Remove">×</button></span>` : `<button class="sh-ph sh-ph-add" data-ea="cv-add">${sh.uploading ? '…' : '+'}<small>${sh.uploading ? 'Adding' : 'Picture'}</small></button>`}</div>
+    <input id="ea-title" class="bz-in" placeholder="Title" autocomplete="off" value="${escText(sh.title || '').replace(/"/g, '&quot;')}">
+    <input id="ea-cost" class="bz-in" placeholder="What it takes to start, e.g. R0 - R500 (optional)" autocomplete="off" value="${escText(sh.cost || '').replace(/"/g, '&quot;')}">
+    <textarea id="ea-sum" class="bz-in mt-notes" placeholder="Short summary - everyone sees this">${escText(sh.summary || '')}</textarea>
+    <textarea id="ea-body" class="bz-in mt-notes" style="min-height:140px;" placeholder="The full how-to - only people with the plan see this">${escText(sh.body || '')}</textarea>
+    <input id="ea-link" class="bz-in" placeholder="Link for the Open button, https://… (optional)" autocomplete="off" autocapitalize="off" value="${escText(sh.link || '').replace(/"/g, '&quot;')}">
+    <div class="confirm-btn-row"><button class="btn-wide${sh.tier !== 'premium' ? ' fl-cur' : ''}" style="margin-top:0;" data-ea="stier" data-v="basic">Basic</button><button class="btn-wide${sh.tier === 'premium' ? ' fl-cur' : ''}" style="margin-top:0;" data-ea="stier" data-v="premium">Premium only</button></div>
+    <button class="btn-wide${sh.active ? ' fl-cur' : ''}" data-ea="sactive">${sh.active ? '✓ Showing to everyone' : 'Hidden'}</button>
+    ${sh.id ? '<button class="btn-wide fl-del" data-ea="del">Delete</button>' : ''}
+    <div class="confirm-btn-row" style="margin-top:10px;"><button class="btn-wide" style="margin-top:0;" data-ea="close">Cancel</button><button class="btn-wide btn-primary" style="margin-top:0;" data-ea="save">Save</button></div>`;
+}
+function earnScreen(){
+  if(EA.list == null && !EA._loading){ EA._loading = true; setTimeout(()=>{ eaLoad(); EA._loading = false; }, 0); }
+  const sheet = EA.sheet ? `<div class="modal-overlay"><div class="modal-sheet fl-sheet">${eaSheetHTML(EA.sheet)}</div></div>` : '';
+  const it = EA.open && (EA.list || []).find(x=>x.id === EA.open);
+  if(it) return `<div class="page-shell fl-page">${eaItemHTML(it)}${sheet}</div>`;
+  const list = (EA.list || []).filter(x=>EA.cat === 'all' || x.cat === EA.cat);
+  const planLine = EA.tier === 'premium' ? 'Your plan opens everything here.' : EA.tier === 'basic' ? 'Basic opens a selection - Premium opens everything, the newest first.' : EA.tier === 'free' ? 'Choose Basic or Premium to open them.' : '';
+  return `
+    <div class="page-shell fl-page">
+    ${topBar('Make money', false)}
+    <div class="fl-head"><div class="fl-note">Money-making systems, channels, groups, business ideas and products from Lockedintool - start with as little money as possible and make as much as you can.${planLine ? ' ' + planLine : ''}</div>
+      ${EA.tier === 'free' ? '<button class="btn-wide btn-primary" data-ea="plans">See the plans</button>' : ''}</div>
+    <div class="fl-chips"><button class="fl-chip${EA.cat === 'all' ? ' on' : ''}" data-ea="cat" data-v="all">All</button>${EA_CATS.map(c=>`<button class="fl-chip${EA.cat === c[0] ? ' on' : ''}" data-ea="cat" data-v="${c[0]}">${c[1]}</button>`).join('')}</div>
+    ${EA.official ? '<button class="btn-wide btn-primary fl-add" data-ea="new">+ Add</button>' : ''}
+    ${EA.err === 'signin' ? '<div class="fl-empty">Log in to see them</div>' : EA.list == null ? '<div class="fl-empty">Loading…</div>' : EA.err === 'net' && !EA.list.length ? '<div class="fl-empty">Couldn’t reach Lockedintool - check your connection</div>' : list.length ? list.map(eaRow).join('') : `<div class="fl-empty">${EA.official ? 'Nothing here yet - add the first one.' : 'Nothing here yet - Lockedintool adds new ones here.'}</div>`}
+    ${sheet}
+    </div>`;
+}
+function eaKeep(){ const g = i=>(document.getElementById(i) || {}).value, sh = EA.sheet; if(!sh || sh.t !== 'edit' || g('ea-title') === undefined) return;
+  sh.title = g('ea-title'); sh.cost = g('ea-cost'); sh.summary = g('ea-sum'); sh.body = g('ea-body'); sh.link = g('ea-link'); }
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-ea]'); if(!b) return;
+  e.stopPropagation();
+  const a = b.getAttribute('data-ea'), id = b.getAttribute('data-id'), v = b.getAttribute('data-v');
+  switch(a){
+    case 'cat': EA.cat = v; break;
+    case 'open': EA.open = id; break;
+    case 'back': EA.open = null; break;
+    case 'plans': state.current = 'subscription'; break;
+    case 'link': { const u = b.getAttribute('data-url') || ''; if(!/^https:\/\//i.test(u)) return; if(NATIVE && window.StoryNative.openUrl) window.StoryNative.openUrl(u); else window.open(u, '_blank'); return; }
+    case 'new': EA.sheet = { t:'edit', id:'', cat: EA.cat !== 'all' ? EA.cat : 'idea', title:'', cost:'', summary:'', body:'', link:'', tier:'basic', active:true, cover:'', coverUrl:'' }; break;
+    case 'edit': { const x = (EA.list || []).find(y=>y.id === id); if(!x) return; EA.sheet = { t:'edit', id:x.id, cat:x.cat, title:x.title, cost:x.cost, summary:x.summary, body:x.body || '', link:x.link || '', tier:x.tier, active:x.active !== false, cover:x.coverId || '', coverUrl:x.cover || '' }; break; }
+    case 'scat': eaKeep(); EA.sheet.cat = v; break;
+    case 'stier': eaKeep(); EA.sheet.tier = v; break;
+    case 'sactive': eaKeep(); EA.sheet.active = !EA.sheet.active; break;
+    case 'cv-del': eaKeep(); EA.sheet.cover = ''; EA.sheet.coverUrl = ''; break;
+    case 'cv-add': { if(EA.sheet.uploading) return; eaKeep(); const sh = EA.sheet;
+      litGrid('photo', async files=>{ sh.uploading = true; if(EA.sheet === sh) renderDevice();
+        try{ const bytes = await files[0].get(); const m = await upPutMedia({ bytes, mime:'image/jpeg' }); sh.cover = m; sh.coverUrl = MSG_API + '/v1/media/' + m; }catch(err){ showToast('Couldn’t add the picture - try again'); }
+        sh.uploading = false; if(EA.sheet === sh){ eaKeep(); renderDevice(); } }, { one:true }); return; }
+    case 'save': { eaKeep(); const sh = EA.sheet; if(sh.uploading){ showToast('Wait for the picture to finish'); return; }
+      if(!(sh.title || '').trim()){ showToast('Give it a title'); return; }
+      if(sh.link && !/^https:\/\//i.test(sh.link.trim())){ showToast('The link starts with https://'); return; }
+      EA.sheet = null; renderDevice();
+      msgApi('/v1/earn/save', { id: sh.id || undefined, cat: sh.cat, title: sh.title.trim(), cost: (sh.cost || '').trim(), summary: sh.summary || '', body: sh.body || '', link: (sh.link || '').trim(), tier: sh.tier, active: sh.active, cover: sh.cover })
+        .then(r=>{ if(r.item){ const i = EA.list.findIndex(x=>x.id === r.item.id); if(i >= 0) EA.list[i] = r.item; else EA.list.unshift(r.item); } showToast(sh.id ? 'Saved' : 'Added'); if(state.current === 'earn') renderDevice(); })
+        .catch(()=>showToast('Couldn’t save it - try again'));
+      return; }
+    case 'del': EA.sheet = { t:'del', id: EA.sheet.id, title: EA.sheet.title }; break;
+    case 'del-yes': EA.list = (EA.list || []).filter(x=>x.id !== id); EA.sheet = null; EA.open = null; msgApi('/v1/earn/delete', { id }).catch(()=>{ showToast('Couldn’t delete it'); eaLoad(); }); break;
+    case 'close': EA.sheet = null; break;
+    default: return;
+  }
+  renderDevice();
+}, true);
 // ---- #396 LEARN (owner, 14 Nov 2026: 'Others can become creators and teach others free or paid. Or post content'): make a course
 // out of lessons (words + a picture or a video each); anyone who can see your profile finds it under Discover and starts it.
 // Free courses work now; paid ones show their price and open once Lockedintool's payment partner is connected (said on screen).
@@ -24620,7 +24723,7 @@ function notePageSwipeGo(idx){
 // Apps scrolls (every app on the phone), never shrinks. Settings and Information (+ its Privacy / Terms / Safety pages)
 // scroll at their normal size too (owner, 3 Nov 2026: 'settings and information they can be scrollable so that the texts
 // become more visible' - shrunk to fit they came out at half size).
-const SCROLL_PAGES = new Set(['lockin','learn','customers','shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
+const SCROLL_PAGES = new Set(['earn','lockin','learn','customers','shop','meetings','staff','files','personal-home','settings','information','legal-privacy','legal-terms','legal-safety','spaces-settings','space-album']);   // #302: the companies list and a company's album can be any length   // NOT Subscription (owner: 'subscription is correct as everything on one full view. No scrolling')
 const NO_FIT_SCREENS = new Set(['notes-canvas','scratch-draw','apps', ...SCROLL_PAGES]);
 let LAST_FIT_PAGE = '';   // #377: the page last fitted on screen
 const FIT_MIN_SCALE = 0.5;

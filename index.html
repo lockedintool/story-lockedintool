@@ -11072,7 +11072,7 @@ const LEGAL = {
       'Before you pay you can cancel or switch plans at any time. Once a payment is made it is not refundable, except where the law requires a refund.',
       'We may change prices or what a plan includes; you will be told in the app before it affects you.' ]],
     ['Lockedintool as your system', [
-      'If you choose “Only system” (on the Subscription page), the Dashboard becomes your home screen: whenever you press home or leave an app, you land back on Lockedintool. Your apps all still work - you open them from the Apps button, app pages or your recent apps. Phone calls, emergency calls, the lock screen and the phone’s own panel keep working. It turns off only when you log out or delete your account. It needs Lockedintool system actions switched on.' ]],
+      'On your phone Lockedintool is an app. Lockedintool as a system - Second system and Only system - will come only on Lockedintool’s own phones: Second system phones and Only system phones.' ]],
     ['Trading - please read', [
       'Lockedintool is not a broker, not a financial adviser and does not give investment advice. It is only a gateway to your own account at your own broker: your broker agreement is between you and your broker, and deposits and withdrawals always stay with them.',
       'Orders you place in Lockedintool are sent to your broker exactly as you place them. You are responsible for every trade. Trading is risky and you can lose more than you put in.',
@@ -11149,6 +11149,7 @@ function informationScreen(){
       ['More than a phone', 'Lockedintool promises to bring more than a phone experience - a full life experience. And it\u2019s coming to PCs, laptops and TVs.'],
       ['Our own designs', 'Lockedintool looks forward to bringing its own designs, shapes and styles - devices made for a life full of trust and bond.'],
       ['Our own devices', 'In the future: Lockedintool cell phones, TVs, laptops, PCs, monitor screens and speakers.'],
+      ['Lockedintool phones', 'Lockedintool as a system will come only on Lockedintool\u2019s own phones - two kinds: Second system phones and Only system phones.'],
       ['Lockedintool kit', 'Books, pens, pencils and erasers - the full desk experience. Backpacks, phone cases, laptop bags and travel suitcases.'],
       ['Backup devices', 'Backup devices, USBs and SD cards.'],
       ['Your system, everywhere', 'Every one of them comes with your Lockedintool system and your data stored - for each user\u2019s own account.'],
@@ -15185,8 +15186,8 @@ function appMenuTemplate(){
 // apps' accounts stay as they are - a company's space lives inside Lockedintool.
 const SUB_ACCTS = [
   { key:'personal', name:'Personal', short:'Your phone, your apps - everything in one place.',
-    text:'One Lockedintool for everything on your phone: your Pages, apps, cards, notes and pictures all in one place.',
-    list:['Everything in one place', 'Your Pages, apps, cards and notes', 'Works with Second system or Only system'] },
+    text:LIT_NO_PAGES ? 'One Lockedintool for everything: your cards, notes and pictures all in one place.' : 'One Lockedintool for everything on your phone: your Pages, apps, cards, notes and pictures all in one place.',
+    list:['Everything in one place', LIT_NO_PAGES ? 'Your cards, notes and pictures' : 'Your Pages, apps, cards and notes', LIT_NO_PAGES ? 'Your own Lockedintool account' : 'Works with Second system or Only system'] },
   { key:'business', name:'Business', short:'A space for each of your companies - plus Personal.',
     text:'Add your companies and each one gets its own Lockedintool: its own Pages, apps, cards, notes, photo album, colours and background. After every unlock you choose which company to focus on, or your Personal account. Everything that isn’t one of your companies stays in Personal.',
     list:['A space for each company', 'Choose your focus after every unlock', 'Each company: its own Pages, apps, photos and notes', 'Personal keeps everything else'] }

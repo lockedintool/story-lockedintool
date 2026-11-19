@@ -4,8 +4,11 @@
 // Every owner-reported problem that a browser can see gets a check here, written in the owner's words.
 // Run: node owner-checks.mjs [url]   (default http://localhost:8800/index.html)
 import { chromium } from 'playwright';
+import fs from 'fs';
 const URL = process.argv[2] || 'http://localhost:8800/index.html';
 const SIZES = [[360, 780], [393, 852], [412, 892]];
+// #399: pages are switched off for now (index.html LIT_NO_PAGES) - the page-only checks wait until they are back.
+const NO_PAGES = /var LIT_NO_PAGES = true;/.test(fs.readFileSync(new globalThis.URL('./index.html', import.meta.url), 'utf8'));
 const SCREENS = ['dashboard', 'money', 'wallet', 'trading', 'notes', 'apps', 'community', 'layouts', 'subscription', 'settings', 'information', 'legal-privacy', 'legal-terms', 'legal-safety'];
 const MAY_SCROLL = new Set(['settings', 'information', 'apps', 'legal-privacy', 'legal-terms', 'legal-safety']);   // owner: 'only settings and information' (+ the Apps list)
 const UA = 'Mozilla/5.0 (Linux; Android 16; SM-A155F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Mobile Safari/537.36';
@@ -197,7 +200,7 @@ for (const [w, h] of SIZES) {
 // 'things are bouncing' (#244 - owner's video, 11 Nov 2026): a page got ready ahead of time for a swipe must already be
 // the size it will have on screen - it was measured while invisible, came out far too big (Money 1.35 instead of ~0.9),
 // slid in like that and then snapped to its real size. Checked as the app (a stand-in StoryNative, so pages fill the screen).
-for (const [w, h] of SIZES) {
+for (const [w, h] of (NO_PAGES ? [] : SIZES)) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, userAgent: UA });
   await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); } catch (e) {}
     window.StoryNative = new Proxy({}, { get: (t, k) => k === 'bottomRoom' ? (() => 48) : (() => '') }); });
@@ -282,15 +285,26 @@ for (const [w, h] of SIZES) {
   const pg = await ctx.newPage();
   await pg.goto(URL); await pg.waitForTimeout(2500);
   await pg.evaluate(() => window.storyShow('dashboard', false)); await pg.waitForTimeout(500);
-  const has = await pg.evaluate(() => { const i = document.getElementById('dash-search-input'); if (!i || !document.getElementById('dash-search-send')) return false; i.removeAttribute('readonly'); i.value = 'weather'; i.dispatchEvent(new Event('input')); return true; });
+  const has = NO_PAGES ? true : await pg.evaluate(() => { const i = document.getElementById('dash-search-input'); if (!i || !document.getElementById('dash-search-send')) return false; i.removeAttribute('readonly'); i.value = 'weather'; i.dispatchEvent(new Event('input')); return true; });
   if (!has) fail('search send button', 'Dashboard', 'no send button in the search bar');
-  else { await pg.tap('#dash-search-send'); await pg.waitForTimeout(300);
+  else if (NO_PAGES) {
+    // #399: no search bar, no Controls, the music card the whole width, pages / Layouts' Pages lead back.
+    const r = await pg.evaluate(async () => { const o = {}; o.search = !!document.querySelector('.search-row'); o.ctl = !!document.querySelector('.controls-card');
+      const m = document.querySelector('.music-card'), bt = document.querySelector('.story-bottom'); o.wide = m && bt ? m.getBoundingClientRect().width / bt.getBoundingClientRect().width : 0;
+      window.storyShow('money', false); await new Promise(r => setTimeout(r, 300)); o.money = state.current;
+      window.storyShow('layouts', false); await new Promise(r => setTimeout(r, 300)); o.tab = !!document.querySelector('[data-layouttab="pages"]'); return o; });
+    if (r.search) fail('no pages (#399)', 'Dashboard', 'the search bar still shows');
+    if (r.ctl) fail('no pages (#399)', 'Dashboard', 'Controls still show');
+    if (r.wide < 0.95) fail('no pages (#399)', 'Dashboard', 'the music card does not run the whole width (' + Math.round(r.wide * 100) + '%)');
+    if (r.money !== 'dashboard') fail('no pages (#399)', 'Money', 'a page still opens (' + r.money + ')');
+    if (r.tab) fail('no pages (#399)', 'Layouts', 'the Pages tab still shows');
+  } else { await pg.tap('#dash-search-send'); await pg.waitForTimeout(300);
     if (!(await pg.evaluate(() => window.__urls.length))) fail('search send button', 'Dashboard', 'tapping send did not open the search'); }
   await ctx.close();
 }
 // #377 (owner, 14 Nov 2026: 'The bottom gap on the trading page is way too big - can it be the same as the money page's
 // one'): a page that kept a size from when it was taller fills the screen again when you come to it.
-{
+if (!NO_PAGES) {
   const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, userAgent: UA });
   await ctx.addInitScript(() => { try { localStorage.setItem('story-msg-account', JSON.stringify({ id: 'check', token: 't', pw: true, username: 'check' })); localStorage.setItem('story-focus', 'trading'); } catch (e) {}
     window.StoryNative = new Proxy({}, { get: (t, k) => k === 'bottomRoom' ? (() => 48) : (() => '') }); });

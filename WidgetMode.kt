@@ -7,7 +7,7 @@ import android.content.Context
  *  Lockedintool app, which then shows just this one switch. Not together with Only system. */
 object WidgetMode {
     private const val PREF = "widgets_only"
-    fun on(c: Context): Boolean = c.getSharedPreferences("story", Context.MODE_PRIVATE).getBoolean(PREF, false)
+    fun on(c: Context): Boolean = !PageWidgets.OFF && c.getSharedPreferences("story", Context.MODE_PRIVATE).getBoolean(PREF, false)
     fun set(c: Context, v: Boolean): Boolean {
         if (v && SystemMode.on(c)) return false
         c.getSharedPreferences("story", Context.MODE_PRIVATE).edit().putBoolean(PREF, v).apply()

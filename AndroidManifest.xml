@@ -253,28 +253,28 @@
              for a public money app's reputation; the owner chose to clear the flag). The LitDeviceAdmin receiver and
              its device_admin.xml are gone so Play Protect no longer sees the device-admin capability. -->
 
-        <!-- STORY's pages as home screen widgets (Dashboard, Money, Wallet, Focus): a picture of the whole page; tap opens it. -->
-        <receiver android:name=".DashboardWidget" android:exported="true" android:label="Dashboard">
+        <!-- #399: widgets are off for now (android:enabled="false" - remove it to bring them back). STORY's pages as home screen widgets (Dashboard, Money, Wallet, Focus): a picture of the whole page; tap opens it. -->
+        <receiver android:name=".DashboardWidget" android:enabled="false" android:exported="true" android:label="Dashboard">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_dashboard" />
         </receiver>
-        <receiver android:name=".NotesWidget" android:exported="true" android:label="Notes">
+        <receiver android:name=".NotesWidget" android:enabled="false" android:exported="true" android:label="Notes">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_notes" />
         </receiver>
-        <receiver android:name=".CommunityWidget" android:exported="true" android:label="Community">
+        <receiver android:name=".CommunityWidget" android:enabled="false" android:exported="true" android:label="Community">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_community" />
         </receiver>
-        <receiver android:name=".MoneyWidget" android:exported="true" android:label="Money">
+        <receiver android:name=".MoneyWidget" android:enabled="false" android:exported="true" android:label="Money">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_money" />
         </receiver>
-        <receiver android:name=".WalletWidget" android:exported="true" android:label="Home / Wallet">
+        <receiver android:name=".WalletWidget" android:enabled="false" android:exported="true" android:label="Home / Wallet">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wallet" />
         </receiver>
-        <receiver android:name=".FocusWidget" android:exported="true" android:label="Focus page">
+        <receiver android:name=".FocusWidget" android:enabled="false" android:exported="true" android:label="Focus page">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_focus" />
         </receiver>

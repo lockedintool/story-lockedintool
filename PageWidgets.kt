@@ -41,13 +41,16 @@ class CommunityWidget : PageWidget("community")
 
 object PageWidgets {
     const val ACTION_OPEN_PAGE = "com.story.launcher.OPEN_PAGE"
+    /** #399 (owner, 19 Nov 2026): no widgets for now - none can be added (the providers are disabled in the manifest) and
+     *  Lockedintool acts as if none are placed. Set to false (and remove android:enabled="false" in the manifest) to bring them back. */
+    const val OFF = true
     private val providers = mapOf("dashboard" to DashboardWidget::class.java, "money" to MoneyWidget::class.java, "wallet" to WalletWidget::class.java, "trading" to FocusWidget::class.java, "notes" to NotesWidget::class.java, "community" to CommunityWidget::class.java)
     private val names = mapOf("dashboard" to "Dashboard", "money" to "Money", "wallet" to "Home / Wallet", "trading" to "Focus page", "notes" to "Notes", "community" to "Community")
     private val lastSnap = HashMap<String, Long>()
 
     fun file(c: Context, page: String) = File(File(c.filesDir, "widgets").apply { mkdirs() }, "$page.png")
     private fun ids(c: Context, page: String): IntArray =
-        runCatching { AppWidgetManager.getInstance(c).getAppWidgetIds(ComponentName(c, providers.getValue(page))) }.getOrDefault(IntArray(0))
+        if (OFF) IntArray(0) else runCatching { AppWidgetManager.getInstance(c).getAppWidgetIds(ComponentName(c, providers.getValue(page))) }.getOrDefault(IntArray(0))
     fun placed(c: Context, page: String) = ids(c, page).isNotEmpty()
     /** Every STORY widget on the home screen. */
     /** The shape (width / height) of the first widget of this page on the home screen, as the launcher reports it

@@ -3780,7 +3780,8 @@
   .spotify-title .dot{ font-size:8px; }
   .music-card .spotify-title{ padding-right:22px; min-width:0; }
   .music-now{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .music-card{ min-width:0; overflow:hidden; }   /* a long song name never widens the card (it pushed brightness / Controls off screen) */
+  .music-card{ min-width:0; overflow:hidden; }
+  .story-bottom.no-ctl .music-card{ grid-column:1 / -1; }   /* #399: no Controls - the music card runs the whole width */   /* a long song name never widens the card (it pushed brightness / Controls off screen) */
   .music-card .spotify-controls span{ cursor:pointer; }
   /* Bigger finger targets for ⟨ ⟩ without moving anything: padding taken back by the same negative margin. */
   .music-card .spotify-controls span:not(.play){ padding:10px 12px; margin:-10px -12px; }
@@ -4714,6 +4715,13 @@ function rowOrders(){ try{ return JSON.parse(localStorage.getItem('story-row-ord
 // removing apps in lockedintool'): no Apps screen / APPS in the Dashboard menu, no app pages in the Rows, no app on the
 // Focus page, no company / Personal Apps page. (var: rowsList runs before the rest of the page is read.) The vault keeps it all.
 var LIT_NO_APPS = true;
+// #399 NO PAGES FOR NOW (owner, 19 Nov 2026: 'remove pages from lockedintool ... But in the future when I tell you to bring
+// them back they should come out the Exact same'): every page (Money, Wallet, Focus page, rows, Page Styles), the home
+// screen widgets, the Dashboard's search bar, Layouts' Pages settings and the Dashboard's Controls are switched off - the
+// code and everything saved on the phone stay exactly as they are (set this to false and they are all back), and the
+// whole app before it is kept in the branch vault-2026-11-19.
+var LIT_NO_PAGES = true;
+function homeKey(){ return LIT_NO_PAGES ? 'dashboard' : (state.homeScreen || 'wallet'); }
 function rowsList(){
   const apps = (LIT_NO_APPS || planBasicOnly()) ? [] : appPagesStored(), ord = rowOrders();
   const sorted = (id, items)=>{ const o = ord[id] || []; const at = k=>{ const i = o.indexOf(k); return i < 0 ? 1e6 : i; };
@@ -6146,7 +6154,7 @@ const SAVED_SETTINGS = { homeScreen:v=>['dashboard','wallet','money','trading'].
 (function(){
   let s = {}; try{ s = JSON.parse(localStorage.getItem('story-settings') || '{}') || {}; }catch(e){}
   Object.keys(SAVED_SETTINGS).forEach(k=>{ const ok = SAVED_SETTINGS[k], v = s[k]; if(v !== undefined && v !== null && (typeof ok === 'function' ? ok(v) : typeof v === ok)) state[k] = v; });
-  if(!/[?&](s3|widget)=/.test(location.search)) state.current = state.homeScreen;   // the Pages start on your Home Screen
+  if(!/[?&](s3|widget)=/.test(location.search)) state.current = homeKey();   // the Pages start on your Home Screen
   // #362 (owner, 14 Nov 2026: 'Where is the business home? Im on lockedintool'): a business in focus starts on its business home.
   try{ if(!/[?&](s3|widget)=/.test(location.search) && spaceHomeHere()) state.current = spaceHomeKey(); }catch(e){}   // #364: Personal too
 })();
@@ -6287,7 +6295,7 @@ function topBar(label, withDots, extraRight, backTarget, titleExtra, hideBack, a
   const dots = withDots
     ? `<span class="page-dots">${PAGES.map(p=>`<span class="dot${p===state.current?' active':''}"></span>`).join('')}</span>`
     : '';
-  const badge = state.current===state.homeScreen ? homeBadge() : '';
+  const badge = state.current===homeKey() ? homeBadge() : '';
   const backBtn = hideBack
     ? `<button class="dash-back" style="visibility:hidden;pointer-events:none;padding-top:8px;padding-bottom:8px;" aria-hidden="true">‹ Back</button>`
     : (target === 'dashboard' && !arrowOnly && bizBack2())
@@ -6339,22 +6347,22 @@ function dashboardScreen(){
       <div class="story-topbar">
         <div class="story-title-row">
           <span class="story-title" aria-label="Lockedintool"><span class="story-title-l">Locked</span><span class="story-title-l">intool</span></span>
-          ${state.homeScreen==='dashboard' ? homeBadge() : ''}
+          ${homeKey()==='dashboard' && !LIT_NO_PAGES ? homeBadge() : ''}
           ${planFree() ? '' : '<span class="story-divider-v"></span><button class="layouts-btn" data-nav="layouts">LAYOUTS</button>'}
         </div>
         <div class="story-status-right">
-          <button class="arrow-btn" data-nav="${state.lastPage}"${planFree() ? ' style="visibility:hidden;pointer-events:none;"' : ''}>→</button>
+          <button class="arrow-btn" data-nav="${state.lastPage}"${planFree() || LIT_NO_PAGES ? ' style="visibility:hidden;pointer-events:none;"' : ''}>→</button>
         </div>
       </div>
       <div class="story-hr"></div>
-      <div class="search-row">
+      ${LIT_NO_PAGES ? '' : `<div class="search-row">
         <span class="search-label">SEARCH ENGINE</span>
         <textarea class="search-value-input" id="dash-search-input" rows="1" placeholder="Google">${state.searchQuery.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
         <button class="search-send" id="dash-search-send" aria-label="Search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
       </div>
       ${state.searchBlocked ? `<div class="dash-search-note dash-search-note-blocked">🛡 Safe Search is on — this search isn't allowed on Lockedintool.</div>` : ''}
       ${(!state.searchBlocked && state.pendingSearchQuery) ? `<div class="dash-search-note">Press Enter again to open "${escText(state.pendingSearchQuery)}"</div>` : ''}
-      <div class="safe-search"><span class="diamond">◇</span> Safe search is on</div>
+      <div class="safe-search"><span class="diamond">◇</span> Safe search is on</div>`}
       <div class="story-body">
         <div class="story-sidebar">
           <div class="sidebar-item" data-nav="notes">NOTES</div>
@@ -6375,7 +6383,7 @@ function dashboardScreen(){
         </div>
         ${quotesCardHTML()}
       </div>
-      <div class="story-bottom">
+      <div class="story-bottom${LIT_NO_PAGES ? ' no-ctl' : ''}">
         <div class="media-card" data-action="media-output-open"><div class="media-label">MEDIA OUTPUT</div><div class="media-sub">${escText(state.activeAudioOutput)}</div></div>
         <div class="brightness-card">
           <span class="sun-ico" id="sun-ico" style="opacity:${(0.3 + (state.brightnessValue/100)*0.7).toFixed(2)};"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Brightness"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></span>
@@ -6391,7 +6399,7 @@ function dashboardScreen(){
           </div>
           ${m.playing ? `<div class="spotify-visualizer">${[1,2,3,4,5].map(i=>`<span style="animation-delay:${i*0.11}s;"></span>`).join('')}</div>` : ''}
         </div>`)(musicNow())}
-        <div class="controls-card">
+        ${LIT_NO_PAGES ? '' : `<div class="controls-card">
           <div class="controls-toggles">
             <div class="controls-toggles-scroll">
               ${state.myControls.slice(0, MAX_DISPLAYED_CONTROLS).map(id => {
@@ -6404,7 +6412,7 @@ function dashboardScreen(){
           </div>
           <div class="controls-hr"></div>
           <div class="controls-label">Controls</div>
-        </div>
+        </div>`}
       </div>
     </div>
 
@@ -10314,7 +10322,7 @@ function layoutsScreen(){
     ${topBar('Layouts', false)}
     <div class="layouts-tabs">
       <div class="layouts-tab${state.layoutsTab==='dashboard'?' active':''}" data-layouttab="dashboard">Dashboard</div>
-      <div class="layouts-tab${state.layoutsTab==='pages'?' active':''}" data-layouttab="pages">Pages</div>
+      ${LIT_NO_PAGES ? '' : `<div class="layouts-tab${state.layoutsTab==='pages'?' active':''}" data-layouttab="pages">Pages</div>`}
     </div>
     ${state.layoutsTab==='dashboard' ? `
       <div class="section-title">DASHBOARD</div>
@@ -10710,6 +10718,7 @@ function quickAccessSettingsHTML(){
 // just that one switch (WidgetMode.kt).
 function wgOn(){ try{ return !!(window.StoryNative && window.StoryNative.widgetsOnlyState && window.StoryNative.widgetsOnlyState() === 'on'); }catch(e){ return false; } }
 function widgetsOnlySettingsHTML(){
+  if(LIT_NO_PAGES) return '';   // #399: no widgets for now
   return `
     <div class="section-title">WIDGETS</div>
     <div class="set2-card">
@@ -11354,9 +11363,9 @@ window.storyWidget = function(page){
 window.storyShow = function(page, station3, back){
   state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null;
   // Opening Lockedintool = your Home Screen (Layouts > Home Screen, owner); back from an app page = where you were.
-  if(page === '~home') page = state.homeScreen || 'wallet';   // #363: Lockedintool on the bottom switch in a business = your Home Screen
+  if(page === '~home') page = homeKey();   // #363: Lockedintool on the bottom switch in a business = your Home Screen
   if(page === '~space') page = spaceHomeHere() ? spaceHomeKey() : '';   // #364: the switch's Business home / Personal home
-  state.current = page || (back ? state.current : '') || (spaceHomeHere() ? spaceHomeKey() : '') || state.homeScreen || 'wallet';   // #360 / #364: a focus lands on its own home
+  state.current = page || (back ? state.current : '') || (spaceHomeHere() ? spaceHomeKey() : '') || homeKey();   // #360 / #364: a focus lands on its own home
   if(['money','wallet','trading'].includes(state.current)) state.lastPage = state.current;
   state.station3Open = !!station3;
   renderDevice();
@@ -11366,7 +11375,7 @@ window.storyShow = function(page, station3, back){
 // tapping anywhere else does nothing (the app's window only covers Station 3 itself anyway).
 window.storyStation3Only = function(){
   document.body.classList.add('s3-only');
-  if(window.__storyOnPages) document.body.classList.add('s3-pages');
+  if(window.__storyOnPages && !LIT_NO_PAGES) document.body.classList.add('s3-pages');
   if(window.__storyOnDash) document.body.classList.add('s3-dash');
   state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null;
   if(state.current==='dashboard') state.current = state.lastPage || 'wallet';
@@ -11408,11 +11417,11 @@ document.addEventListener('click', (e)=>{
 }, true);
 // Station 3 on the Pages: Rows and Page Styles are there too (the app says when the Pages are up). Tapping one does it
 // on the Pages and Station 3 closes, as always.
-window.storyOnPages = function(on){ document.body.classList.toggle('s3-pages', !!on); if(document.body.classList.contains('s3-only')) renderDevice(); };
+window.storyOnPages = function(on){ document.body.classList.toggle('s3-pages', !!on && !LIT_NO_PAGES); if(document.body.classList.contains('s3-only')) renderDevice(); };
 // Where Station 3 is, in one go (one redraw): on the Pages (Rows / Page Styles column) and / or on the Dashboard, where it
 // runs the whole bottom, side to side (owner), with no button and no Rows / Page Styles.
 window.storyS3Context = function(onPages, onDash){
-  document.body.classList.toggle('s3-pages', !!onPages);
+  document.body.classList.toggle('s3-pages', !!onPages && !LIT_NO_PAGES);
   document.body.classList.toggle('s3-dash', !!onDash);
   if(document.body.classList.contains('s3-only')) renderDevice();
   if(window.applyS3DashColors) window.applyS3DashColors();
@@ -15006,7 +15015,7 @@ document.addEventListener('click', (e)=>{
 }, true);
 // A contact picked with the dial pad's Search contact: its number goes into the dial pad (OverlayService.contactDone).
 window.storyDialSet = function(n){ state.station3DialInput = String(n || '').replace(/[^0-9+*#]/g, '').slice(0, 24); renderDevice(); };
-window.storyGoHome = function(){ state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null; state.current = (spaceHomeHere() ? spaceHomeKey() : '') || state.homeScreen || 'wallet'; renderDevice(); };   // #362 / #364
+window.storyGoHome = function(){ state.recentsOpen=false; state.homePickerOpen=false; state.appMenuId=null; state.current = (spaceHomeHere() ? spaceHomeKey() : '') || homeKey(); renderDevice(); };   // #362 / #364
 document.addEventListener('click', (e)=>{
   const el = e.target.closest && e.target.closest('[data-native-pkg]');
   if(!el || !NATIVE) return;
@@ -17474,7 +17483,7 @@ function dashTellNative(){
 let homeToldNative = null;
 function homeTellNative(){
   if(!NATIVE || IN_STATION3_WINDOW || document.documentElement.classList.contains('story-widget') || !window.StoryNative.homeShown) return;
-  const on = state.current === (state.homeScreen || 'wallet') && !state.rowsViewOpen && !(state.pageStyleOn && state.pageStyleViewOpen) && !document.querySelector('.lit-auth');
+  const on = state.current === homeKey() && !state.rowsViewOpen && !(state.pageStyleOn && state.pageStyleViewOpen) && !document.querySelector('.lit-auth');
   if(on === homeToldNative) return;
   homeToldNative = on;
   try{ window.StoryNative.homeShown(on); }catch(e){}
@@ -18460,7 +18469,14 @@ function renderDevice(){
   if(isAppPage(state.lastPage) && !rowOfPage(state.lastPage)) state.lastPage = PAGES[0] || 'wallet';
   // No plan (once subscriptions are really on) = Free: the Dashboard only - the Pages, the Apps screen and Layouts are
   // all hidden (owner, 28 Oct 2026: 'apps button on the dashboard and layouts, and pages, won't be available on the free').
-  if(LIT_NO_APPS && ['apps', 'biz-home', 'personal-home'].includes(state.current)) state.current = state.homeScreen || 'wallet';   // #373
+  if(LIT_NO_APPS && ['apps', 'biz-home', 'personal-home'].includes(state.current)) state.current = homeKey();   // #373
+  // #399: no pages for now - anything that would open a page, Rows, a Page Style or Layouts' Pages settings lands on the Dashboard / Layouts.
+  if(LIT_NO_PAGES && !IN_STATION3_WINDOW){
+    state.rowsViewOpen = false; state.pageStyleViewOpen = false; state.layoutsTab = 'dashboard'; state.searchOpen = false; state.controlsExpanded = false;
+    if(isPagesScreen(state.current)) state.current = 'dashboard';
+    else if(['layouts-homescreen', 'layouts-pagelayout', 'layouts-arrangement'].includes(state.current)
+      || (state.current === 'layouts-color' && state.colorScope !== 'dashboard') || (state.current === 'layouts-bg' && state.bgScope !== 'dashboard')) state.current = 'layouts';
+  }
   if(planFree() && !IN_STATION3_WINDOW && (isPagesScreen(state.current) || state.current === 'apps' || state.current === 'layouts' || state.current.indexOf('layouts-') === 0)){
     state.current = 'dashboard'; state.rowsViewOpen = false; state.pageStyleViewOpen = false;
   }
@@ -23977,15 +23993,15 @@ async function litAuthAct(k, btn){
 // they can skip the tutorial if they want'; chose 'On the real screens' and 'Yes, from Information'). Shown once, right
 // after Create your account (story-tour 'start' -> 'done'), in the Pages window: it opens each real screen and puts a
 // spotlight on the real part with a short note. Skip tour on every step; Information > Take the tour again. No motion.
-const TOUR_PAGES_OK = k=>!planFree() && PAGES.includes(k);
+const TOUR_PAGES_OK = k=>!LIT_NO_PAGES && !planFree() && PAGES.includes(k);
 const TOUR = [
   { s:'dashboard', t:'Welcome to Lockedintool', b:'A quick look around your new phone experience. It takes about a minute, and you can skip it at any time.' },
-  { s:'dashboard', sel:'.search-row', t:'Search', b:'Search the web from here. Safe search is always on.' },
+  { s:'dashboard', sel:'.search-row', t:'Search', b:'Search the web from here. Safe search is always on.', need:()=>!LIT_NO_PAGES },
   { s:'dashboard', sel:'.story-sidebar', t:'Your menu', b:LIT_NO_APPS ? 'Notes, Settings, Information and your alarms.' : 'Notes, Settings, Information, your camera, gallery and alarms, and every app on your phone.' },
   { s:'dashboard', sel:'#quotes-card', t:'Your quote', b:'Tap the lock, then hold the card to write a quote of your own.' },
-  { s:'dashboard', sel:'.story-bottom', t:'Quick controls', b:'Your phone\u2019s sound output, brightness, music and controls - the real ones, right here.' },
+  { s:'dashboard', sel:'.story-bottom', t:'Quick controls', b:LIT_NO_PAGES ? 'Your phone\u2019s sound output, brightness and music - the real ones, right here.' : 'Your phone\u2019s sound output, brightness, music and controls - the real ones, right here.' },
   { s:'dashboard', sel:'#dash-s3', t:'Station 3', b:'Messages, your Profile, Updates, Create (+), Call history and the dial pad.' },
-  { s:'dashboard', sel:'.layouts-btn', t:'Layouts', b:'Make Lockedintool yours: your own colours, a background picture, your Home Screen and the order of your pages.' },
+  { s:'dashboard', sel:'.layouts-btn', t:'Layouts', b:LIT_NO_PAGES ? 'Make Lockedintool yours: your own colours, a background picture and your music player.' : 'Make Lockedintool yours: your own colours, a background picture, your Home Screen and the order of your pages.' },
   { s:'dashboard', sel:'.arrow-btn', t:'Your Pages', b:'This arrow opens your Pages: Money, Wallet and your Focus page.', need:()=>TOUR_PAGES_OK('money') || TOUR_PAGES_OK('wallet') },
   { s:'money', sel:'.big-num', t:'Money', b:'Every payment into and out of your cards, read from your bank\u2019s own messages. The big number is what you have.', need:()=>TOUR_PAGES_OK('money') },
   { s:'wallet', sel:'.paycard-wrap', t:'Wallet', b:'Your real cards. Add a card, then tap it to see its details after your fingerprint, face or PIN.', need:()=>TOUR_PAGES_OK('wallet') },

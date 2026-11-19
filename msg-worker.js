@@ -559,7 +559,10 @@ export class Hub {
     if (s === 'nobody') return false;
     if (s === 'following') return iFollow;
     if (s === 'followers') return followsMe;
-    return iFollow || followsMe;
+    // #402 (owner, 19 Nov 2026: 'Stories go with your account type and its privacy settings'; chose 'Follow your account
+    // privacy'): the default ('public') = everyone who can see your profile - a public account everyone, a private one only
+    // accepted followers (canSeeProfile above).
+    return true;
   }
   dropOldStatuses() {
     const old = this.sql.exec("SELECT * FROM uposts WHERE kind = 'status' AND at < ?", Date.now() - 86400000).toArray();

@@ -2834,6 +2834,14 @@
   #story-profile .up-st-n{ width:66px; font-size:11px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #story-profile .up-h{ font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--pf-muted); margin:14px 0 2px; }
   #story-profile .up-row{ cursor:pointer; }
+  #story-profile .up-list.up-cards{ display:flex; gap:10px; overflow-x:auto; scrollbar-width:none; padding:8px 2px 4px; }
+  #story-profile .up-list.up-cards::-webkit-scrollbar{ display:none; }
+  #story-profile .up-card{ flex:0 0 112px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 6px 10px; border:1px solid var(--pf-line, #262626); border-radius:16px; cursor:pointer; min-width:0; }
+  #story-profile .up-card > :first-child{ width:64px !important; height:64px !important; flex:0 0 64px; }
+  #story-profile .up-card-n{ font-weight:700; font-size:13px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #story-profile .up-card-u{ color:var(--pf-muted); font-size:11.5px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:14px; }
+  #story-profile .up-card .up-follow{ margin-top:4px; padding:5px 14px; font-size:12.5px; }
+  #story-profile .up-card-you{ margin-top:6px; color:var(--pf-muted); font-size:12px; }
   #story-profile .up-about{ font-size:12.5px; line-height:1.35; color:var(--pf-fg); opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; white-space:normal; }
   #story-profile .up-follow{ flex-shrink:0; padding:8px 14px; border-radius:10px; border:1px solid var(--pf-fg); background:var(--pf-fg); color:var(--pf-bg); font-size:12.5px; font-weight:700; font-family:inherit; }
   #story-profile .up-follow.on{ background:transparent; color:var(--pf-fg); border-color:var(--pf-hair); }
@@ -2927,6 +2935,8 @@
   #story-profile .up-fp-acts button{ display:flex; align-items:center; gap:6px; border:none; background:transparent; color:var(--pf-fg); font:inherit; font-size:13px; padding:4px 0; }
   #story-profile .up-fp-acts button.on svg{ fill:#ff3b30; stroke:#ff3b30; }
   #story-profile .up-fp-acts .up-fp-more{ margin-left:auto; color:var(--pf-muted); }
+  #story-profile .up-st-hint{ align-self:center; max-width:190px; color:var(--pf-muted); font-size:12.5px; line-height:1.35; padding-left:6px; }
+  #story-profile .up-fp-kind{ display:block; color:var(--pf-muted); font-size:11.5px; margin-top:1px; }
   #story-profile .up-feed-note{ text-align:center; color:var(--pf-muted); font-size:13px; padding:14px 0; }
   #story-profile .up-fcs{ position:fixed; left:0; right:0; bottom:0; max-height:70%; z-index:40; display:flex; flex-direction:column; background:var(--pf-bg); border-top:1px solid var(--pf-hair); border-radius:18px 18px 0 0; padding:12px 16px calc(12px + var(--pf-ime, 0px)); box-sizing:border-box; }
   #story-profile .up-fcs-head{ display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:15px; padding-bottom:8px; }
@@ -10866,7 +10876,7 @@ function delStep1(){
 function delStep2(){
   const f = delFlow; if(!f) return;
   f.box.innerHTML = '<div class="lit-sheet-t">You’re going to lose everything</div>' +
-    '<div class="lit-sheet-d">Deleting your account can’t be undone. Everything that comes with Lockedintool goes:</div><ul class="lit-del-list"><li>Your profile, name and @username</li><li>Your followers and who you follow</li><li>Your posts, statuses, comments and hearts</li><li>Your chats, messages and call history</li><li>Your community and your place in groups</li><li>Your Pages, notes and drawings, Money and Wallet history, cards, trading accounts and settings</li><li>Your Lockedintool plan - payments can’t be refunded</li></ul>' +
+    '<div class="lit-sheet-d">Deleting your account can’t be undone. Everything that comes with Lockedintool goes:</div><ul class="lit-del-list"><li>Your profile, name and @username</li><li>Your followers and who you follow</li><li>Your posts, updates, comments and hearts</li><li>Your chats, messages and call history</li><li>Your community and your place in groups</li><li>Your Pages, notes and drawings, Money and Wallet history, cards, trading accounts and settings</li><li>Your Lockedintool plan - payments can’t be refunded</li></ul>' +
     '<div class="lit-sheet-d">Nothing outside Lockedintool is touched - your bank, your cards, your payments, your broker accounts and your phone stay exactly as they are. It’s like deleting an app.</div>' +
     delButtons([['danger', 'Continue', 'go'], ['cancel', 'Cancel', 'cancel']]);
   delOn(f.box, { go: delStep3, cancel: delClose });
@@ -10957,9 +10967,9 @@ function privacySettingsHTML(){
           <span class="privacy-check${picked.includes(c.id) ? ' on' : ''}">${picked.includes(c.id) ? '✓' : ''}</span>
         </div>`).join('') : `<div class="set2-row set2-nested"><div class="set2-text"><div class="set2-sub">People you chat with show here to pick from.</div></div></div>`) : ''}
       <div class="set2-row set2-stack">
-        <div class="set2-text"><div class="set2-name">Who can see your status</div><div class="set2-sub">${status === 'following' ? 'Only people you follow' : status === 'followers' ? 'Only your followers' : status === 'nobody' ? 'Only you' : 'People you follow and your followers'}${profilePrivacy() === 'private' && status !== 'nobody' ? ' - and only followers you accepted, as your account is private' : ''}</div></div>
+        <div class="set2-text"><div class="set2-name">Who can see your updates</div><div class="set2-sub">${status === 'following' ? 'Only people you follow' : status === 'followers' ? 'Only your followers' : status === 'nobody' ? 'Only you' : 'Same as your account - everyone who can see your profile'}${profilePrivacy() === 'private' && status !== 'nobody' ? ' - and only followers you accepted, as your account is private' : ''}</div></div>
         <div class="set2-seg">
-          <button class="theme-opt${status === 'public' ? ' on' : ''}" data-action="privacy-status" data-value="public">Public</button>
+          <button class="theme-opt${status === 'public' ? ' on' : ''}" data-action="privacy-status" data-value="public">Account</button>
           <button class="theme-opt${status === 'following' ? ' on' : ''}" data-action="privacy-status" data-value="following">Following</button>
           <button class="theme-opt${status === 'followers' ? ' on' : ''}" data-action="privacy-status" data-value="followers">Followers</button>
           <button class="theme-opt${status === 'nobody' ? ' on' : ''}" data-action="privacy-status" data-value="nobody">No one</button>
@@ -11019,7 +11029,7 @@ const LEGAL = {
       'Removing Lockedintool from your phone removes all of this.' ]],
     ['Kept on our server', [
       'Your account: your @username and a key made from your password on your phone (only a scrambled copy is kept - your password itself never leaves your phone), a locked backup of your chats and your message key (locked with an account key; that key is kept locked with your password, and we keep a spare of it so a password reset can bring your chats back), a random ID, the public half of your encryption key, your name, @username, profile picture, bio and About (so people can find you and see who you are - a private profile can’t be found and only shows to people you follow, message or share a group with) and your privacy choices (who can see your profile, who can message and call you and who can see your status).',
-      'Updates: who you follow and who follows you, the posts you share (their title, text, pictures and videos - shown in the feed and on your profile to everyone who can see your profile), your statuses (deleted after 24 hours with their hearts and comments; only seen by who your status setting allows), and the hearts and comments you leave on posts and statuses. Delete a post any time from its ⋮.',
+      'Updates: who you follow and who follows you, the posts you share (their title, text, pictures and videos - shown in the feed and on your profile to everyone who can see your profile), your updates (deleted after 24 hours with their hearts and comments; seen by everyone who can see your profile unless your updates setting narrows it), and the hearts and comments you leave on posts and updates. Delete a post any time from its ⋮.',
       'Messages and calls: locked messages waiting for a phone that is offline (deleted once delivered), and whether a message was delivered, seen or read. Calls go straight from phone to phone; our server only helps them connect.',
       'Community: groups you create or join, and what you post, like or comment in public groups - public groups are visible to everyone. Private group messages and Your Community’s chat are end-to-end encrypted.',
       'Payments: your plan, its price, status and dates, and the payment reference from our payment partner. If you add a bank account to receive money, it is kept to pay you - anyone viewing it sees only the last 3 digits, and people sending you money never see it.',
@@ -11869,10 +11879,11 @@ window.storyProfileOnly = function(){
       <div class="up-status-row"></div>
       <div class="up-lives" hidden></div>
       <button class="up-cp-box" data-pf="up-compose">What’s on your mind?</button>
-      <div class="up-feed"></div>
-      <div class="up-h">Profiles</div>
+      <div class="up-h up-h-prof">Profiles to check out</div>
       <div class="up-list"></div>
       <div class="pf-msgs-empty up-empty" hidden><div class="pf-msgs-empty-t"></div></div>
+      <div class="up-h up-h-feed">Updates feed</div>
+      <div class="up-feed"></div>
       <div class="up-feed2"></div>
       <div class="up-feed-note" hidden></div>
     </div>
@@ -11962,7 +11973,7 @@ window.storyProfileOnly = function(){
         </div>
       </div>
       <div class="cr-pick" hidden>
-        <button data-pf="cr-as" data-k="status">Status</button>
+        <button data-pf="cr-as" data-k="status">Update</button>
         <button data-pf="cr-as" data-k="post">Post</button>
       </div>
       <div class="cr-sheet" hidden>
@@ -12000,7 +12011,7 @@ window.storyProfileOnly = function(){
     else if(k === 'up-p-more'){ const p = UP.person; if(p) litPersonSheet(p, { after: ()=>upOpenPerson(p.id) }); }
     else if(k === 'upv-more'){ const v = UP.view; if(!v) return; const it = v.items[v.i]; upPause();
       litSheet({ onClose: ()=>{ if(UP.view === v) upShowItem(); }, items: [
-        { label: v.status ? 'Report status' : 'Report post', fn: ()=>litReport(v.status ? 'status' : 'post', it.id, { onClose: ()=>{ if(UP.view === v) upShowItem(); } }) },
+        { label: v.status ? 'Report update' : 'Report post', fn: ()=>litReport(v.status ? 'status' : 'post', it.id, { onClose: ()=>{ if(UP.view === v) upShowItem(); } }) },
         { label: 'Block', danger:true, fn: ()=>{ if(UP.view === v) upShowItem(); litBlock(v.user, true, ()=>{ upCloseView(); upLoad(); }); } }] }); }
     else if(k === 'upv-creport') litReport('comment', b.getAttribute('data-id'));
     else if(k === 'menu-important'){ el.querySelector('.pf-menupage').hidden = true; main.hidden = true; const pg = el.querySelector('.pf-important'); pg.hidden = false; pg.scrollTop = 0; IMP.open = null; impRender(); }
@@ -12612,7 +12623,7 @@ function crPostAs(as){
   const kept = window.StoryNative.createKeep(); if(!kept){ showToast('That didn’t work — try again'); return; }
   const [id, kind] = kept.split(':');
   if(as === 'status'){
-    upAddToServer(id, kind, 'status'); crClear(); showToast('Sharing your status…');
+    upAddToServer(id, kind, 'status'); crClear(); showToast('Sharing your update…');
     if(crForStatus){ crForStatus = false; if(NATIVE && window.StoryNative.toggleUpdates) window.StoryNative.toggleUpdates(); else window.storyS3Page('updates'); }
     return;
   }
@@ -12702,13 +12713,22 @@ function upStatusRowHTML(){
   const d = UP.data || {}, seen = upSeen(), mine = (d.statuses || []).find(s=>s.user.id === (msgAccount() || {}).id);
   const me = Object.assign({ photo: (d.me || {}).photo || '' }, d.me || {});
   let h = '<button class="up-st" data-pf="up-st-me">' + upPic(me, mine ? 'up-ring' + (mine.items.every(i=>seen[i.id]) ? ' seen' : '') : '') +
-    '<span class="up-st-add" data-pf="up-st-new" aria-label="Add a status">+</span><span class="up-st-n">Your status</span></button>';
+    '<span class="up-st-add" data-pf="up-st-new" aria-label="Add an update">+</span><span class="up-st-n">Your update</span></button>';
   for(const s of (d.statuses || [])){
     if(mine && s === mine) continue;
     const all = s.items.every(i=>seen[i.id]);
     h += '<button class="up-st" data-pf="up-st-open" data-id="' + escText(s.user.id) + '">' + upPic(s.user, 'up-ring' + (all ? ' seen' : '')) + '<span class="up-st-n">' + escText(upName(s.user)) + '</span></button>';
   }
+  // #402: alone in the row - say where the people you follow will show
+  if(!(d.statuses || []).some(s=>!mine || s !== mine)) h += '<span class="up-st-hint">Updates from people you follow show here for 24 hours</span>';
   return h;
+}
+function upPersonCardHTML(u){
+  const me = u.id === (msgAccount() || {}).id;
+  return '<div class="up-card" data-pf="up-person" data-id="' + escText(u.id) + '">' + upPic(u) +
+    '<span class="up-card-n">' + escText(upName(u)) + '</span>' +
+    (u.name && u.username ? '<span class="up-card-u">@' + escText(u.username) + '</span>' : '<span class="up-card-u"></span>') +
+    (me ? '<span class="up-card-you">You</span>' : '<button class="up-follow' + (u.isFollowing || u.requested ? ' on' : '') + '" data-pf="up-follow" data-id="' + escText(u.id) + '">' + (u.isFollowing ? 'Following' : u.requested ? 'Requested' : 'Follow') + '</button>') + '</div>';
 }
 function upPersonRowHTML(u){
   const me = u.id === (msgAccount() || {}).id;
@@ -12724,7 +12744,7 @@ function upPersonRowHTML(u){
 const ACT = { list:null };
 function actLine(a){
   const k = a.kind, t = a.text || '';
-  if(k === 'status') return 'posted a status';
+  if(k === 'status') return 'posted an update';
   if(k === 'post') return 'shared a new post';
   if(k === 'highlight') return 'added to a highlight';
   if(k === 'request') return a.pending ? 'wants to follow you' : 'asked to follow you';
@@ -12740,7 +12760,7 @@ function actLine(a){
   if(k === 'lkchal') return 'challenged you to ' + escText(LK_NAMES[t] || 'a game') + ' - open LOCK IN in the Dashboard menu';   // #383
   if(k === 'lkyes') return 'accepted your ' + escText(LK_NAMES[t] || 'game') + ' challenge';
   if(k === 'lk2inv') return 'challenged you to ' + escText(t || 'Mode two') + ' on a video call - open LOCK IN';   // #398
-  if(k === 'like') return t === 'status' ? 'liked your status' : 'liked your post';
+  if(k === 'like') return t === 'status' ? 'liked your update' : 'liked your post';
   if(k === 'share') return 'shared your post';
   if(k === 'comment'){ const st = t.indexOf('s:') === 0; return 'commented on your ' + (st ? 'status' : 'post') + ': “' + escText(st ? t.slice(2) : t) + '”'; }
   return '';
@@ -12783,9 +12803,9 @@ function upBellPaint(){
 }
 function upStatusPrivacySheet(){
   const p = storyPrivacy(), cur = ['following', 'followers', 'nobody'].includes(p.status) ? p.status : 'public';
-  const opt = (v, label)=>({ label: (cur === v ? '✓ ' : '') + label, fn: ()=>{ const q = storyPrivacy(); q.status = v; setStoryPrivacy(q); showToast('Status: ' + label); } });
-  litSheet({ title:'Who can see your status', text: profilePrivacy() === 'private' ? 'Your account is private, so only followers you accepted can see it - within this choice.' : '',
-    items:[opt('public', 'Public - people you follow and your followers'), opt('following', 'Only people you follow'), opt('followers', 'Only your followers'), opt('nobody', 'No one')] });
+  const opt = (v, label)=>({ label: (cur === v ? '✓ ' : '') + label, fn: ()=>{ const q = storyPrivacy(); q.status = v; setStoryPrivacy(q); showToast('Updates: ' + label); } });
+  litSheet({ title:'Who can see your updates', text: profilePrivacy() === 'private' ? 'Your account is private, so only followers you accepted can see it - within this choice.' : '',
+    items:[opt('public', 'Same as your account'), opt('following', 'Only people you follow'), opt('followers', 'Only your followers'), opt('nobody', 'No one')] });
 }
 function upRender(){
   const el = upEl(); if(!el) return;
@@ -12794,8 +12814,14 @@ function upRender(){
   box.querySelector('.up-status-row').innerHTML = upStatusRowHTML();
   const searching = UP.q.trim().replace(/^@/, '').length >= 2;
   const list = searching ? (UP.found || []) : ((d && d.profiles) || []);
-  box.querySelector('.up-h').textContent = searching ? 'Results' : 'Profiles';
-  box.querySelector('.up-list').innerHTML = list.map(upPersonRowHTML).join('');
+  box.querySelector('.up-h-prof').textContent = searching ? 'Results' : 'Profiles to check out';
+  // #402 (owner, 19 Nov 2026, a drawing: 'Profiles to check out should always be like that - then underneath, that's the
+  // updates feed'): profiles to check out are a row of circles you swipe through, always above the Updates feed; search
+  // results stay a list.
+  const ul = box.querySelector('.up-list');
+  ul.classList.toggle('up-cards', !searching);
+  ul.innerHTML = searching ? list.map(upPersonRowHTML).join('') : list.map(upPersonCardHTML).join('');
+  box.querySelector('.up-h-feed').hidden = searching;
   const empty = box.querySelector('.up-empty');
   empty.hidden = list.length > 0;
   empty.querySelector('.pf-msgs-empty-t').textContent = !msgAccount() ? 'Connecting to Lockedintool…'
@@ -12806,7 +12832,7 @@ function upRender(){
 // ---- The feed (owner): everything posted on Lockedintool, newest first. The Profiles list shows after the first few
 // posts ("after a couple of scrolls into the feed"); more posts load as you scroll (no loop - only on scroll). ----
 const FEED = { posts:[], next:0, more:true, loading:false, error:false, loaded:false };
-const FEED_BEFORE_PROFILES = 4;
+const FEED_BEFORE_PROFILES = 0;   // #402: the whole feed sits under Profiles to check out
 async function feedLoad(reset){
   if(FEED.loading || !msgAccount()) return;
   if(reset){ FEED.next = 0; FEED.more = true; }
@@ -12824,6 +12850,15 @@ function fpAgo(at){ return Date.now() - at < 86400000 ? upAgo(at) : msgTime(at);
 const FP_HEART = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7 4.5c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>';
 const FP_COMMENT = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.5 8.5 0 0 1-4.3-1.2L3 20l1.2-5.2A8.4 8.4 0 0 1 3 11.5 8.5 8.5 0 0 1 11.5 3a8.4 8.4 0 0 1 9.5 8.5Z"/></svg>';
 const FP_SHARE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+// #402 (owner, 19 Nov 2026: 'Posts users post are going to be called according to what they posted - Picture is a Photo update
+// post, Video is a Video update post'; words only = 'Text update post'): each post in the Updates feed says what it is.
+function fpKind(items){
+  const t = (items || []).map(i=>i.type === 'video' ? 'v' : 'p');
+  if(!t.length) return 'Text update post';
+  if(t.every(x=>x === 'p')) return 'Photo update post';
+  if(t.every(x=>x === 'v')) return 'Video update post';
+  return 'Update post';
+}
 function fpHTML(p){
   const u = p.user || {}, items = p.items || [];
   const media = items.length ? '<div class="up-fp-media"><div class="up-fp-strip">' + items.map(i=>i.type === 'video'
@@ -12832,7 +12867,7 @@ function fpHTML(p){
     (items.length > 1 ? '<span class="up-fp-count">1/' + items.length + '</span>' : '') + '</div>' : '';
   return '<div class="up-fp" data-post="' + escText(p.id) + '">' +
     '<div class="up-fp-head" data-pf="up-person" data-id="' + escText(u.id || '') + '">' + upPic(u) + '<span class="up-fp-who"><b>' + escText(upName(u)) + '</b><span>' +
-      (u.name && u.username ? '@' + escText(u.username) + ' · ' : '') + escText(fpAgo(p.at)) + (p.vis === 'me' ? ' · Only you' : p.vis === 'followers' ? ' · Followers' : '') + '</span></span></div>' +
+      (u.name && u.username ? '@' + escText(u.username) + ' · ' : '') + escText(fpAgo(p.at)) + (p.vis === 'me' ? ' · Only you' : p.vis === 'followers' ? ' · Followers' : '') + '</span><span class="up-fp-kind">' + fpKind(items) + '</span></span></div>' +
     (p.title ? '<div class="up-fp-title">' + escText(p.title) + '</div>' : '') +
     (p.text ? '<div class="up-fp-text">' + escText(p.text) + '</div>' : '') + media +
     (p.music ? '<button class="up-fp-music" data-pf="fp-music" data-url="' + escText(p.music.url) + '">♪ <span>' + escText(p.music.name || 'Song') + '</span></button>' : '') +
@@ -13111,7 +13146,7 @@ function upShowItem(){
   lkb.hidden = !(v.status && it.lk && (!mineSt || it.lk.full));
   if(!lkb.hidden){ const left = Math.max(0, (it.lk.max || 1) - (it.lk.taken || 0));
     lkb.classList.toggle('full', !!it.lk.full && !it.lk.mine);   // #390 (owner): full - it says so (for 10 minutes, then the status goes)
-    lkb.textContent = it.lk.mine ? 'Accepted - play in LOCK IN' : it.lk.full ? (mineSt ? 'Challenge full - this status disappears in 10 minutes' : 'Challenge full - can’t accept anyone any more') : 'Accept ' + upName(v.user) + '’s challenge' + ((it.lk.max || 1) > 1 ? ' · ' + left + ' left' : ''); }
+    lkb.textContent = it.lk.mine ? 'Accepted - play in LOCK IN' : it.lk.full ? (mineSt ? 'Challenge full - this update disappears in 10 minutes' : 'Challenge full - can’t accept anyone any more') : 'Accept ' + upName(v.user) + '’s challenge' + ((it.lk.max || 1) > 1 ? ' · ' + left + ' left' : ''); }
   if(v.status) upVActs();
   const img = box.querySelector('img'), vid = box.querySelector('video');
   try{ vid.pause(); }catch(e){}
@@ -13294,14 +13329,14 @@ async function upDeleteShown(){
     return; }
   try{ await msgApi('/v1/uposts/delete', { id: it.id }); }catch(e){ showToast('No connection right now'); return; }
   v.items.splice(v.i, 1);
-  showToast(v.status ? 'Status deleted' : 'Post deleted');
+  showToast(v.status ? 'Update deleted' : 'Post deleted');
   if(!v.items.length) upCloseView(); else { v.i = Math.min(v.i, v.items.length - 1); upShowItem(); }
   upLoad();
 }
 // ---- Every day (owner): if you haven't posted a status in the last 24 hours, Lockedintool sends you a NOTIFICATION
 //      to post one (owner: a notification, not a message in Lockedintool's chat), so people who don't know you can
 //      catch up and see what you're up to. Checked when the app connects and once more at the next 10:00 - no loop.
-const UP_REMIND_KEY = 'story-status-remind', UP_REMIND_TEXT = 'Post a status today so people who don’t know you can catch up and see what you’re up to. Tap + on Station 3, choose Profile, then Status.';
+const UP_REMIND_KEY = 'story-status-remind', UP_REMIND_TEXT = 'Share an update today so people who don’t know you can catch up and see what you’re up to. Tap + on Station 3, choose Profile, then Update.';
 let upRemindT = 0, upLoadedAt = 0;
 document.addEventListener('visibilitychange', ()=>{ if(MSG_ENGINE && document.visibilityState === 'visible' && Date.now() - upLoadedAt > 300000){ upLoadedAt = Date.now(); upLoad(); } });
 // Launch welcome (owner): once per phone, a message from Lockedintool about the Introduction Welcome price. Only on the
@@ -13330,7 +13365,7 @@ async function upReminder(){
   if(mine.some(s=>Date.now() - s.at < 86400000)) return;   // you already have one up
   // Only a notification (owner: 'these should be notifications - it's annoying, every time I need to open the chat so it
   // disappears') - never a message in Lockedintool's chat.
-  if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify('Lockedintool', 'Post a status today so people can catch up with you'); }catch(e){}
+  if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify('Lockedintool', 'Share an update today so people can catch up with you'); }catch(e){}
 }
 // The reminders that used to land in Lockedintool's chat are taken out of it (the chat goes if nothing else is in it).
 function upReminderTidy(){
@@ -13407,7 +13442,7 @@ async function upFlush(){
         if(job.music){ try{ const r = await fetch(PF_PHOTO_BASE + 'chatfile/' + job.music.file); if(r.ok) music = { media: await upPutMedia({ bytes: new Uint8Array(await r.arrayBuffer()), mime: job.music.mime }), name: job.music.name }; }catch(e){ if(e.code === 'big') showToast('That song is too big to share (300 MB max)'); } }
         const made = await msgApi('/v1/uposts/create', { kind: job.kind, type: job.type, media, thumb, music, hl: job.hl, hlname: job.hlname });
         if(job.kind === 'highlight' && made && made.id){ const hl = profileHighlights(), h = hl.find(x=>x.id === job.hl), x = h && h.items.find(y=>y.id === job.localId); if(x){ x.sid = made.id; saveHighlights(hl); } else msgApi('/v1/uposts/delete', { id: made.id }).catch(()=>{}); }   // deleted on the phone while it was uploading: gone here too   // #285: so deleting it on the phone deletes it on your profile too
-        if(job.kind === 'status') showToast('Your status is up');
+        if(job.kind === 'status') showToast('Your update is up');
       }catch(e){
         if(e.code === 'big' || e.message === 'file'){ showToast(e.code === 'big' ? 'That video is too big to share (300 MB max)' : 'That file is gone'); }
         else break;   // no connection: try again later
@@ -13861,7 +13896,7 @@ async function msgOnServer(m){
       if(typeof upLoad === 'function') setTimeout(()=>{ try{ upLoad(); }catch(e){} }, 800);
       return;
     }
-    const what = m.kind === 'status' ? 'posted a status' : m.kind === 'highlight' ? 'added to a highlight' : m.kind === 'live' ? 'is live now' : 'shared a new post';
+    const what = m.kind === 'status' ? 'posted an update' : m.kind === 'highlight' ? 'added to a highlight' : m.kind === 'live' ? 'is live now' : 'shared a new post';
     if(NATIVE && window.StoryNative.msgNotify) try{ window.StoryNative.msgNotify(who, who + ' ' + what); }catch(e){}
     if(m.kind === 'live' && typeof liveNote === 'function') liveNote(m);
     if(typeof upLoad === 'function') setTimeout(()=>{ try{ upLoad(); feedLoad && feedLoad(true); }catch(e){} }, 800);
@@ -23121,10 +23156,10 @@ function lkSheetHTML(sh){
       <div class="lk-people">${ppl == null ? '<div class="fl-sh-s">Loading…</div>' : ppl.length ? ppl.map(u=>`<button class="row-card lk-person${sh.to === u.id ? ' on' : ''}" data-lk="pick" data-id="${escText(u.id)}"><span class="tm-pic">${u.photo ? `<img alt="" src="${escText(u.photo)}">` : `<b>${escText((u.name || u.username || '?').charAt(0).toUpperCase())}</b>`}</span><span class="fl-tx"><b>${escText(u.name || '@' + u.username)}</b><small>${u.username ? '@' + escText(u.username) : ''}</small></span></button>`).join('')
         : '<div class="fl-sh-s">You can play people who follow you and whom you follow back. Follow each other in Updates first.</div>'}</div>
       <button class="btn-wide btn-primary" data-lk="send">Send challenge</button>
-      <div class="section-title" style="margin-top:14px;">OR POST IT TO YOUR STATUS</div>
-      <div class="fl-sh-s">How many people can accept - the first ${sh.max || 1} to accept play you, then your status disappears.</div>
+      <div class="section-title" style="margin-top:14px;">OR POST IT AS AN UPDATE</div>
+      <div class="fl-sh-s">How many people can accept - the first ${sh.max || 1} to accept play you, then your update disappears.</div>
       <div class="lk-seg lk-max">${[1, 2, 3, 5, 10].map(n=>`<button class="${(sh.max || 1) === n ? 'on' : ''}" data-lk="max" data-v="${n}">${n}</button>`).join('')}</div>
-      <button class="btn-wide lk-post" data-lk="post-status">${sh.posting ? 'Posting…' : 'Post to my status - anyone can accept'}</button>`}
+      <button class="btn-wide lk-post" data-lk="post-status">${sh.posting ? 'Posting…' : 'Post as my update - anyone can accept'}</button>`}
       <button class="btn-wide" data-lk="close">Close</button>`;
   }
   if(sh.t === 'invite'){ const g = LK.games.find(x=>x.id === sh.id); if(!g) return '<button class="btn-wide" data-lk="close">Close</button>';
@@ -23541,7 +23576,7 @@ document.addEventListener('click', e=>{
       let stake = 0;
       if(s.bet){ stake = Math.round(parseFloat(String(s.amt || '').replace(',', '.')) * 100) || 0; if(stake <= 0){ showToast('Enter the bet amount'); return; } if(!/^[A-Z]{3}$/.test(s.cur || '')){ showToast('The currency is 3 letters, like USD or ZAR'); return; } }
       s.posting = true; renderDevice();
-      lkStatusPost(s.k, stake, s.cur, s.max || 1).then(()=>{ LK.sheet = null; showToast('Your challenge is on your status - anyone who sees it can accept'); })
+      lkStatusPost(s.k, stake, s.cur, s.max || 1).then(()=>{ LK.sheet = null; showToast('Your challenge is in your updates - anyone who sees it can accept'); })
         .catch(()=>{ s.posting = false; showToast('Couldn’t post it - try again'); })
         .finally(()=>{ if(state.current === 'lockin') renderDevice(); });
       return; }
